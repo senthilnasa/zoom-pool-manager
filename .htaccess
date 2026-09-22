@@ -1,0 +1,22 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Prevent direct access to sensitive files and directories
+    RewriteRule ^(\.env|\.git|storage|vendor|bootstrap/cache) - [F,L,NC]
+
+    # Redirect root requests to /public if document root cannot be configured
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Block access to hidden files (.env, .git, etc.)
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block access to composer/package/lock files
+<FilesMatch "(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op]|env)|~)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

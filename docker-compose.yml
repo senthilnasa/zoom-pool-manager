@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: zpm-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - zpm-network
+    depends_on:
+      - db
+
+  web:
+    image: nginx:alpine
+    container_name: zpm-web
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - zpm-network
+    depends_on:
+      - app
+
+  db:
+    image: mariadb:10.6
+    container_name: zpm-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE:-zpm}
+      MARIADB_USER: ${DB_USERNAME:-zpm}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-secret}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - zpm-db-data:/var/lib/mysql
+    networks:
+      - zpm-network
+
+networks:
+  zpm-network:
+    driver: bridge
+
+volumes:
+  zpm-db-data:
+    driver: local

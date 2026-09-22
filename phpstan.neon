@@ -1,0 +1,11 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+
+    # Level 6 is required by SPEC Part I
+    level: 6
+
+    treatPhpDocTypesAsCertain: false

@@ -1,0 +1,60 @@
+name: Release & Packaging
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, pdo_mysql, bcmath, gmp, zip
+          coverage: none
+
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Verify Code Style & Static Analysis
+        run: |
+          ./vendor/bin/pint --test
+          ./vendor/bin/phpstan analyse --memory-limit=2G
+
+      - name: Run Test Suite
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: ./vendor/bin/pest
+
+      - name: Extract Tag Name
+        id: tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build Standalone Release Package
+        run: |
+          bash tools/build-release.sh ${{ steps.tag.outputs.TAG_NAME }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Zoom Pool Manager ${{ steps.tag.outputs.TAG_NAME }}"
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+          files: |
+            dist/zpm-release-*.zip
+            dist/zpm-release-*.zip.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
