@@ -366,8 +366,8 @@ class SpaAdminController extends Controller
                     'join_url' => $m->join_url,
                     'zoom_meeting_id' => $m->zoom_meeting_id,
                     'participant_count' => $m->participant_count,
-                    'resource_name' => $m->zoomResource?->name ?? 'Pooled Host',
-                    'department_name' => $m->department?->name ?? '—',
+                    'resource_name' => $m->zoomResource->name ?? 'Pooled Host',
+                    'department_name' => $m->department->name ?? '—',
                 ];
             });
 
@@ -419,7 +419,7 @@ class SpaAdminController extends Controller
                 'scope_type' => $quota->scope_type,
                 'max_meetings_per_month' => $quota->max_meetings_per_month,
                 'max_hours_per_month' => $quota->max_hours_per_month,
-                'current_month_meetings' => $quotaUsage?->meetings_count ?? 0,
+                'current_month_meetings' => $quotaUsage ? $quotaUsage->meetings_count : 0,
                 'current_month_hours' => $quotaUsage ? round($quotaUsage->minutes_used / 60, 1) : 0,
             ] : null,
             'meetings' => $recentMeetings,
