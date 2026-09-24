@@ -163,9 +163,12 @@ class InstallerService
      */
     public function saveDatabaseConfig(array $config): void
     {
-        $envPath = base_path('.env');
+        $envPath = function_exists('app') && app()->has('path') ? app()->environmentFilePath() : base_path('.env');
         if (! file_exists($envPath)) {
-            copy(base_path('.env.example'), $envPath);
+            $examplePath = base_path('.env.example');
+            if (file_exists($examplePath)) {
+                copy($examplePath, $envPath);
+            }
         }
 
         $content = file_get_contents($envPath);

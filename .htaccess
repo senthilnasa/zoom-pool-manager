@@ -2,7 +2,7 @@
     RewriteEngine On
 
     # Prevent direct access to sensitive files and directories
-    RewriteRule ^(\.env|\.git|storage|vendor|bootstrap/cache) - [F,L,NC]
+    RewriteRule ^(\.env|\.git|storage|vendor|bootstrap/cache|ai) - [F,L,NC]
 
     # Redirect root requests to /public if document root cannot be configured
     RewriteCond %{REQUEST_URI} !^/public/
