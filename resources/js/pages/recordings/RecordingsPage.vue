@@ -98,8 +98,18 @@
                 <div class="font-bold text-slate-900 dark:text-white">
                   {{ r.topic || r.meeting?.title || 'Recorded Meeting' }}
                 </div>
-                <div class="text-[11px] text-slate-400 font-mono">
-                  Zoom ID: {{ r.zoom_meeting_id || 'N/A' }}
+                <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400 font-mono">
+                  <span>Zoom ID: {{ r.zoom_meeting_id || 'N/A' }}</span>
+                  <span v-if="r.resource?.zoom_user?.display_name || r.resource?.zoom_user?.email" class="text-slate-400">
+                    • {{ r.resource?.zoom_user?.display_name || r.resource?.zoom_user?.email }}
+                  </span>
+                </div>
+                <div v-if="r.passcode" class="flex items-center gap-1.5 mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-mono">
+                  <Key class="w-3 h-3" />
+                  <span>Passcode: {{ r.passcode }}</span>
+                  <button @click="copyText(r.passcode, 'Passcode')" class="hover:text-amber-700 dark:hover:text-amber-300 cursor-pointer" title="Copy Passcode">
+                    <Copy class="w-3 h-3 inline" />
+                  </button>
                 </div>
               </td>
               <td class="py-3.5 px-4 text-slate-600 dark:text-slate-300">
@@ -255,6 +265,7 @@ import {
   Search,
   Copy,
   Trash2,
+  Key,
   X
 } from 'lucide-vue-next';
 
@@ -370,6 +381,16 @@ const copyShareLink = async (url) => {
     toast.success('Recording link copied to clipboard!');
   } catch {
     toast.error('Failed to copy recording link.');
+  }
+};
+
+const copyText = async (text, label = 'Text') => {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard!`);
+  } catch {
+    toast.error(`Failed to copy ${label.toLowerCase()}.`);
   }
 };
 

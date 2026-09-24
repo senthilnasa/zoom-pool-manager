@@ -9,6 +9,8 @@ use App\Domain\Recordings\Models\CloudRecording;
 use App\Domain\Recordings\Models\RecordingAccessLog;
 use App\Domain\Recordings\Models\RecordingFile;
 use App\Domain\Users\Models\User;
+use App\Domain\Zoom\Models\ZoomResource;
+use App\Domain\Zoom\Models\ZoomUser;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 
@@ -58,6 +60,49 @@ class CloudRecordingService
         $logicalOwnerUserId = $meeting?->owner_user_id ?: $meeting?->requester_user_id;
         $zoomResourceId = $meeting?->zoom_resource_id;
 
+        // Fallback: If not linked to a meeting, map resource from host_id or provided payload
+        if (! $zoomResourceId && ! empty($object['host_id'])) {
+            $zoomUser = ZoomUser::where('zoom_user_id', (string) $object['host_id'])->first();
+            if ($zoomUser) {
+                $resource = ZoomResource::where('zoom_user_id', $zoomUser->id)->first();
+                $zoomResourceId = $resource?->id;
+            }
+        }
+        if (! $zoomResourceId && ! empty($payload['zoom_resource_id'])) {
+            $zoomResourceId = (int) $payload['zoom_resource_id'];
+        }
+
+        // Fallback: If no logical owner, map from host email or ZoomUser email
+        if (! $logicalOwnerUserId) {
+            $hostEmail = (string) ($object['host_email'] ?? $payload['host_email'] ?? '');
+            if (! $hostEmail && ! empty($object['host_id'])) {
+                $zoomUser = ZoomUser::where('zoom_user_id', (string) $object['host_id'])->first();
+                if ($zoomUser && ! empty($zoomUser->email)) {
+                    $hostEmail = (string) $zoomUser->email;
+                }
+            }
+            if ($hostEmail !== '') {
+                $ownerUser = User::where('email', $hostEmail)->first();
+                $logicalOwnerUserId = $ownerUser?->id;
+            }
+        }
+
+        // Extract passcode from password or recording_play_passcode
+        $passcode = ! empty($object['password'])
+            ? (string) $object['password']
+            : (! empty($object['recording_play_passcode']) ? (string) $object['recording_play_passcode'] : null);
+
+        // Fallback play URL from recording files if share_url is empty
+        $effectivePlayUrl = $shareUrl ?: null;
+        if (! $effectivePlayUrl && ! empty($object['recording_files']) && is_array($object['recording_files'])) {
+            foreach ($object['recording_files'] as $rf) {
+                if (! empty($rf['play_url'])) {
+                    $effectivePlayUrl = (string) $rf['play_url'];
+                    break;
+                }
+            }
+        }
+
         // Upsert the recording
         $zoomRecordingUuid = ! empty($object['uuid']) ? (string) $object['uuid'] : null;
         $existing = null;
@@ -85,8 +130,8 @@ class CloudRecordingService
             'duration_minutes' => $durationMinutes,
             'file_size_bytes' => $totalSize,
             'share_url' => $shareUrl ?: null,
-            'play_url' => $shareUrl ?: null,
-            'passcode' => ! empty($object['password']) ? (string) $object['password'] : null,
+            'play_url' => $effectivePlayUrl,
+            'passcode' => $passcode,
             'status' => 'completed',
         ];
 
@@ -137,7 +182,7 @@ class CloudRecordingService
                     [
                         'recording_id' => $recording->id,
                         'recording_public_id' => $recording->public_id,
-                        'meeting_id' => $meeting->id,
+                        'meeting_id' => $meeting?->id,
                         'meeting_title' => $topic,
                         'duration_minutes' => $durationMinutes,
                     ]

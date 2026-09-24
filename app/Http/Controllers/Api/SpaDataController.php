@@ -270,13 +270,24 @@ class SpaDataController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $query = CloudRecording::with(['meeting.owner'])
+        $query = CloudRecording::with(['meeting.owner', 'resource.zoomUser', 'logicalOwner', 'files'])
+            ->orderBy('recording_start', 'desc')
             ->orderBy('created_at', 'desc');
 
-        if (! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator')) {
-            $query->whereHas('meeting', function ($q) use ($user) {
-                $q->where('owner_user_id', $user->id)
-                    ->orWhere('requester_user_id', $user->id);
+        $canViewAll = $user->can('recording.view_any')
+            || $user->hasRole('Super Administrator')
+            || $user->hasRole('Super Admin')
+            || $user->hasRole('super_admin')
+            || $user->hasRole('Administrator')
+            || $user->hasRole('it_admin');
+
+        if (! $canViewAll) {
+            $query->where(function ($q) use ($user) {
+                $q->where('logical_owner_user_id', $user->id)
+                    ->orWhereHas('meeting', function ($mq) use ($user) {
+                        $mq->where('owner_user_id', $user->id)
+                            ->orWhere('requester_user_id', $user->id);
+                    });
             });
         }
 
@@ -285,12 +296,15 @@ class SpaDataController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('topic', 'like', $search)
                     ->orWhere('zoom_meeting_id', 'like', $search)
-                    ->orWhere('public_id', 'like', $search);
+                    ->orWhere('public_id', 'like', $search)
+                    ->orWhereHas('meeting', function ($mq) use ($search) {
+                        $mq->where('title', 'like', $search);
+                    });
             });
         }
 
         $perPage = (int) $request->query('per_page', 25);
-        if (! in_array($perPage, [10, 25, 100], true)) {
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 25;
         }
 
@@ -374,7 +388,7 @@ class SpaDataController extends Controller
         }
 
         // Live Mode
-        \Artisan::call('zpm:recordings:sync');
+        \Artisan::call('zpm:recordings:sync', ['--days' => 60]);
         $output = trim(\Artisan::output());
 
         return response()->json([
