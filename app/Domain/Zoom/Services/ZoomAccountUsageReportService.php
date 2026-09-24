@@ -457,7 +457,7 @@ class ZoomAccountUsageReportService
         if ($bufferPercentage >= 50.0 && $totalAccounts >= 10) {
             return [
                 'headline' => "Significant Capacity Headroom: Peak concurrency was {$peakConcurrent} of {$totalAccounts} accounts ({$bufferPercentage}% buffer).",
-                'recommendation' => "Your system peaked at {$peakConcurrent} concurrent accounts. With {$concurrencyHeadroom} unused licenses during peak demand and {$underutilizedCount} underutilized accounts, your organization could comfortably operate with approximately {$recommendedLicenses} pooled licenses (saving up to " . ($totalAccounts - $recommendedLicenses) . " license subscriptions).",
+                'recommendation' => "Your system peaked at {$peakConcurrent} concurrent accounts. With {$concurrencyHeadroom} unused licenses during peak demand and {$underutilizedCount} underutilized accounts, your organization could comfortably operate with approximately {$recommendedLicenses} pooled licenses (saving up to ".($totalAccounts - $recommendedLicenses).' license subscriptions).',
                 'status_level' => 'optimal',
                 'recommended_licenses' => $recommendedLicenses,
             ];
@@ -491,7 +491,7 @@ class ZoomAccountUsageReportService
         $accounts = $report['accounts'];
         $summary = $report['summary'];
 
-        $filename = 'zoom_account_usage_report_' . Carbon::now()->format('Ymd_His') . '.csv';
+        $filename = 'zoom_account_usage_report_'.Carbon::now()->format('Ymd_His').'.csv';
 
         return new StreamedResponse(function () use ($accounts, $summary) {
             $handle = fopen('php://output', 'w');
@@ -505,12 +505,12 @@ class ZoomAccountUsageReportService
             // Summary Metadata Header
             fputcsv($handle, ['Zoom Pool Manager - Account Usage & Concurrency Report']);
             fputcsv($handle, ['Generated At', Carbon::now()->toDateTimeString()]);
-            fputcsv($handle, ['Date Range', $summary['range_start'] . ' to ' . $summary['range_end']]);
+            fputcsv($handle, ['Date Range', $summary['range_start'].' to '.$summary['range_end']]);
             fputcsv($handle, ['Total Accounts', $summary['total_accounts']]);
             fputcsv($handle, ['Peak Concurrency (Simultaneous Accounts)', $summary['peak_concurrent_accounts']]);
-            fputcsv($handle, ['Concurrency Headroom (Buffer)', $summary['concurrency_headroom'] . ' accounts (' . $summary['buffer_percentage'] . '%)']);
+            fputcsv($handle, ['Concurrency Headroom (Buffer)', $summary['concurrency_headroom'].' accounts ('.$summary['buffer_percentage'].'%)']);
             fputcsv($handle, ['Total Meetings Hosted', $summary['total_meetings']]);
-            fputcsv($handle, ['Total Occupied Hours', $summary['total_hours'] . ' hrs']);
+            fputcsv($handle, ['Total Occupied Hours', $summary['total_hours'].' hrs']);
             fputcsv($handle, []); // Blank separator row
 
             // Data Table Headers
@@ -542,7 +542,7 @@ class ZoomAccountUsageReportService
                     $row['meetings_count'],
                     $row['total_minutes'],
                     $row['total_hours'],
-                    $row['utilization_rate'] . '%',
+                    $row['utilization_rate'].'%',
                     $row['is_underutilized'] ? 'Yes' : 'No',
                     $row['last_used_at'] ? Carbon::parse($row['last_used_at'])->format('Y-m-d H:i:s') : 'Never',
                 ]);
