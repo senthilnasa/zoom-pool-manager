@@ -60,12 +60,16 @@
 
         <div class="space-y-3 pt-2">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Target User ID *</label>
-            <input
-              v-model.number="targetUserId"
-              type="number"
-              placeholder="Enter User Database ID"
-              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Select Target User (10,000+ Employees) *</label>
+            <SearchableSelect
+              v-model="targetUserId"
+              remote-url="/spa/users/search"
+              placeholder="Search employee by name or email..."
+              search-placeholder="Type name, email, or designation..."
+              label-key="name"
+              value-key="id"
+              sublabel-key="email"
+              badge-key="department.name"
             />
           </div>
 
@@ -233,6 +237,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import {
   UserX,
   Clock,

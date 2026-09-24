@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Installer\InstallerController;
+use App\Http\Controllers\LegalController;
 use App\Http\Middleware\EnsureInstalled;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,12 @@ Route::get('/', function () {
 
     return redirect()->route('dashboard');
 })->name('home');
+
+// Legal Policies & Compliance (Publicly accessible)
+Route::get('/privacy-policy', [LegalController::class, 'privacyPolicy'])->name('legal.privacy');
+Route::get('/terms-of-service', [LegalController::class, 'termsOfService'])->name('legal.terms');
+Route::get('/spa/branding', [LegalController::class, 'branding'])->name('spa.branding');
+Route::get('/spa/legal/{type}', [LegalController::class, 'apiDocument'])->name('spa.legal.doc');
 
 // Authentication & Session Routes
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -81,6 +88,9 @@ Route::post('/api/webhooks/zoom/{public_id?}', [WebhookController::class, 'handl
     ->name('api.webhooks.zoom')
     ->withoutMiddleware([ValidateCsrfToken::class]);
 
+// SPA CSRF Token & Session Keepalive (accessible without auth for refresh and keepalive)
+Route::get('/spa/csrf-token', [SpaAuthController::class, 'csrfToken'])->name('spa.csrf-token');
+
 // Authenticated Application Routes
 Route::middleware('auth')->group(function () {
     // Vue 3 SPA Application Shell
@@ -116,6 +126,8 @@ Route::middleware('auth')->group(function () {
         // General Institutional & Platform Settings
         Route::get('/settings/general', [SpaGeneralSettingsController::class, 'show'])->name('settings.general.show');
         Route::put('/settings/general', [SpaGeneralSettingsController::class, 'update'])->name('settings.general.update');
+        Route::post('/settings/general/logo', [SpaGeneralSettingsController::class, 'uploadLogo'])->name('settings.general.logo.upload');
+        Route::delete('/settings/general/logo', [SpaGeneralSettingsController::class, 'deleteLogo'])->name('settings.general.logo.delete');
 
         // Zoom Settings in SPA
         Route::get('/settings/zoom', [ZoomSettingsController::class, 'show'])->name('settings.zoom.show');
@@ -160,6 +172,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/resources/{id}/pools', [SpaAdminController::class, 'assignResourcePools'])->name('resources.assign-pools');
 
         // Users & Departments
+        Route::get('/users/search', [SpaAdminController::class, 'searchUsers'])->name('users.search');
         Route::get('/users', [SpaAdminController::class, 'users'])->name('users');
         Route::post('/users', [SpaAdminController::class, 'storeUser'])->name('users.store');
         Route::post('/users/{id}/toggle', [SpaAdminController::class, 'toggleUser'])->name('users.toggle');

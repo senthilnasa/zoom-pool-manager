@@ -243,7 +243,7 @@ class SpaDataController extends Controller
         );
 
         $users = $canBookOnBehalf
-            ? User::where('is_active', true)->select('id', 'name', 'email', 'department_id')->with('department:id,name')->orderBy('name')->get()
+            ? User::where('is_active', true)->select('id', 'name', 'email', 'department_id', 'designation')->with('department:id,name')->orderBy('name')->limit(50)->get()
             : [];
 
         return response()->json([

@@ -54,9 +54,9 @@
                 type="button"
                 v-for="prov in providers"
                 :key="prov.value"
-                @click="form.current_provider = prov.value"
+                @click="form.provider = form.current_provider = prov.value"
                 class="px-3 py-2 rounded-xl text-xs font-bold border transition text-center"
-                :class="form.current_provider === prov.value ? 'bg-brand-500/10 border-brand-500 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+                :class="(form.provider === prov.value || form.current_provider === prov.value) ? 'bg-brand-500/10 border-brand-500 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
               >
                 {{ prov.label }}
               </button>
@@ -94,7 +94,7 @@
           </div>
 
           <!-- SMTP Options (visible when smtp chosen) -->
-          <div v-if="form.current_provider === 'smtp'" class="space-y-3 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
+          <div v-if="['smtp', 'sendgrid', 'ses', 'postmark'].includes(form.provider || form.current_provider)" class="space-y-3 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
             <h3 class="text-xs font-bold text-slate-800 dark:text-slate-200">SMTP Server Credentials</h3>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div class="sm:col-span-2">
@@ -126,7 +126,7 @@
                 >
                   <option value="tls">TLS</option>
                   <option value="ssl">SSL</option>
-                  <option value="null">None</option>
+                  <option value="none">None</option>
                 </select>
               </div>
               <div>
@@ -314,6 +314,7 @@ const providers = [
 ];
 
 const form = ref({
+  provider: 'smtp',
   current_provider: 'smtp',
   from_address: '',
   from_name: '',
@@ -331,7 +332,9 @@ const fetchSettings = async () => {
       headers: { Accept: 'application/json' },
     });
     if (res.data) {
-      form.value.current_provider = res.data.current_provider || 'smtp';
+      const activeProvider = res.data.provider || res.data.current_provider || 'smtp';
+      form.value.provider = activeProvider;
+      form.value.current_provider = activeProvider;
       form.value.from_address = res.data.from_address || '';
       form.value.from_name = res.data.from_name || '';
       form.value.reply_to = res.data.reply_to || '';
@@ -361,7 +364,12 @@ const saveSettings = async () => {
   feedback.value = '';
   feedbackIsError.value = false;
   try {
-    await axios.post('/admin/mail', form.value, {
+    const payload = {
+      ...form.value,
+      provider: form.value.provider || form.value.current_provider || 'smtp',
+      current_provider: form.value.provider || form.value.current_provider || 'smtp',
+    };
+    await axios.post('/admin/mail', payload, {
       headers: { Accept: 'application/json' },
     });
     feedback.value = 'Mail server settings saved successfully.';
@@ -393,7 +401,11 @@ const testConnection = async () => {
 const sendTestEmail = async () => {
   sendingTest.value = true;
   try {
-    const res = await axios.post('/admin/mail/test-send', { to_email: testEmailTo.value }, {
+    const res = await axios.post('/admin/mail/test-send', {
+      to_email: testEmailTo.value,
+      test_email: testEmailTo.value,
+      recipient: testEmailTo.value,
+    }, {
       headers: { Accept: 'application/json' },
     });
     feedback.value = res.data?.message || `Test email dispatched to ${testEmailTo.value}.`;

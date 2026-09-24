@@ -141,7 +141,34 @@
                 }
 
                 if (response.status === 419) {
-                    ZPM.toast('error', 'Session expired. Please refresh the page.');
+                    if (!options._retry) {
+                        try {
+                            const refreshRes = await fetch('/spa/csrf-token', {
+                                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                                credentials: 'same-origin'
+                            });
+                            if (refreshRes.ok) {
+                                const refreshData = await refreshRes.json();
+                                if (refreshData.authenticated && refreshData.csrf_token) {
+                                    if (tokenMeta) tokenMeta.setAttribute('content', refreshData.csrf_token);
+                                    return await ZPM.api(url, {
+                                        ...options,
+                                        _retry: true,
+                                        headers: {
+                                            ...(options.headers || {}),
+                                            'X-CSRF-TOKEN': refreshData.csrf_token
+                                        }
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            // proceed to session expired handling
+                        }
+                    }
+                    ZPM.toast('error', 'Session expired. Redirecting to login...');
+                    setTimeout(() => {
+                        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+                    }, 1200);
                 } else if (response.status === 403) {
                     ZPM.toast('error', errorData.message || 'You are not authorized to perform this action.');
                 } else if (response.status === 422) {
@@ -261,6 +288,33 @@
         if (flashSuccess && flashSuccess.content) ZPM.toast('success', flashSuccess.content);
         if (flashError && flashError.content) ZPM.toast('error', flashError.content);
         if (flashWarning && flashWarning.content) ZPM.toast('warning', flashWarning.content);
+
+        // Proactive keepalive every 10 minutes to prevent CSRF / session expiration
+        let lastPing = Date.now();
+        const refreshCsrf = async () => {
+            try {
+                const res = await fetch('/spa/csrf-token', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.csrf_token) {
+                        const meta = document.querySelector('meta[name="csrf-token"]');
+                        if (meta) meta.setAttribute('content', data.csrf_token);
+                    }
+                    lastPing = Date.now();
+                }
+            } catch (e) {}
+        };
+
+        setInterval(refreshCsrf, 10 * 60 * 1000);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && (Date.now() - lastPing > 3 * 60 * 1000)) {
+                refreshCsrf();
+            }
+        });
     });
 
 })();

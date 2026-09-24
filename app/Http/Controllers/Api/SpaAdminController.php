@@ -134,6 +134,49 @@ class SpaAdminController extends Controller
     // 2. USERS & DEPARTMENTS MANAGEMENT
     // ==========================================
 
+    /**
+     * Fast typeahead search for 10,000+ employees across name, email, and designation.
+     */
+    public function searchUsers(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        $limit = min(max($request->integer('limit', 30), 5), 100);
+
+        $query = User::with('department:id,name,code')
+            ->where('is_active', true)
+            ->select('id', 'public_id', 'name', 'email', 'designation', 'department_id');
+
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->integer('department_id'));
+        }
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%")
+                    ->orWhere('designation', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('include_id')) {
+            $includeId = $request->integer('include_id');
+            /** @var User|null $includedUser */
+            $includedUser = User::with('department:id,name,code')
+                ->select('id', 'public_id', 'name', 'email', 'designation', 'department_id')
+                ->find($includeId);
+        } else {
+            $includedUser = null;
+        }
+
+        $users = $query->orderBy('name')->limit($limit)->get();
+
+        if ($includedUser && ! $users->contains('id', $includedUser->id)) {
+            $users->prepend($includedUser);
+        }
+
+        return response()->json($users);
+    }
+
     public function users(Request $request): JsonResponse
     {
         $query = User::with(['department', 'roles'])->orderBy('name');

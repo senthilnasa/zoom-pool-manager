@@ -74,6 +74,7 @@
             demoMode: {{ $demoMode ? 'true' : 'false' }},
             appVersion: "{{ $appVersion }}",
             csrfToken: "{{ csrf_token() }}",
+            branding: @json($branding),
         };
     </script>
 </body>

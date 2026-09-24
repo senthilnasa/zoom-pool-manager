@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import axios from 'axios';
 import { useThemeStore } from './theme';
+import { useBrandingStore } from './branding';
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref(window.__ZPM__?.user || null);
@@ -52,6 +53,11 @@ export const useAuthStore = defineStore('auth', () => {
                 user.value = response.data.user;
                 demoMode.value = response.data.demo_mode;
                 appVersion.value = response.data.app_version;
+
+                if (response.data.branding) {
+                    const brandingStore = useBrandingStore();
+                    brandingStore.updateBranding(response.data.branding);
+                }
 
                 // Sync theme if provided
                 if (user.value?.theme) {

@@ -5,13 +5,30 @@
 @section('content')
 <div class="max-w-md mx-auto my-8">
     <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        @php
+            $customLogo = \App\Domain\Settings\Models\Setting::get('org.logo_url');
+            $orgName = \App\Domain\Settings\Models\Setting::get('org.name', config('app.name', 'Zoom Pool Manager'));
+        @endphp
         <div class="px-8 pt-8 pb-6 text-center">
-            <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 mb-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
-            </div>
-            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Sign In to ZPM</h1>
+            @if(!empty($customLogo))
+                <div class="flex items-center justify-center mb-4">
+                    <img src="{{ $customLogo }}" alt="{{ $orgName }}" class="h-12 w-auto max-w-[200px] object-contain rounded-xl shadow-sm" />
+                </div>
+            @else
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                </div>
+            @endif
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
+                @if(!empty($orgName) && $orgName !== 'Zoom Pool Manager')
+                    Sign In to {{ $orgName }}
+                    <span class="block text-xs font-normal text-slate-400 mt-0.5">Zoom Pool Manager (ZPM)</span>
+                @else
+                    Sign In to ZPM
+                @endif
+            </h1>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Access pooled Zoom meeting resources and schedules</p>
         </div>
 
@@ -105,6 +122,12 @@
                 </div>
             @endif
         </div>
+    </div>
+
+    <div class="mt-6 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-3">
+        <a href="{{ route('legal.privacy') }}" class="hover:underline hover:text-slate-700 dark:hover:text-slate-300">Privacy Policy</a>
+        <span>•</span>
+        <a href="{{ route('legal.terms') }}" class="hover:underline hover:text-slate-700 dark:hover:text-slate-300">Terms of Service</a>
     </div>
 </div>
 @endsection

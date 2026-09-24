@@ -20,7 +20,7 @@ class MailProviderManager
         $driver = $driver ?? Setting::get('mail.provider', config('mail.default', 'smtp'));
 
         return match ($driver) {
-            'smtp' => app(SmtpMailProvider::class),
+            'smtp', 'sendgrid', 'ses', 'postmark' => app(SmtpMailProvider::class),
             'gmail', 'gmail_api' => app(GmailApiMailProvider::class),
             'graph', 'microsoft_graph' => app(MicrosoftGraphMailProvider::class),
             'log', 'array' => app(LogMailProvider::class),

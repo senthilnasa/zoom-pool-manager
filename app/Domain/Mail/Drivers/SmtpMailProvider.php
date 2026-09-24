@@ -97,7 +97,8 @@ class SmtpMailProvider implements MailProviderInterface
         if ($host) {
             Config::set('mail.mailers.smtp.host', $host);
             Config::set('mail.mailers.smtp.port', Setting::get('mail.smtp_port', 587));
-            Config::set('mail.mailers.smtp.encryption', Setting::get('mail.smtp_encryption', 'tls'));
+            $encryption = Setting::get('mail.smtp_encryption', 'tls');
+            Config::set('mail.mailers.smtp.encryption', ($encryption === 'none' || $encryption === 'null' || empty($encryption)) ? null : $encryption);
             Config::set('mail.mailers.smtp.username', Setting::get('mail.smtp_username'));
             Config::set('mail.mailers.smtp.password', Setting::get('mail.smtp_password'));
         }

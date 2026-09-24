@@ -101,32 +101,30 @@
               <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Meeting Template
               </label>
-              <select
+              <SearchableSelect
                 v-model="form.template_id"
+                :options="[{ id: null, name: 'Default Template' }, ...(options.templates || [])]"
                 @change="onTemplateSelected"
-                class="w-full glass-input cursor-pointer"
-              >
-                <option :value="null">Default Template</option>
-                <option v-for="t in options.templates" :key="t.id" :value="t.id">
-                  {{ t.name }}
-                </option>
-              </select>
+                placeholder="Default Template"
+                search-placeholder="Search templates..."
+                label-key="name"
+                value-key="id"
+              />
             </div>
 
             <div>
               <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Resource Pool
               </label>
-              <select
+              <SearchableSelect
                 v-model="form.pool_id"
+                :options="[{ id: null, name: 'Auto-Select Best Available Pool' }, ...(options.pools || [])]"
                 @change="checkConflicts"
-                class="w-full glass-input cursor-pointer"
-              >
-                <option :value="null">Auto-Select Best Available Pool</option>
-                <option v-for="p in options.pools" :key="p.id" :value="p.id">
-                  {{ p.name }}
-                </option>
-              </select>
+                placeholder="Auto-Select Best Available Pool"
+                search-placeholder="Search pools..."
+                label-key="name"
+                value-key="id"
+              />
             </div>
           </div>
 
@@ -147,18 +145,19 @@
 
             <div v-if="bookOnBehalf" class="space-y-1.5 pt-1">
               <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">
-                Select Host / Meeting Owner *
+                Select Host / Meeting Owner (10,000+ Employees) *
               </label>
-              <select
+              <SearchableSelect
                 v-model="form.owner_user_id"
-                required
-                class="w-full glass-input cursor-pointer"
-              >
-                <option :value="null" disabled>Choose faculty / staff member...</option>
-                <option v-for="u in options.users" :key="u.id" :value="u.id">
-                  {{ u.name }} ({{ u.email }}) {{ u.department ? '• ' + u.department.name : '' }}
-                </option>
-              </select>
+                remote-url="/spa/users/search"
+                :initial-options="options.users || []"
+                placeholder="Search faculty / staff member by name or email..."
+                search-placeholder="Type name, email, or designation..."
+                label-key="name"
+                value-key="id"
+                sublabel-key="email"
+                badge-key="department.name"
+              />
               <p class="text-[11px] text-slate-500 dark:text-slate-400">
                 The selected user will be designated as the meeting host/owner, will receive calendar invites with host instructions, and the meeting will be attributed to their department.
               </p>
@@ -522,6 +521,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import GlassCard from '@/components/GlassCard.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useToastStore } from '@/stores/toast';
 import {
   Calendar as CalendarIcon,

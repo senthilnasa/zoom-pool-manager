@@ -95,12 +95,20 @@
             <!-- Branding Header -->
             <div class="h-16 flex items-center justify-between px-5 border-b border-slate-100 dark:border-white/5">
                 <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 group">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-glow group-hover:scale-105 transition duration-200">
-                        Z
-                    </div>
+                    @php
+                        $customLogo = \App\Domain\Settings\Models\Setting::get('org.logo_url');
+                        $orgName = \App\Domain\Settings\Models\Setting::get('org.name', config('app.name', 'Zoom Pool Manager'));
+                    @endphp
+                    @if(!empty($customLogo))
+                        <img src="{{ $customLogo }}" alt="{{ $orgName }}" class="w-10 h-10 object-contain rounded-xl shadow-sm group-hover:scale-105 transition duration-200" />
+                    @else
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-glow group-hover:scale-105 transition duration-200">
+                            {{ strtoupper(substr($orgName, 0, 1)) }}
+                        </div>
+                    @endif
                     <div>
                         <div class="font-bold text-sm tracking-tight text-slate-900 dark:text-white flex items-center space-x-2">
-                            <span>Zoom Pool</span>
+                            <span class="truncate max-w-[130px]" title="{{ $orgName }}">{{ $orgName }}</span>
                             <span class="px-1.5 py-0.5 text-[10px] font-semibold bg-sky-500/10 dark:bg-sky-500/20 border border-sky-500/30 text-sky-600 dark:text-sky-400 rounded-md">v{{ config('zpm.version', '1.0.0') }}</span>
                         </div>
                         <p class="text-[10px] text-slate-500 dark:text-slate-400">Resource Manager</p>
@@ -321,6 +329,10 @@
                     <a href="{{ config('zpm.attribution.url', 'https://github.com/senthilnasa') }}" target="_blank" rel="noopener noreferrer" class="text-sky-600 dark:text-sky-400 hover:underline underline-offset-2">GitHub</a>
                 </div>
                 <div class="flex items-center space-x-3 text-slate-500 dark:text-slate-400 text-[11px]">
+                    <a href="{{ route('legal.privacy') }}" class="hover:text-slate-700 dark:hover:text-slate-200 transition">Privacy</a>
+                    <span>•</span>
+                    <a href="{{ route('legal.terms') }}" class="hover:text-slate-700 dark:hover:text-slate-200 transition">Terms</a>
+                    <span>•</span>
                     @if(Route::has('admin.system.updates.index'))
                         <a href="{{ route('admin.system.updates.index') }}" class="hover:text-slate-700 dark:hover:text-slate-200 transition">v{{ config('zpm.version', '1.0.0') }}</a>
                     @else

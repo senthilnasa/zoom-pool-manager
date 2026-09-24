@@ -54,6 +54,7 @@ import MailSettingsPage from '@/pages/mail/MailSettingsPage.vue';
 import EmailTemplatesPage from '@/pages/mail/EmailTemplatesPage.vue';
 import UpdatesPage from '@/pages/settings/UpdatesPage.vue';
 import NotificationsPage from '@/pages/notifications/NotificationsPage.vue';
+import LegalViewPage from '@/pages/legal/LegalViewPage.vue';
 
 const routes = [
     // Legacy / Top-Level Redirects
@@ -344,6 +345,18 @@ const routes = [
                 component: NotificationsPage,
                 meta: { title: 'Notifications Center' },
             },
+            {
+                path: 'privacy-policy',
+                name: 'legal.privacy',
+                component: LegalViewPage,
+                meta: { title: 'Privacy Policy' },
+            },
+            {
+                path: 'terms-of-service',
+                name: 'legal.terms',
+                component: LegalViewPage,
+                meta: { title: 'Terms of Service' },
+            },
         ],
     },
     // Fallback for any unknown /app/* route
@@ -362,9 +375,10 @@ const router = createRouter({
 });
 
 router.afterEach((to) => {
+    const orgName = window.__ZPM__?.branding?.org_name || 'Zoom Pool Manager';
     document.title = to.meta?.title
-        ? `${to.meta.title} — Zoom Pool Manager`
-        : 'Zoom Pool Manager';
+        ? `${to.meta.title} — ${orgName}`
+        : orgName;
 });
 
 export default router;

@@ -158,17 +158,18 @@
 
         <form @submit.prevent="submitDelegation" class="space-y-4 text-xs">
           <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Select Delegate</label>
-            <select
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Select Delegate (10,000+ Employees)</label>
+            <SearchableSelect
               v-model="form.delegate_user_id"
-              required
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-            >
-              <option :value="null" disabled>Choose an eligible user...</option>
-              <option v-for="u in eligibleDelegates" :key="u.id" :value="u.id">
-                {{ u.name }} ({{ u.email }})
-              </option>
-            </select>
+              remote-url="/spa/users/search"
+              :initial-options="eligibleDelegates"
+              placeholder="Search eligible delegate by name or email..."
+              search-placeholder="Type name, email, or designation..."
+              label-key="name"
+              value-key="id"
+              sublabel-key="email"
+              badge-key="department.name"
+            />
           </div>
 
           <div class="grid grid-cols-2 gap-3">
@@ -217,6 +218,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import {
   UserCheck,
   Plus,

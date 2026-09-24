@@ -33,6 +33,7 @@ class MailSettingsController extends Controller
 
         if (request()->wantsJson()) {
             return response()->json([
+                'provider' => $currentProvider,
                 'current_provider' => $currentProvider,
                 'from_address' => $fromAddress,
                 'from_name' => $fromName,
@@ -51,14 +52,22 @@ class MailSettingsController extends Controller
 
     public function update(Request $request): RedirectResponse|JsonResponse
     {
+        if (! $request->has('provider') && $request->has('current_provider')) {
+            $request->merge(['provider' => $request->input('current_provider')]);
+        }
+        if (! $request->has('current_provider') && $request->has('provider')) {
+            $request->merge(['current_provider' => $request->input('provider')]);
+        }
+
         $validated = $request->validate([
-            'provider' => 'required|in:smtp,gmail,graph,log',
+            'provider' => 'required|in:smtp,gmail,graph,log,sendgrid,ses,postmark',
+            'current_provider' => 'nullable|string',
             'from_address' => 'required|email|max:255',
             'from_name' => 'required|string|max:255',
             'reply_to' => 'nullable|email|max:255',
             'smtp_host' => 'nullable|string|max:255',
             'smtp_port' => 'nullable|numeric',
-            'smtp_encryption' => 'nullable|in:tls,ssl,none',
+            'smtp_encryption' => 'nullable|in:tls,ssl,none,null',
             'smtp_username' => 'nullable|string|max:255',
             'smtp_password' => 'nullable|string',
             'gmail_access_token' => 'nullable|string',
@@ -66,15 +75,20 @@ class MailSettingsController extends Controller
             'graph_sender_user' => 'nullable|string|max:255',
         ]);
 
+        $encryption = $validated['smtp_encryption'] ?? 'tls';
+        if ($encryption === 'null') {
+            $encryption = 'none';
+        }
+
         Setting::set('mail.provider', $validated['provider']);
         Setting::set('mail.from_address', $validated['from_address']);
         Setting::set('mail.from_name', $validated['from_name']);
         Setting::set('mail.reply_to', $validated['reply_to'] ?? '');
 
-        if ($validated['provider'] === 'smtp') {
+        if (in_array($validated['provider'], ['smtp', 'sendgrid', 'ses', 'postmark'], true)) {
             Setting::set('mail.smtp_host', $validated['smtp_host'] ?? '');
             Setting::set('mail.smtp_port', $validated['smtp_port'] ?? 587);
-            Setting::set('mail.smtp_encryption', $validated['smtp_encryption'] ?? 'tls');
+            Setting::set('mail.smtp_encryption', $encryption);
             Setting::set('mail.smtp_username', $validated['smtp_username'] ?? '');
             if (! empty($validated['smtp_password'])) {
                 Setting::set('mail.smtp_password', $validated['smtp_password']);
@@ -116,7 +130,7 @@ class MailSettingsController extends Controller
 
     public function testSend(Request $request): JsonResponse
     {
-        $recipient = $request->input('test_email', $request->input('recipient'));
+        $recipient = $request->input('test_email', $request->input('recipient', $request->input('to_email')));
 
         if (empty($recipient) || ! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
             return response()->json([

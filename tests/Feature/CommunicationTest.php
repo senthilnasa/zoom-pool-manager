@@ -263,4 +263,38 @@ class CommunicationTest extends TestCase
         $res = $this->actingAs($this->user)->get(route('notifications.index'));
         $res->assertOk();
     }
+
+    public function test_mail_settings_update_accepts_current_provider_payload(): void
+    {
+        $payload = [
+            'current_provider' => 'smtp',
+            'from_address' => 'noreply@krea.edu.in',
+            'from_name' => 'IT Team Noreply',
+            'reply_to' => '',
+            'smtp_host' => 'smtp.gmail.com',
+            'smtp_port' => 465,
+            'smtp_encryption' => 'ssl',
+            'smtp_username' => 'firewall.ttk@krea.edu.in',
+            'smtp_password' => 'secret123',
+        ];
+
+        $res = $this->actingAs($this->admin)->postJson(route('admin.mail.update'), $payload);
+        $res->assertOk();
+        $res->assertJson(['success' => true]);
+
+        $this->assertSame('smtp', Setting::get('mail.provider'));
+        $this->assertSame('noreply@krea.edu.in', Setting::get('mail.from_address'));
+        $this->assertSame('smtp.gmail.com', Setting::get('mail.smtp_host'));
+        $this->assertSame(465, (int) Setting::get('mail.smtp_port'));
+        $this->assertSame('ssl', Setting::get('mail.smtp_encryption'));
+
+        // Verify index JSON returns both provider and current_provider
+        $indexRes = $this->actingAs($this->admin)->getJson(route('admin.mail.index'));
+        $indexRes->assertOk();
+        $indexRes->assertJsonFragment([
+            'provider' => 'smtp',
+            'current_provider' => 'smtp',
+            'from_address' => 'noreply@krea.edu.in',
+        ]);
+    }
 }

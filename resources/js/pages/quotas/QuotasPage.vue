@@ -162,24 +162,29 @@
 
           <div v-if="form.scope_type === 'department'">
             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Select Department</label>
-            <select
+            <SearchableSelect
               v-model="form.scope_id"
-              required
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-            >
-              <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-            </select>
+              :options="departments"
+              placeholder="Search department..."
+              search-placeholder="Type department name..."
+              label-key="name"
+              value-key="id"
+            />
           </div>
 
           <div v-else>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Select User</label>
-            <select
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Select User (10,000+ Employees)</label>
+            <SearchableSelect
               v-model="form.scope_id"
-              required
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-            >
-              <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
-            </select>
+              remote-url="/spa/users/search"
+              :initial-options="users"
+              placeholder="Search employee by name or email..."
+              search-placeholder="Type name, email, or designation..."
+              label-key="name"
+              value-key="id"
+              sublabel-key="email"
+              badge-key="department.name"
+            />
           </div>
 
           <div>
@@ -227,6 +232,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useAuthStore } from '@/stores/auth';
 import {
   PieChart,

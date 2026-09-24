@@ -343,28 +343,27 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Resource Pool</label>
-            <select
+            <SearchableSelect
               v-model="bookingForm.pool_id"
-              class="w-full text-xs rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              <option :value="null">Automatic Pool Optimization</option>
-              <option v-for="p in pools" :key="p.id" :value="p.id">
-                {{ p.name }}
-              </option>
-            </select>
+              :options="[{ id: null, name: 'Automatic Pool Optimization' }, ...(pools || [])]"
+              placeholder="Automatic Pool Optimization"
+              search-placeholder="Search pool..."
+              label-key="name"
+              value-key="id"
+            />
           </div>
 
           <div>
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Department</label>
-            <select
+            <SearchableSelect
               v-model="bookingForm.department_id"
-              class="w-full text-xs rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              <option :value="null">Default User Department</option>
-              <option v-for="d in departments" :key="d.id" :value="d.id">
-                {{ d.name }} ({{ d.code }})
-              </option>
-            </select>
+              :options="[{ id: null, name: 'Default User Department' }, ...(departments || [])]"
+              placeholder="Default User Department"
+              search-placeholder="Search department..."
+              label-key="name"
+              value-key="id"
+              sublabel-key="code"
+            />
           </div>
         </div>
 
@@ -383,16 +382,20 @@
 
           <div>
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Meeting Classification</label>
-            <select
+            <SearchableSelect
               v-model="bookingForm.meeting_type"
-              class="w-full text-xs rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              <option value="class">Lecture / Class</option>
-              <option value="meeting">General Meeting</option>
-              <option value="webinar">Webinar / Broadcast</option>
-              <option value="exam">Proctored Assessment</option>
-              <option value="office_hours">Office Hours</option>
-            </select>
+              :options="[
+                { value: 'class', label: 'Lecture / Class' },
+                { value: 'meeting', label: 'General Meeting' },
+                { value: 'webinar', label: 'Webinar / Broadcast' },
+                { value: 'exam', label: 'Proctored Assessment' },
+                { value: 'office_hours', label: 'Office Hours' }
+              ]"
+              placeholder="Meeting Classification"
+              search-placeholder="Filter classifications..."
+              label-key="label"
+              value-key="value"
+            />
           </div>
         </div>
 
@@ -684,6 +687,7 @@ import { ref, computed, onMounted, reactive } from 'vue';
 import axios from 'axios';
 import { useToastStore } from '@/stores/toast';
 import Modal from '@/components/Modal.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import {
   Calendar as CalendarIcon,
   RefreshCw,

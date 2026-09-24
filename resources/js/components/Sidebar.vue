@@ -3,18 +3,21 @@
     class="w-64 shrink-0 border-r border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl flex flex-col transition-all duration-300 z-30"
   >
     <!-- Brand Header -->
-    <div class="h-16 flex items-center justify-between px-5 border-b border-slate-200/60 dark:border-slate-800/60">
-      <router-link to="/app/dashboard" class="flex items-center gap-3 group">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
-          Z
+    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200/60 dark:border-slate-800/60">
+      <router-link to="/app/dashboard" class="flex items-center gap-3 group min-w-0 w-full">
+        <!-- Logo Image or Fallback Initial Mark -->
+        <div v-if="brandingStore.orgLogoUrl" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 p-1 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+          <img :src="brandingStore.orgLogoUrl" :alt="brandingStore.orgName" class="w-full h-full object-contain" />
         </div>
-        <div>
-          <div class="font-bold text-sm leading-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-            <span>Zoom Pool</span>
-            <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400">Enterprise</span>
+        <div v-else class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-black shrink-0 shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
+          {{ brandingStore.orgName ? brandingStore.orgName.charAt(0).toUpperCase() : 'Z' }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="font-bold text-sm leading-tight text-slate-900 dark:text-white truncate" :title="brandingStore.orgName">
+            {{ brandingStore.orgName }}
           </div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-            Manager
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold truncate">
+            Zoom Pool Manager
           </div>
         </div>
       </router-link>
@@ -530,6 +533,7 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useBrandingStore } from '@/stores/branding';
 import {
   LayoutDashboard,
   Video,
@@ -573,6 +577,7 @@ import {
 
 const route = useRoute();
 const authStore = useAuthStore();
+const brandingStore = useBrandingStore();
 
 const isActive = (path) => route.path === path;
 

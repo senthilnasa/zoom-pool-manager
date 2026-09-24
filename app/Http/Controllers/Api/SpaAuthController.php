@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -41,6 +42,20 @@ class SpaAuthController extends Controller
                 'is_admin' => $user->hasRole('Super Administrator') || $user->hasRole('Administrator'),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ],
+            'branding' => [
+                'org_name' => (string) Setting::get('org.name', config('app.name', 'Zoom Pool Manager')),
+                'org_logo_url' => (string) Setting::get('org.logo_url', ''),
+                'org_support_email' => (string) Setting::get('org.support_email', 'support@zoompoolmanager.org'),
+                'org_website' => (string) Setting::get('org.website', url('/')),
+                'privacy_policy' => [
+                    'type' => (string) Setting::get('legal.privacy_policy_type', 'none'),
+                    'url' => (string) Setting::get('legal.privacy_policy_url', ''),
+                ],
+                'terms' => [
+                    'type' => (string) Setting::get('legal.terms_type', 'none'),
+                    'url' => (string) Setting::get('legal.terms_url', ''),
+                ],
+            ],
             'demo_mode' => (bool) config('app.demo', false),
             'app_version' => (string) config('zpm.version', '1.0.0'),
         ]);
@@ -62,6 +77,30 @@ class SpaAuthController extends Controller
         return response()->json([
             'success' => true,
             'theme' => $user->theme,
+        ]);
+    }
+
+    /**
+     * Refresh CSRF token and return current session authentication status.
+     * Keeps the active session alive and ensures SPA clients never encounter stale tokens.
+     */
+    public function csrfToken(Request $request): JsonResponse
+    {
+        // Touching the session updates last_activity timestamp in session store
+        $request->session()->put('_zpm_last_ping', time());
+
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return response()->json([
+            'csrf_token' => csrf_token(),
+            'authenticated' => Auth::check(),
+            'user' => $user ? [
+                'id' => $user->id,
+                'public_id' => $user->public_id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ] : null,
         ]);
     }
 }

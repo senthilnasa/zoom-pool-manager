@@ -105,25 +105,29 @@
           />
         </div>
 
-        <select
-          v-model="selectedDepartment"
-          @change="fetchUsers(1)"
-          class="text-xs rounded-xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-        >
-          <option value="">All Departments</option>
-          <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-        </select>
+        <div class="w-48">
+          <SearchableSelect
+            v-model="selectedDepartment"
+            :options="[{ id: '', name: 'All Departments' }, ...(departments || [])]"
+            @change="fetchUsers(1)"
+            placeholder="All Departments"
+            search-placeholder="Search department..."
+            label-key="name"
+            value-key="id"
+          />
+        </div>
 
-        <select
-          v-model="selectedRole"
-          @change="fetchUsers(1)"
-          class="text-xs rounded-xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-        >
-          <option value="">All Roles</option>
-          <option v-for="r in dynamicRoleOptions" :key="r.name" :value="r.name">
-            {{ r.name }} {{ r.is_system ? '(Core)' : '(Custom)' }}
-          </option>
-        </select>
+        <div class="w-48">
+          <SearchableSelect
+            v-model="selectedRole"
+            :options="[{ name: '', label: 'All Roles' }, ...dynamicRoleOptions.map(r => ({ name: r.name, label: r.name + (r.is_system ? ' (Core)' : ' (Custom)') }))]"
+            @change="fetchUsers(1)"
+            placeholder="All Roles"
+            search-placeholder="Search role..."
+            label-key="label"
+            value-key="name"
+          />
+        </div>
       </div>
 
       <!-- Users Table -->
@@ -491,33 +495,30 @@
 
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Department</label>
-            <select
+            <SearchableSelect
               v-model="userForm.department_id"
-              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-            >
-              <option :value="null">-- No Department --</option>
-              <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-            </select>
+              :options="[{ id: null, name: '-- No Department --' }, ...(departments || [])]"
+              placeholder="Select Department..."
+              search-placeholder="Search department..."
+              label-key="name"
+              value-key="id"
+            />
           </div>
 
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Assigned Role *</label>
-            <select
+            <SearchableSelect
               v-model="userForm.role"
-              required
-              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-            >
-              <optgroup label="Core Institutional Roles">
-                <option v-for="r in coreRoles" :key="r.name" :value="r.name">
-                  {{ r.name }}
-                </option>
-              </optgroup>
-              <optgroup v-if="customRoles.length" label="Custom Roles">
-                <option v-for="r in customRoles" :key="r.name" :value="r.name">
-                  {{ r.name }}
-                </option>
-              </optgroup>
-            </select>
+              :options="[
+                ...coreRoles.map(r => ({ name: r.name, label: r.name, group: 'Core' })),
+                ...customRoles.map(r => ({ name: r.name, label: r.name, group: 'Custom' }))
+              ]"
+              placeholder="Select Role..."
+              search-placeholder="Search role..."
+              label-key="label"
+              value-key="name"
+              badge-key="group"
+            />
           </div>
 
           <div>
@@ -834,6 +835,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import TablePagination from '@/components/TablePagination.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useAuthStore } from '@/stores/auth';
 import {
   Users,
