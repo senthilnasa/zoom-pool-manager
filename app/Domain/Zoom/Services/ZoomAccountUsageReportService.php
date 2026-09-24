@@ -500,7 +500,7 @@ class ZoomAccountUsageReportService
             }
 
             // UTF-8 BOM for Excel
-            fputs($handle, "\xEF\xBB\xBF");
+            fwrite($handle, "\xEF\xBB\xBF");
 
             // Summary Metadata Header
             fputcsv($handle, ['Zoom Pool Manager - Account Usage & Concurrency Report']);

@@ -19,7 +19,9 @@ class UserProfileSummaryTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected Department $department;
+
     protected User $facultyUser;
 
     protected function setUp(): void
