@@ -7,21 +7,12 @@
         <span>v{{ authStore.appVersion }}</span>
       </div>
 
-      <!-- Minimal, clean attribution -->
-      <div class="flex items-center gap-1.5">
-        <span>Made with</span>
-        <span class="text-rose-500 inline-block animate-pulse">❤️</span>
-        <span>by</span>
-        <a
-          href="https://github.com/senthilnasa"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="font-semibold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-        >
-          Senthil Nasa
-        </a>
+      <!-- Custom Institutional Footer / Copyright Text -->
+      <div class="text-center font-medium text-slate-600 dark:text-slate-400">
+        <span>{{ brandingStore.orgFooterText || ('© ' + currentYear + ' ' + brandingStore.orgName + '. All rights reserved.') }}</span>
       </div>
 
+      <!-- Legal Links -->
       <div class="flex items-center gap-4">
         <!-- Privacy Policy -->
         <a
@@ -58,32 +49,18 @@
         >
           Terms of Service
         </router-link>
-
-        <a
-          href="https://github.com/senthilnasa/zoom-pool-manager"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-        >
-          GitHub
-        </a>
-        <a
-          v-if="authStore.can('api.manage') || authStore.isAdmin"
-          href="/docs/api"
-          target="_blank"
-          class="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-        >
-          API Docs
-        </a>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useBrandingStore } from '@/stores/branding';
 
 const authStore = useAuthStore();
 const brandingStore = useBrandingStore();
+
+const currentYear = computed(() => new Date().getFullYear());
 </script>

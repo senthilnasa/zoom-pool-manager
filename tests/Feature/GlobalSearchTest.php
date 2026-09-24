@@ -71,6 +71,9 @@ class GlobalSearchTest extends TestCase
         $this->assertNotNull($matchedUser);
         $this->assertEquals('Aryabhata Astronomer', $matchedUser['name']);
         $this->assertEquals('aryabhata@krea.edu.in', $matchedUser['email']);
+        $this->assertStringContainsString('/profile', $matchedUser['path']);
+        $this->assertStringContainsString('/profile', $matchedUser['profile_path']);
+        $this->assertStringContainsString('/app/users?search=', $matchedUser['directory_path']);
     }
 
     public function test_global_search_finds_pools(): void

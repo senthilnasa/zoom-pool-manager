@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\SpaDataController;
 use App\Http\Controllers\Api\SpaGeneralSettingsController;
 use App\Http\Controllers\Api\SpaIdentityController;
 use App\Http\Controllers\Api\SpaJobSettingsController;
+use App\Http\Controllers\Api\SpaReportController;
 use App\Http\Controllers\Api\SpaRoleController;
 use App\Http\Controllers\Api\SpaSearchController;
 use App\Http\Controllers\Api\ZoomSettingsController;
@@ -128,6 +129,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings/general', [SpaGeneralSettingsController::class, 'update'])->name('settings.general.update');
         Route::post('/settings/general/logo', [SpaGeneralSettingsController::class, 'uploadLogo'])->name('settings.general.logo.upload');
         Route::delete('/settings/general/logo', [SpaGeneralSettingsController::class, 'deleteLogo'])->name('settings.general.logo.delete');
+        Route::post('/settings/general/logo-dark', [SpaGeneralSettingsController::class, 'uploadDarkLogo'])->name('settings.general.logo-dark.upload');
+        Route::delete('/settings/general/logo-dark', [SpaGeneralSettingsController::class, 'deleteDarkLogo'])->name('settings.general.logo-dark.delete');
+        Route::post('/settings/general/favicon', [SpaGeneralSettingsController::class, 'uploadFavicon'])->name('settings.general.favicon.upload');
+        Route::delete('/settings/general/favicon', [SpaGeneralSettingsController::class, 'deleteFavicon'])->name('settings.general.favicon.delete');
 
         // Zoom Settings in SPA
         Route::get('/settings/zoom', [ZoomSettingsController::class, 'show'])->name('settings.zoom.show');
@@ -170,10 +175,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/resources/{id}/toggle', [SpaAdminController::class, 'toggleResource'])->name('resources.toggle');
         Route::post('/resources/sync-from-zoom', [SpaAdminController::class, 'syncZoomUsers'])->name('resources.sync-from-zoom');
         Route::post('/resources/{id}/pools', [SpaAdminController::class, 'assignResourcePools'])->name('resources.assign-pools');
+        Route::get('/reports/zoom-usage', [SpaReportController::class, 'zoomAccountUsage'])->name('reports.zoom-usage');
+        Route::get('/reports/zoom-usage/export', [SpaReportController::class, 'exportZoomAccountUsage'])->name('reports.zoom-usage.export');
 
         // Users & Departments
         Route::get('/users/search', [SpaAdminController::class, 'searchUsers'])->name('users.search');
         Route::get('/users', [SpaAdminController::class, 'users'])->name('users');
+        Route::get('/users/{id}/profile', [SpaAdminController::class, 'userProfile'])->name('users.profile');
         Route::post('/users', [SpaAdminController::class, 'storeUser'])->name('users.store');
         Route::post('/users/{id}/toggle', [SpaAdminController::class, 'toggleUser'])->name('users.toggle');
         Route::get('/users/{id}/permissions', [SpaRoleController::class, 'userPermissions'])->name('users.permissions');

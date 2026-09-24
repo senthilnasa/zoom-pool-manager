@@ -1,5 +1,8 @@
 <template>
-  <div class="glass-card transition-all duration-300 hover:shadow-lg dark:hover:shadow-2xl overflow-hidden" :class="[padding ? 'p-6' : '', customClass]">
+  <div
+    class="glass-card transition-all duration-300 hover:shadow-lg dark:hover:shadow-2xl"
+    :class="[padding ? 'p-6' : '', overflowHidden ? 'overflow-hidden' : '', customClass]"
+  >
     <div v-if="$slots.header || title" class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/80">
       <div>
         <h3 v-if="title" class="text-base font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -36,6 +39,10 @@ defineProps({
   padding: {
     type: Boolean,
     default: true,
+  },
+  overflowHidden: {
+    type: Boolean,
+    default: false,
   },
   customClass: {
     type: String,

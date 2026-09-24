@@ -138,7 +138,11 @@ class Meeting extends Model
 
     public function getDurationMinutesAttribute(): int
     {
-        return (int) $this->starts_at->diffInMinutes($this->ends_at);
+        if (! $this->starts_at || ! $this->ends_at) {
+            return 0;
+        }
+
+        return max(0, abs((int) $this->starts_at->diffInMinutes($this->ends_at, false)));
     }
 
     public function canTransitionTo(string $toStatus): bool

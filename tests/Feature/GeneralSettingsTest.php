@@ -118,6 +118,7 @@ class GeneralSettingsTest extends TestCase
         $payload = [
             'org_name' => 'Krea University',
             'org_logo_url' => 'https://krea.edu.in/custom-logo.png',
+            'org_footer_text' => '© 2026 Krea University. Custom Footer.',
             'org_support_email' => 'tech@krea.edu.in',
             'org_website' => 'https://krea.edu.in',
             'org_timezone' => 'Asia/Kolkata',
@@ -143,6 +144,7 @@ class GeneralSettingsTest extends TestCase
 
         $this->assertEquals('Krea University', Setting::get('org.name'));
         $this->assertEquals('https://krea.edu.in/custom-logo.png', Setting::get('org.logo_url'));
+        $this->assertEquals('© 2026 Krea University. Custom Footer.', Setting::get('org.footer_text'));
         $this->assertEquals('custom', Setting::get('legal.privacy_policy_type'));
         $this->assertEquals('<h2>Krea Privacy Policy</h2><p>Data is protected.</p>', Setting::get('legal.privacy_policy_content'));
         $this->assertEquals('url', Setting::get('legal.terms_type'));
@@ -180,6 +182,10 @@ class GeneralSettingsTest extends TestCase
     public function test_public_legal_and_branding_routes(): void
     {
         Setting::set('org.name', 'Krea Institute');
+        Setting::set('org.favicon_url', 'https://example.com/fav.png');
+        Setting::set('org.logo_dark_url', 'https://example.com/logo-dark.png');
+        Setting::set('org.tagline', 'Excellence in Learning');
+        Setting::set('org.primary_color', '#6366f1');
         Setting::set('legal.privacy_policy_type', 'custom');
         Setting::set('legal.privacy_policy_content', '<p>Our privacy policy content.</p>');
         Setting::set('legal.terms_type', 'url');
@@ -189,6 +195,10 @@ class GeneralSettingsTest extends TestCase
         $brandingRes = $this->getJson('/spa/branding');
         $brandingRes->assertOk();
         $this->assertEquals('Krea Institute', $brandingRes->json('org_name'));
+        $this->assertEquals('https://example.com/fav.png', $brandingRes->json('org_favicon_url'));
+        $this->assertEquals('https://example.com/logo-dark.png', $brandingRes->json('org_logo_dark_url'));
+        $this->assertEquals('Excellence in Learning', $brandingRes->json('org_tagline'));
+        $this->assertEquals('#6366f1', $brandingRes->json('org_primary_color'));
 
         // Test public legal API document
         $privacyApi = $this->getJson('/spa/legal/privacy');
@@ -205,5 +215,83 @@ class GeneralSettingsTest extends TestCase
         // Test redirect for external terms
         $termsWeb = $this->get('/terms-of-service');
         $termsWeb->assertRedirect('https://example.com/external-terms');
+    }
+
+    public function test_admin_can_upload_and_delete_favicon(): void
+    {
+        Storage::fake('public');
+        $file = UploadedFile::fake()->create('custom_favicon.ico', 20, 'image/x-icon');
+
+        // Upload favicon
+        $response = $this->actingAs($this->admin)->postJson('/spa/settings/general/favicon', [
+            'favicon' => $file,
+        ]);
+        $response->assertOk();
+        $this->assertNotEmpty($response->json('favicon_url'));
+        $this->assertEquals($response->json('favicon_url'), Setting::get('org.favicon_url'));
+
+        // Delete favicon
+        $delResponse = $this->actingAs($this->admin)->deleteJson('/spa/settings/general/favicon');
+        $delResponse->assertOk();
+        $this->assertEmpty(Setting::get('org.favicon_url'));
+    }
+
+    public function test_admin_can_upload_and_delete_dark_logo(): void
+    {
+        Storage::fake('public');
+        $file = UploadedFile::fake()->create('custom_logo_dark.png', 50, 'image/png');
+
+        // Upload dark logo
+        $response = $this->actingAs($this->admin)->postJson('/spa/settings/general/logo-dark', [
+            'logo_dark' => $file,
+        ]);
+        $response->assertOk();
+        $this->assertNotEmpty($response->json('logo_dark_url'));
+        $this->assertEquals($response->json('logo_dark_url'), Setting::get('org.logo_dark_url'));
+
+        // Delete dark logo
+        $delResponse = $this->actingAs($this->admin)->deleteJson('/spa/settings/general/logo-dark');
+        $delResponse->assertOk();
+        $this->assertEmpty(Setting::get('org.logo_dark_url'));
+    }
+
+    public function test_admin_can_update_extended_branding_options(): void
+    {
+        $payload = [
+            'org_name' => 'Krea Higher Institute of Technology',
+            'org_logo_url' => 'https://krea.edu.in/logo.png',
+            'org_logo_dark_url' => 'https://krea.edu.in/logo-dark.png',
+            'org_favicon_url' => 'https://krea.edu.in/favicon.ico',
+            'org_tagline' => 'Next-Gen Research Platform',
+            'org_primary_color' => '#10b981',
+            'org_help_url' => 'https://help.krea.edu.in',
+            'org_login_heading' => 'Sign In to Campus Video Pool',
+            'org_login_subtext' => 'Staff and faculty credentials required.',
+            'org_support_email' => 'support@krea.edu.in',
+            'org_website' => 'https://zoom.krea.edu.in',
+            'org_timezone' => 'Asia/Kolkata',
+
+            'org_min_buffer_minutes' => 10,
+            'org_default_buffer_minutes' => 10,
+            'org_min_notice_hours' => 2,
+            'org_max_advance_days' => 90,
+            'org_max_duration_minutes' => 480,
+            'host_lead_minutes' => 15,
+
+            'org_ai_companion_policy' => 'ALLOWED',
+            'org_default_recording_mode' => 'cloud',
+        ];
+
+        $response = $this->actingAs($this->admin)->putJson('/spa/settings/general', $payload);
+        $response->assertOk();
+
+        $this->assertEquals('Krea Higher Institute of Technology', Setting::get('org.name'));
+        $this->assertEquals('https://krea.edu.in/logo-dark.png', Setting::get('org.logo_dark_url'));
+        $this->assertEquals('https://krea.edu.in/favicon.ico', Setting::get('org.favicon_url'));
+        $this->assertEquals('Next-Gen Research Platform', Setting::get('org.tagline'));
+        $this->assertEquals('#10b981', Setting::get('org.primary_color'));
+        $this->assertEquals('https://help.krea.edu.in', Setting::get('org.help_url'));
+        $this->assertEquals('Sign In to Campus Video Pool', Setting::get('org.login_heading'));
+        $this->assertEquals('Staff and faculty credentials required.', Setting::get('org.login_subtext'));
     }
 }

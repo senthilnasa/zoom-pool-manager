@@ -22,7 +22,7 @@
       <Header @toggle-sidebar="mobileSidebarOpen = !mobileSidebarOpen" />
 
       <!-- Page Content Area -->
-      <main class="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
+      <main class="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto min-w-0">
         <router-view v-slot="{ Component }">
           <transition
             enter-active-class="transition duration-200 ease-out"

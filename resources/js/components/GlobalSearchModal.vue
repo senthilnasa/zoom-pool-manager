@@ -201,13 +201,30 @@
               <div class="flex items-center gap-2 shrink-0 ml-3">
                 <span
                   v-if="item.department && item.department !== 'No Department'"
-                  class="text-[10px] text-slate-600 dark:text-slate-300 font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 hidden sm:inline"
+                  class="text-[10px] text-slate-600 dark:text-slate-300 font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 hidden md:inline"
                 >
                   {{ item.department }}
                 </span>
                 <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/50">
                   {{ item.role }}
                 </span>
+                <button
+                  type="button"
+                  @click.stop="navigate(item.path)"
+                  class="inline-flex items-center gap-1 text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/60 px-2 py-0.5 rounded-md border border-sky-200 dark:border-sky-800/60 transition cursor-pointer"
+                  title="View User Profile & Summary"
+                >
+                  <User class="w-3 h-3" />
+                  <span>Profile</span>
+                </button>
+                <button
+                  type="button"
+                  @click.stop="navigate(item.directory_path || ('/app/users?search=' + encodeURIComponent(item.email)))"
+                  class="text-[10px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-1.5 py-0.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800 transition hidden sm:inline cursor-pointer"
+                  title="Open in User Directory & Access Control"
+                >
+                  Directory
+                </button>
               </div>
             </div>
           </div>
@@ -286,23 +303,23 @@
       </div>
 
       <!-- Footer Guide -->
-      <div class="px-4 py-3 bg-slate-50/90 dark:bg-slate-900/90 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-        <div class="flex items-center gap-4">
+      <div class="px-4 py-3 bg-slate-50/90 dark:bg-slate-900/90 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 gap-2">
+        <div class="hidden sm:flex items-center gap-3">
           <span class="inline-flex items-center gap-1.5">
             <kbd class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono shadow-xs">↑↓</kbd>
             <span>Navigate</span>
           </span>
           <span class="inline-flex items-center gap-1.5">
             <kbd class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono shadow-xs">↵</kbd>
-            <span>Select / Search</span>
+            <span>Select</span>
           </span>
           <span class="inline-flex items-center gap-1.5">
             <kbd class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono shadow-xs">esc</kbd>
             <span>Dismiss</span>
           </span>
         </div>
-        <div class="text-[11px] text-slate-400">
-          Global Search &bull; Zoom Pool Manager
+        <div class="text-[11px] text-slate-400 truncate">
+          Global Search &bull; {{ brandingStore.orgName || 'Zoom Pool Manager' }}
         </div>
       </div>
     </div>
@@ -312,6 +329,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useBrandingStore } from '@/stores/branding';
 import axios from 'axios';
 import {
   Search,
@@ -325,6 +343,7 @@ import {
   RefreshCw,
   AlertCircle,
   X,
+  User,
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -337,6 +356,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const router = useRouter();
+const brandingStore = useBrandingStore();
 const isOpen = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),

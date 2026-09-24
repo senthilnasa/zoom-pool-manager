@@ -4,7 +4,7 @@
       type="button"
       @click="themeStore.setTheme('light')"
       :class="[
-        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-all duration-200',
+        'flex items-center gap-1.5 px-2 py-1 xl:px-2.5 xl:py-1 rounded-lg font-medium transition-all duration-200',
         themeStore.currentTheme === 'light'
           ? 'bg-white text-brand-600 shadow-sm'
           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -12,14 +12,14 @@
       title="Light Mode"
     >
       <Sun class="w-3.5 h-3.5" />
-      <span class="hidden sm:inline">Light</span>
+      <span class="hidden xl:inline">Light</span>
     </button>
 
     <button
       type="button"
       @click="themeStore.setTheme('system')"
       :class="[
-        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-all duration-200',
+        'flex items-center gap-1.5 px-2 py-1 xl:px-2.5 xl:py-1 rounded-lg font-medium transition-all duration-200',
         themeStore.currentTheme === 'system'
           ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -27,14 +27,14 @@
       title="System (Default) - Automatically matches OS preference"
     >
       <Monitor class="w-3.5 h-3.5" />
-      <span class="hidden sm:inline">System</span>
+      <span class="hidden xl:inline">System</span>
     </button>
 
     <button
       type="button"
       @click="themeStore.setTheme('dark')"
       :class="[
-        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-all duration-200',
+        'flex items-center gap-1.5 px-2 py-1 xl:px-2.5 xl:py-1 rounded-lg font-medium transition-all duration-200',
         themeStore.currentTheme === 'dark'
           ? 'bg-slate-700 text-brand-400 shadow-sm'
           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -42,7 +42,7 @@
       title="Dark Mode"
     >
       <Moon class="w-3.5 h-3.5" />
-      <span class="hidden sm:inline">Dark</span>
+      <span class="hidden xl:inline">Dark</span>
     </button>
   </div>
 </template>

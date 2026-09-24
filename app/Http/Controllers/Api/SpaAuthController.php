@@ -45,6 +45,7 @@ class SpaAuthController extends Controller
             'branding' => [
                 'org_name' => (string) Setting::get('org.name', config('app.name', 'Zoom Pool Manager')),
                 'org_logo_url' => (string) Setting::get('org.logo_url', ''),
+                'org_footer_text' => (string) Setting::get('org.footer_text', ''),
                 'org_support_email' => (string) Setting::get('org.support_email', 'support@zoompoolmanager.org'),
                 'org_website' => (string) Setting::get('org.website', url('/')),
                 'privacy_policy' => [

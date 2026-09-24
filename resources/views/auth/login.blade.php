@@ -7,12 +7,18 @@
     <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         @php
             $customLogo = \App\Domain\Settings\Models\Setting::get('org.logo_url');
+            $customLogoDark = \App\Domain\Settings\Models\Setting::get('org.logo_dark_url');
             $orgName = \App\Domain\Settings\Models\Setting::get('org.name', config('app.name', 'Zoom Pool Manager'));
+            $loginHeading = \App\Domain\Settings\Models\Setting::get('org.login_heading');
+            $loginSubtext = \App\Domain\Settings\Models\Setting::get('org.login_subtext');
         @endphp
         <div class="px-8 pt-8 pb-6 text-center">
-            @if(!empty($customLogo))
+            @if(!empty($customLogo) || !empty($customLogoDark))
                 <div class="flex items-center justify-center mb-4">
-                    <img src="{{ $customLogo }}" alt="{{ $orgName }}" class="h-12 w-auto max-w-[200px] object-contain rounded-xl shadow-sm" />
+                    <img src="{{ $customLogo ?: $customLogoDark }}" alt="{{ $orgName }}" class="h-12 w-auto max-w-[200px] object-contain rounded-xl shadow-sm {{ !empty($customLogoDark) ? 'dark:hidden' : '' }}" />
+                    @if(!empty($customLogoDark))
+                        <img src="{{ $customLogoDark }}" alt="{{ $orgName }}" class="h-12 w-auto max-w-[200px] object-contain rounded-xl shadow-sm hidden dark:block" />
+                    @endif
                 </div>
             @else
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 mb-4">
@@ -22,14 +28,18 @@
                 </div>
             @endif
             <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
-                @if(!empty($orgName) && $orgName !== 'Zoom Pool Manager')
+                @if(!empty($loginHeading))
+                    {{ $loginHeading }}
+                @elseif(!empty($orgName) && $orgName !== 'Zoom Pool Manager')
                     Sign In to {{ $orgName }}
                     <span class="block text-xs font-normal text-slate-400 mt-0.5">Zoom Pool Manager (ZPM)</span>
                 @else
                     Sign In to ZPM
                 @endif
             </h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Access pooled Zoom meeting resources and schedules</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {{ !empty($loginSubtext) ? $loginSubtext : 'Access pooled Zoom meeting resources and schedules' }}
+            </p>
         </div>
 
         <div class="px-8 pb-8 space-y-6">

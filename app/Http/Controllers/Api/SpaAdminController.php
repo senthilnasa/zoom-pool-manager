@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Attendance\Models\MeetingAttendance;
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Services\RoleManagementService;
+use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Operations\Models\DataExportRequest;
 use App\Domain\Operations\Services\PrivacyAndRetentionService;
+use App\Domain\Recordings\Models\CloudRecording;
 use App\Domain\Scheduling\Models\BlackoutPeriod;
 use App\Domain\Scheduling\Models\BookingPolicy;
 use App\Domain\Scheduling\Models\MeetingTemplate;
 use App\Domain\Scheduling\Models\SecurityProfile;
 use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
+use App\Domain\Workflow\Models\MeetingApproval;
+use App\Domain\Workflow\Models\Quota;
 use App\Domain\Workflow\Models\WaitlistEntry;
 use App\Domain\Workflow\Services\WaitlistService;
 use App\Domain\Zoom\Models\ResourcePool;
@@ -263,6 +269,165 @@ class SpaAdminController extends Controller
         $user->update(['is_active' => ! $user->is_active]);
 
         return response()->json(['success' => true, 'user' => $user]);
+    }
+
+    public function userProfile(string $id, RoleManagementService $roleService): JsonResponse
+    {
+        $user = User::where('public_id', $id)
+            ->orWhere('id', $id)
+            ->with(['department', 'roles'])
+            ->firstOrFail();
+
+        // Query all meetings requested or owned by this user
+        $meetingsQuery = Meeting::where(function ($q) use ($user) {
+            $q->where('requester_user_id', $user->id)
+                ->orWhere('owner_user_id', $user->id);
+        });
+
+        $totalRequests = (clone $meetingsQuery)->count();
+        $scheduledRequests = (clone $meetingsQuery)->whereIn('status', ['scheduled', 'allocating'])->count();
+        $inProgressRequests = (clone $meetingsQuery)->whereIn('status', ['started', 'in_progress'])->count();
+        $completedRequests = (clone $meetingsQuery)->where('status', 'completed')->count();
+        $cancelledRequests = (clone $meetingsQuery)->where('status', 'cancelled')->count();
+
+        // Calculate total hours of booked pool time
+        $meetingsForDuration = (clone $meetingsQuery)->select('starts_at', 'ends_at')->get();
+        $totalMinutes = 0;
+        foreach ($meetingsForDuration as $m) {
+            if ($m->starts_at && $m->ends_at) {
+                $totalMinutes += max(0, $m->starts_at->diffInMinutes($m->ends_at));
+            }
+        }
+        $totalHours = round($totalMinutes / 60, 1);
+
+        // Approvals for meetings requested by this user
+        $userMeetingIds = (clone $meetingsQuery)->pluck('id');
+        $submittedApprovalsQuery = MeetingApproval::whereIn('meeting_id', $userMeetingIds);
+        $approvalsSubmitted = (clone $submittedApprovalsQuery)->count();
+        $approvalsPending = (clone $submittedApprovalsQuery)->where('decision', 'pending')->count();
+        $approvalsApproved = (clone $submittedApprovalsQuery)->where('decision', 'approved')->count();
+        $approvalsRejected = (clone $submittedApprovalsQuery)->where('decision', 'rejected')->count();
+
+        // Approvals assigned to this user to review (if user is an approver)
+        $assignedApprovalsCount = MeetingApproval::where('approver_user_id', $user->id)->count();
+        $assignedApprovalsPending = MeetingApproval::where('approver_user_id', $user->id)->where('decision', 'pending')->count();
+
+        // Cloud Recordings
+        $recordings = CloudRecording::where('logical_owner_user_id', $user->id)
+            ->orWhereIn('meeting_id', $userMeetingIds)
+            ->with('meeting')
+            ->latest()
+            ->limit(50)
+            ->get();
+        $recordingsCount = $recordings->count();
+        $recordingsBytes = $recordings->sum('file_size_bytes');
+        $recordingsMb = round($recordingsBytes / (1024 * 1024), 2);
+
+        // Attendance participant records across meetings requested/owned
+        $attendanceSessionsCount = MeetingAttendance::whereIn('meeting_id', $userMeetingIds)->count();
+
+        // Quotas & Usage (User scope or Department scope)
+        $quota = Quota::where(function ($q) use ($user) {
+            $q->where(function ($sub) use ($user) {
+                $sub->where('scope_type', 'user')->where('scope_id', $user->id);
+            });
+            if ($user->department_id) {
+                $q->orWhere(function ($sub) use ($user) {
+                    $sub->where('scope_type', 'department')->where('scope_id', $user->department_id);
+                });
+            }
+        })->with('usages')->first();
+
+        $currentYear = (int) date('Y');
+        $currentMonth = (int) date('n');
+        $quotaUsage = null;
+        if ($quota) {
+            $quotaUsage = $quota->usages()
+                ->where('period_year', $currentYear)
+                ->where('period_month', $currentMonth)
+                ->first();
+        }
+
+        // Recent 50 meetings
+        $recentMeetings = (clone $meetingsQuery)
+            ->with(['zoomResource', 'department', 'template'])
+            ->orderBy('starts_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(function ($m) {
+                return [
+                    'id' => $m->id,
+                    'public_id' => $m->public_id,
+                    'title' => $m->title,
+                    'starts_at' => $m->starts_at?->toIso8601String(),
+                    'ends_at' => $m->ends_at?->toIso8601String(),
+                    'duration_minutes' => $m->duration_minutes,
+                    'status' => $m->status,
+                    'join_url' => $m->join_url,
+                    'zoom_meeting_id' => $m->zoom_meeting_id,
+                    'participant_count' => $m->participant_count,
+                    'resource_name' => $m->zoomResource?->name ?? 'Pooled Host',
+                    'department_name' => $m->department?->name ?? '—',
+                ];
+            });
+
+        // Recent Approvals list
+        $recentApprovals = MeetingApproval::whereIn('meeting_id', $userMeetingIds)
+            ->with(['meeting', 'approver'])
+            ->latest()
+            ->limit(25)
+            ->get();
+
+        // Effective permissions
+        $permissionData = $roleService->getUserPermissions($user);
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'public_id' => $user->public_id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'designation' => $user->designation,
+                'department_id' => $user->department_id,
+                'department' => $user->department,
+                'is_active' => (bool) $user->is_active,
+                'mfa_enabled' => (bool) $user->mfa_enabled,
+                'timezone' => $user->timezone ?? 'Asia/Kolkata',
+                'last_login_at' => $user->last_login_at?->toIso8601String(),
+                'created_at' => $user->created_at?->toIso8601String(),
+                'roles' => $user->roles->pluck('name'),
+            ],
+            'summary' => [
+                'total_requests' => $totalRequests,
+                'scheduled_requests' => $scheduledRequests,
+                'in_progress_requests' => $inProgressRequests,
+                'completed_requests' => $completedRequests,
+                'cancelled_requests' => $cancelledRequests,
+                'total_hours' => $totalHours,
+                'total_minutes' => $totalMinutes,
+                'approvals_submitted' => $approvalsSubmitted,
+                'approvals_pending' => $approvalsPending,
+                'approvals_approved' => $approvalsApproved,
+                'approvals_rejected' => $approvalsRejected,
+                'assigned_approvals_count' => $assignedApprovalsCount,
+                'assigned_approvals_pending' => $assignedApprovalsPending,
+                'recordings_count' => $recordingsCount,
+                'recordings_mb' => $recordingsMb,
+                'attendance_sessions_count' => $attendanceSessionsCount,
+            ],
+            'quota' => $quota ? [
+                'scope_type' => $quota->scope_type,
+                'max_meetings_per_month' => $quota->max_meetings_per_month,
+                'max_hours_per_month' => $quota->max_hours_per_month,
+                'current_month_meetings' => $quotaUsage?->meetings_count ?? 0,
+                'current_month_hours' => $quotaUsage ? round($quotaUsage->minutes_used / 60, 1) : 0,
+            ] : null,
+            'meetings' => $recentMeetings,
+            'approvals' => $recentApprovals,
+            'recordings' => $recordings,
+            'permissions' => $permissionData['permissions'],
+            'is_super_admin' => $permissionData['is_super_admin'],
+        ]);
     }
 
     public function departments(): JsonResponse

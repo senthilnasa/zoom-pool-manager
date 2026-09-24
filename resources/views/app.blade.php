@@ -4,10 +4,20 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Zoom Pool Manager') }}</title>
+    <title>{{ $branding['org_name'] ?? config('app.name', 'Zoom Pool Manager') }}</title>
 
-    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
+    @if(!empty($branding['org_favicon_url']))
+        <link rel="icon" href="{{ $branding['org_favicon_url'] }}">
+    @else
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+        <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
+    @endif
+
+    <style>
+        :root {
+            --brand-primary: {{ $branding['org_primary_color'] ?? '#0ea5e9' }};
+        }
+    </style>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

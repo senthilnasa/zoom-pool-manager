@@ -43,7 +43,9 @@ class AppServiceProvider extends ServiceProvider
                 || ($user && ($user->hasRole(['Super Administrator', 'IT Administrator']) || $user->can('api.manage')));
         });
 
-        if (str_starts_with((string) config('app.url'), 'https://') || request()->header('X-Forwarded-Proto') === 'https') {
+        if (request()->header('X-Forwarded-Proto') === 'https' || request()->isSecure()) {
+            URL::forceScheme('https');
+        } elseif (app()->environment('production') && str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
     }

@@ -22,12 +22,19 @@ class SpaGeneralSettingsController extends Controller
     {
         abort_unless($request->user()?->hasRole('Super Administrator') || $request->user()?->can('settings.manage') || $request->user()?->can('system.manage'), 403);
         $settings = [
-            // Institutional Profile
+            // Institutional & Visual Identity Profile
             'org_name' => (string) Setting::get('org.name', config('app.name', 'Zoom Pool Manager')),
             'org_logo_url' => (string) Setting::get('org.logo_url', ''),
+            'org_logo_dark_url' => (string) Setting::get('org.logo_dark_url', ''),
+            'org_favicon_url' => (string) Setting::get('org.favicon_url', ''),
+            'org_tagline' => (string) Setting::get('org.tagline', 'Zoom Pool Manager'),
+            'org_primary_color' => (string) Setting::get('org.primary_color', '#0ea5e9'),
             'org_footer_text' => (string) Setting::get('org.footer_text', ''),
             'org_support_email' => (string) Setting::get('org.support_email', 'support@zoompoolmanager.org'),
             'org_website' => (string) Setting::get('org.website', url('/')),
+            'org_help_url' => (string) Setting::get('org.help_url', ''),
+            'org_login_heading' => (string) Setting::get('org.login_heading', ''),
+            'org_login_subtext' => (string) Setting::get('org.login_subtext', ''),
             'org_timezone' => (string) Setting::get('org.timezone', 'Asia/Kolkata'),
 
             // Legal & Compliance Policies
@@ -144,6 +151,146 @@ class SpaGeneralSettingsController extends Controller
     }
 
     /**
+     * Upload a dark mode institutional logo image file.
+     */
+    public function uploadDarkLogo(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Super Administrator') || $request->user()?->can('settings.manage') || $request->user()?->can('system.manage'), 403);
+
+        $request->validate([
+            'logo_dark' => 'required|file|image|mimes:jpeg,png,jpg,gif,svg,webp|max:4096',
+        ]);
+
+        $file = $request->file('logo_dark');
+        $directory = public_path('uploads/branding');
+        if (! file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $extension = $file->getClientOriginalExtension() ?: 'png';
+        $filename = 'logo_dark_'.time().'.'.$extension;
+        $file->move($directory, $filename);
+
+        $logoDarkUrl = '/uploads/branding/'.$filename;
+        $oldLogoDark = Setting::get('org.logo_dark_url');
+        Setting::set('org.logo_dark_url', $logoDarkUrl);
+
+        $this->auditService->log(
+            event: 'settings.logo_dark.uploaded',
+            auditable: null,
+            oldValues: ['org_logo_dark_url' => $oldLogoDark],
+            newValues: ['org_logo_dark_url' => $logoDarkUrl]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dark mode logo updated successfully.',
+            'logo_dark_url' => $logoDarkUrl,
+        ]);
+    }
+
+    /**
+     * Remove custom dark mode logo and revert to primary logo.
+     */
+    public function deleteDarkLogo(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Super Administrator') || $request->user()?->can('settings.manage') || $request->user()?->can('system.manage'), 403);
+
+        $currentLogoDark = (string) Setting::get('org.logo_dark_url');
+        if (! empty($currentLogoDark) && str_starts_with($currentLogoDark, '/uploads/branding/')) {
+            $filePath = public_path(ltrim($currentLogoDark, '/'));
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+
+        Setting::set('org.logo_dark_url', '');
+
+        $this->auditService->log(
+            event: 'settings.logo_dark.removed',
+            auditable: null,
+            oldValues: ['org_logo_dark_url' => $currentLogoDark],
+            newValues: ['org_logo_dark_url' => '']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dark mode logo removed successfully.',
+            'logo_dark_url' => '',
+        ]);
+    }
+
+    /**
+     * Upload custom institutional favicon file.
+     */
+    public function uploadFavicon(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Super Administrator') || $request->user()?->can('settings.manage') || $request->user()?->can('system.manage'), 403);
+
+        $request->validate([
+            'favicon' => 'required|file|mimes:ico,png,svg,webp,jpg,jpeg|max:2048',
+        ]);
+
+        $file = $request->file('favicon');
+        $directory = public_path('uploads/branding');
+        if (! file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $extension = $file->getClientOriginalExtension() ?: 'png';
+        $filename = 'favicon_'.time().'.'.$extension;
+        $file->move($directory, $filename);
+
+        $faviconUrl = '/uploads/branding/'.$filename;
+        $oldFavicon = Setting::get('org.favicon_url');
+        Setting::set('org.favicon_url', $faviconUrl);
+
+        $this->auditService->log(
+            event: 'settings.favicon.uploaded',
+            auditable: null,
+            oldValues: ['org_favicon_url' => $oldFavicon],
+            newValues: ['org_favicon_url' => $faviconUrl]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Favicon updated successfully.',
+            'favicon_url' => $faviconUrl,
+        ]);
+    }
+
+    /**
+     * Remove custom favicon and revert to default.
+     */
+    public function deleteFavicon(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Super Administrator') || $request->user()?->can('settings.manage') || $request->user()?->can('system.manage'), 403);
+
+        $currentFavicon = (string) Setting::get('org.favicon_url');
+        if (! empty($currentFavicon) && str_starts_with($currentFavicon, '/uploads/branding/')) {
+            $filePath = public_path(ltrim($currentFavicon, '/'));
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+
+        Setting::set('org.favicon_url', '');
+
+        $this->auditService->log(
+            event: 'settings.favicon.removed',
+            auditable: null,
+            oldValues: ['org_favicon_url' => $currentFavicon],
+            newValues: ['org_favicon_url' => '']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Favicon removed successfully.',
+            'favicon_url' => '',
+        ]);
+    }
+
+    /**
      * Update general settings.
      */
     public function update(Request $request): JsonResponse
@@ -153,8 +300,16 @@ class SpaGeneralSettingsController extends Controller
         $validated = $request->validate([
             'org_name' => 'required|string|max:150',
             'org_logo_url' => 'nullable|string|max:1000',
+            'org_logo_dark_url' => 'nullable|string|max:1000',
+            'org_favicon_url' => 'nullable|string|max:1000',
+            'org_tagline' => 'nullable|string|max:255',
+            'org_primary_color' => ['nullable', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
+            'org_footer_text' => 'nullable|string|max:255',
             'org_support_email' => 'required|email|max:150',
             'org_website' => 'nullable|url|max:200',
+            'org_help_url' => 'nullable|string|max:500',
+            'org_login_heading' => 'nullable|string|max:255',
+            'org_login_subtext' => 'nullable|string|max:500',
             'org_timezone' => 'required|string|timezone',
 
             'privacy_policy_type' => 'nullable|string|in:none,url,custom',
@@ -178,14 +333,42 @@ class SpaGeneralSettingsController extends Controller
         $oldSettings = [
             'org_name' => Setting::get('org.name'),
             'org_logo_url' => Setting::get('org.logo_url'),
+            'org_logo_dark_url' => Setting::get('org.logo_dark_url'),
+            'org_favicon_url' => Setting::get('org.favicon_url'),
+            'org_tagline' => Setting::get('org.tagline'),
+            'org_primary_color' => Setting::get('org.primary_color'),
             'org_timezone' => Setting::get('org.timezone'),
             'org_min_buffer_minutes' => Setting::get('org.min_buffer_minutes'),
         ];
 
-        // Persist institutional settings
+        // Persist institutional & branding settings
         Setting::set('org.name', $validated['org_name']);
         if (array_key_exists('org_logo_url', $validated)) {
             Setting::set('org.logo_url', $validated['org_logo_url'] ?? '');
+        }
+        if (array_key_exists('org_logo_dark_url', $validated)) {
+            Setting::set('org.logo_dark_url', $validated['org_logo_dark_url'] ?? '');
+        }
+        if (array_key_exists('org_favicon_url', $validated)) {
+            Setting::set('org.favicon_url', $validated['org_favicon_url'] ?? '');
+        }
+        if (array_key_exists('org_tagline', $validated)) {
+            Setting::set('org.tagline', $validated['org_tagline'] ?? '');
+        }
+        if (array_key_exists('org_primary_color', $validated)) {
+            Setting::set('org.primary_color', $validated['org_primary_color'] ?? '#0ea5e9');
+        }
+        if (array_key_exists('org_footer_text', $validated)) {
+            Setting::set('org.footer_text', $validated['org_footer_text'] ?? '');
+        }
+        if (array_key_exists('org_help_url', $validated)) {
+            Setting::set('org.help_url', $validated['org_help_url'] ?? '');
+        }
+        if (array_key_exists('org_login_heading', $validated)) {
+            Setting::set('org.login_heading', $validated['org_login_heading'] ?? '');
+        }
+        if (array_key_exists('org_login_subtext', $validated)) {
+            Setting::set('org.login_subtext', $validated['org_login_subtext'] ?? '');
         }
         Setting::set('org.support_email', $validated['org_support_email']);
         Setting::set('org.website', $validated['org_website'] ?? url('/'));

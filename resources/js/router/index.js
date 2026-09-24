@@ -41,8 +41,10 @@ import InboundWebhooksPage from '@/pages/api/InboundWebhooksPage.vue';
 
 // 7. Identity & Resource Management
 import UsersPage from '@/pages/users/UsersPage.vue';
+import UserProfilePage from '@/pages/users/UserProfilePage.vue';
 import DepartmentsPage from '@/pages/departments/DepartmentsPage.vue';
 import PoolsPage from '@/pages/pools/PoolsPage.vue';
+import ZoomUsageReportPage from '@/pages/analytics/ZoomUsageReportPage.vue';
 
 // 8. Settings & Communications
 import GeneralSettingsPage from '@/pages/settings/GeneralSettingsPage.vue';
@@ -87,6 +89,8 @@ const routes = [
     { path: '/system/updates', redirect: '/app/settings/updates' },
     { path: '/admin/system/updates', redirect: '/app/settings/updates' },
     { path: '/notifications', redirect: '/app/notifications' },
+    { path: '/reports/zoom-usage', redirect: '/app/reports/zoom-usage' },
+    { path: '/pools/usage', redirect: '/app/reports/zoom-usage' },
 
     // Primary SPA Application Layout Shell
     {
@@ -273,10 +277,30 @@ const routes = [
                 meta: { title: 'Zoom Resource Pools' },
             },
             {
+                path: 'reports/zoom-usage',
+                name: 'reports.zoom-usage',
+                component: ZoomUsageReportPage,
+                meta: { title: 'Zoom Account Usage & Concurrency' },
+            },
+            {
+                path: 'pools/usage',
+                redirect: '/app/reports/zoom-usage',
+            },
+            {
                 path: 'users',
                 name: 'users.index',
                 component: UsersPage,
                 meta: { title: 'User Directory & Access Control' },
+            },
+            {
+                path: 'users/:id/profile',
+                name: 'users.profile',
+                component: UserProfilePage,
+                meta: { title: 'User Profile & Summary' },
+            },
+            {
+                path: 'users/:id',
+                redirect: (to) => `/app/users/${to.params.id}/profile`,
             },
             {
                 path: 'roles',

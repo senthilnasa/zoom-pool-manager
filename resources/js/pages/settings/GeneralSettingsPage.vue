@@ -53,88 +53,313 @@
     </div>
 
     <form v-else @submit.prevent="saveSettings" class="space-y-6">
-      <!-- Section 1: Institutional Identity & Logo Branding -->
+      <!-- Section 1: Institutional Identity, Logos & Visual Branding -->
       <div class="glass-card p-6 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 space-y-6">
-        <div class="border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
-          <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Building2 class="w-4 h-4 text-brand-500" />
-            <span>Institutional Identity & Logo Branding</span>
-          </h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Branding logo, authoritative organization name, support contact points, and primary system timezone.
-          </p>
+        <div class="border-b border-slate-200/60 dark:border-slate-800/60 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Building2 class="w-4 h-4 text-brand-500" />
+              <span>Institutional Identity & Brand Configuration</span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Customize logos, dynamic favicon, brand primary accent color, organization metadata, and sign-in page presentation.
+            </p>
+          </div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+            <Sparkles class="w-3.5 h-3.5" />
+            <span>Full Branding Suite</span>
+          </span>
         </div>
 
-        <!-- Logo Management Card -->
-        <div class="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-            Institution Logo
-          </label>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-            <!-- Logo Preview Container -->
-            <div class="w-24 h-24 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 flex items-center justify-center shrink-0 shadow-xs relative overflow-hidden group">
-              <img
-                v-if="form.org_logo_url"
-                :src="form.org_logo_url"
-                alt="Logo Preview"
-                class="w-full h-full object-contain"
-              />
-              <div v-else class="w-full h-full rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-black text-2xl shadow-sm">
-                {{ form.org_name ? form.org_name.charAt(0).toUpperCase() : 'Z' }}
+        <!-- Visual Assets: Logos, Favicon & Color Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Card A: Primary Institutional Logo -->
+          <div class="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700/60 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Sun class="w-3.5 h-3.5 text-amber-500" />
+                  <span>Primary Logo (Light Theme)</span>
+                </label>
+                <span class="text-[10px] text-slate-400 font-medium">Default Brandmark</span>
+              </div>
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-20 h-20 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+                  <img
+                    v-if="form.org_logo_url"
+                    :src="form.org_logo_url"
+                    alt="Primary Logo Preview"
+                    class="w-full h-full object-contain"
+                  />
+                  <div v-else class="w-full h-full rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-xs">
+                    {{ form.org_name ? form.org_name.charAt(0).toUpperCase() : 'Z' }}
+                  </div>
+                </div>
+
+                <div class="flex-1 space-y-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <input
+                      ref="logoInputRef"
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+                      @change="onLogoSelected"
+                      class="hidden"
+                    />
+                    <button
+                      type="button"
+                      @click="triggerLogoUpload"
+                      :disabled="uploadingLogo"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-xs transition disabled:opacity-50"
+                    >
+                      <UploadCloud class="w-3.5 h-3.5" :class="{ 'animate-bounce': uploadingLogo }" />
+                      <span>{{ uploadingLogo ? 'Uploading...' : 'Upload Logo' }}</span>
+                    </button>
+                    <button
+                      v-if="form.org_logo_url"
+                      type="button"
+                      @click="removeLogo"
+                      :disabled="uploadingLogo"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition disabled:opacity-50"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <input
+                    v-model="form.org_logo_url"
+                    type="text"
+                    placeholder="https://example.com/logo.png"
+                    class="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-slate-800 dark:text-slate-200 w-full focus:ring-1 focus:ring-brand-500"
+                  />
+                </div>
               </div>
             </div>
+            <p class="text-[10px] text-slate-400">
+              Shown in light mode headers, sidebar navigation, email notices, and standard views.
+            </p>
+          </div>
 
-            <!-- Upload Controls -->
-            <div class="space-y-2 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <input
-                  ref="logoInputRef"
-                  type="file"
-                  accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
-                  @change="onLogoSelected"
-                  class="hidden"
-                />
+          <!-- Card B: Dark Mode Logo -->
+          <div class="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700/60 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Moon class="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Dark Mode Logo (Optional)</span>
+                </label>
+                <span class="text-[10px] text-slate-400 font-medium">Night Theme</span>
+              </div>
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-20 h-20 rounded-xl bg-slate-950 border border-slate-800 p-2 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+                  <img
+                    v-if="form.org_logo_dark_url"
+                    :src="form.org_logo_dark_url"
+                    alt="Dark Logo Preview"
+                    class="w-full h-full object-contain"
+                  />
+                  <img
+                    v-else-if="form.org_logo_url"
+                    :src="form.org_logo_url"
+                    alt="Fallback Logo"
+                    class="w-full h-full object-contain opacity-60"
+                  />
+                  <div v-else class="w-full h-full rounded-lg bg-indigo-900/60 text-indigo-300 flex items-center justify-center font-black text-xl">
+                    {{ form.org_name ? form.org_name.charAt(0).toUpperCase() : 'Z' }}
+                  </div>
+                </div>
 
-                <button
-                  type="button"
-                  @click="triggerLogoUpload"
-                  :disabled="uploadingLogo"
-                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition disabled:opacity-50"
-                >
-                  <UploadCloud class="w-3.5 h-3.5" :class="{ 'animate-bounce': uploadingLogo }" />
-                  <span>{{ uploadingLogo ? 'Uploading Logo...' : 'Upload New Logo' }}</span>
-                </button>
+                <div class="flex-1 space-y-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <input
+                      ref="darkLogoInputRef"
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+                      @change="onDarkLogoSelected"
+                      class="hidden"
+                    />
+                    <button
+                      type="button"
+                      @click="triggerDarkLogoUpload"
+                      :disabled="uploadingDarkLogo"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition disabled:opacity-50"
+                    >
+                      <UploadCloud class="w-3.5 h-3.5" :class="{ 'animate-bounce': uploadingDarkLogo }" />
+                      <span>{{ uploadingDarkLogo ? 'Uploading...' : 'Upload Dark Logo' }}</span>
+                    </button>
+                    <button
+                      v-if="form.org_logo_dark_url"
+                      type="button"
+                      @click="removeDarkLogo"
+                      :disabled="uploadingDarkLogo"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition disabled:opacity-50"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <input
+                    v-model="form.org_logo_dark_url"
+                    type="text"
+                    placeholder="https://example.com/logo-white.png"
+                    class="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-slate-800 dark:text-slate-200 w-full focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400">
+              High-contrast logo for dark backgrounds. Falls back to primary logo if not configured.
+            </p>
+          </div>
 
-                <button
-                  v-if="form.org_logo_url"
-                  type="button"
-                  @click="removeLogo"
-                  :disabled="uploadingLogo"
-                  class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition disabled:opacity-50"
-                >
-                  <Trash2 class="w-3.5 h-3.5" />
-                  <span>Remove Custom Logo</span>
-                </button>
+          <!-- Card C: Favicon & Browser Tab Branding -->
+          <div class="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700/60 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Globe class="w-3.5 h-3.5 text-sky-500" />
+                  <span>Browser Tab Favicon</span>
+                </label>
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Live Tab Preview
+                </span>
               </div>
 
-              <div class="flex items-center gap-2">
-                <span class="text-[11px] text-slate-400">Or enter an image URL directly:</span>
+              <!-- Realistic Mini Browser Tab Preview -->
+              <div class="mb-3 p-2 bg-slate-200/80 dark:bg-slate-900/90 rounded-lg border border-slate-300/60 dark:border-slate-800 flex items-center justify-between shadow-inner">
+                <div class="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-md shadow-xs max-w-xs">
+                  <div class="w-4 h-4 rounded overflow-hidden flex items-center justify-center shrink-0">
+                    <img
+                      v-if="form.org_favicon_url"
+                      :src="form.org_favicon_url"
+                      alt="Favicon"
+                      class="w-full h-full object-contain"
+                    />
+                    <img
+                      v-else
+                      src="/favicon.svg"
+                      alt="Default Favicon"
+                      class="w-full h-full object-contain"
+                    />
+                  </div>
+                  <span class="text-[11px] font-medium text-slate-800 dark:text-slate-200 truncate">
+                    {{ form.org_name || 'Zoom Pool Manager' }}
+                  </span>
+                  <span class="text-[10px] text-slate-400 ml-1">×</span>
+                </div>
+                <span class="text-[10px] text-slate-400 hidden sm:inline">Browser Tab</span>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <input
+                    ref="faviconInputRef"
+                    type="file"
+                    accept=".ico,.png,.svg,.webp,.jpg,.jpeg,image/x-icon,image/png,image/svg+xml,image/webp"
+                    @change="onFaviconSelected"
+                    class="hidden"
+                  />
+                  <button
+                    type="button"
+                    @click="triggerFaviconUpload"
+                    :disabled="uploadingFavicon"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 shadow-xs transition disabled:opacity-50"
+                  >
+                    <UploadCloud class="w-3.5 h-3.5" :class="{ 'animate-bounce': uploadingFavicon }" />
+                    <span>{{ uploadingFavicon ? 'Uploading...' : 'Upload Favicon' }}</span>
+                  </button>
+                  <button
+                    v-if="form.org_favicon_url"
+                    type="button"
+                    @click="removeFavicon"
+                    :disabled="uploadingFavicon"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition disabled:opacity-50"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                    <span>Reset to Default</span>
+                  </button>
+                </div>
                 <input
-                  v-model="form.org_logo_url"
+                  v-model="form.org_favicon_url"
+                  @input="onFaviconUrlInput"
                   type="text"
-                  placeholder="https://example.com/logo.png"
-                  class="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-slate-800 dark:text-slate-200 flex-1 max-w-sm focus:ring-1 focus:ring-brand-500"
+                  placeholder="https://example.com/favicon.ico"
+                  class="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-slate-800 dark:text-slate-200 w-full focus:ring-1 focus:ring-sky-500"
                 />
               </div>
-
-              <p class="text-[11px] text-slate-400">
-                Supports PNG, SVG, JPG, WebP (Max 4MB). Shown in navigation sidebar, login screen, and institutional policies.
-              </p>
             </div>
+            <p class="text-[10px] text-slate-400 mt-2">
+              Supports .ico, .png, .svg, .webp (Max 2MB). Immediately updates browser tab icon in real time.
+            </p>
+          </div>
+
+          <!-- Card D: Primary Accent Brand Color -->
+          <div class="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700/60 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Palette class="w-3.5 h-3.5 text-violet-500" />
+                  <span>Primary Accent Tone</span>
+                </label>
+                <div class="flex items-center gap-2">
+                  <!-- Live Sample Preview -->
+                  <span
+                    class="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-xs"
+                    :style="{ backgroundColor: form.org_primary_color || '#0ea5e9' }"
+                  >
+                    Sample Accent
+                  </span>
+                </div>
+              </div>
+
+              <!-- Color picker input row -->
+              <div class="flex items-center gap-3 mb-3">
+                <div class="relative w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs cursor-pointer">
+                  <input
+                    v-model="form.org_primary_color"
+                    @input="onColorChanged"
+                    type="color"
+                    class="absolute -inset-2 w-14 h-14 cursor-pointer border-0 p-0"
+                  />
+                </div>
+                <div class="flex-1">
+                  <input
+                    v-model="form.org_primary_color"
+                    @input="onColorChanged"
+                    type="text"
+                    placeholder="#0ea5e9"
+                    maxlength="7"
+                    class="text-xs font-mono uppercase rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-slate-900 dark:text-white w-full focus:ring-1 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Preset Palette Swatches -->
+              <div>
+                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1.5">Preset Palettes</span>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <button
+                    v-for="preset in colorPresets"
+                    :key="preset.hex"
+                    type="button"
+                    @click="setPrimaryColor(preset.hex)"
+                    :title="preset.name + ' (' + preset.hex + ')'"
+                    class="w-6 h-6 rounded-lg transition-transform hover:scale-110 flex items-center justify-center shadow-xs"
+                    :style="{ backgroundColor: preset.hex }"
+                  >
+                    <Check v-if="form.org_primary_color?.toLowerCase() === preset.hex.toLowerCase()" class="w-3.5 h-3.5 text-white drop-shadow" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-2">
+              Defines the global CSS primary brand accent tone across navigation, buttons, and badges.
+            </p>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Institutional Metadata Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Institution / Organization Name *
@@ -147,6 +372,19 @@
               placeholder="e.g. Krea University"
             />
             <p class="text-[10px] text-slate-400 mt-1">Updates globally across the navigation sidebar, header, browser tabs, and emails.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Organization Tagline / Subtitle
+            </label>
+            <input
+              v-model="form.org_tagline"
+              type="text"
+              placeholder="e.g. Enterprise Video Pool Manager"
+              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+            />
+            <p class="text-[10px] text-slate-400 mt-1">Displayed directly underneath your institution name in the primary navigation sidebar.</p>
           </div>
 
           <div>
@@ -176,6 +414,19 @@
 
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Help Desk & Knowledgebase URL
+            </label>
+            <input
+              v-model="form.org_help_url"
+              type="url"
+              placeholder="https://help.institution.edu"
+              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+            />
+            <p class="text-[10px] text-slate-400 mt-1">When configured, adds a direct "Help Desk & Docs" link at the bottom of the navigation sidebar.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Primary System Timezone *
             </label>
             <select
@@ -185,6 +436,60 @@
             >
               <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
             </select>
+          </div>
+
+          <div class="col-span-1 md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Custom Footer / Copyright Attribution Text
+            </label>
+            <input
+              v-model="form.org_footer_text"
+              type="text"
+              placeholder="e.g. © 2026 Krea University. All rights reserved."
+              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+            />
+            <p class="text-[10px] text-slate-400 mt-1">
+              Displayed in page footers. If left blank, automatically displays "© {Year} {Institution Name}. All rights reserved."
+            </p>
+          </div>
+        </div>
+
+        <!-- Login Screen Presentation & Notice Card -->
+        <div class="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2">
+            <div class="flex items-center gap-2">
+              <Lock class="w-4 h-4 text-amber-500" />
+              <span class="text-xs font-bold text-slate-900 dark:text-white">Sign-In Screen Customization</span>
+            </div>
+            <span class="text-[10px] text-slate-400">Authentication Portal</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Custom Sign-In Headline
+              </label>
+              <input
+                v-model="form.org_login_heading"
+                type="text"
+                placeholder="e.g. Sign In to Krea University Video Portal"
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              />
+              <p class="text-[10px] text-slate-400 mt-1">Overrides the default title on the public login page.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Custom Sign-In Subtext & Security Policy Notice
+              </label>
+              <input
+                v-model="form.org_login_subtext"
+                type="text"
+                placeholder="e.g. Authorized staff only. Use institutional Google or Entra ID credentials."
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              />
+              <p class="text-[10px] text-slate-400 mt-1">Provides organizational guidance to users arriving at the login gate.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -608,6 +913,13 @@ import {
   Trash2,
   FileText,
   ExternalLink,
+  Globe,
+  Palette,
+  Moon,
+  Sun,
+  Lock,
+  Sparkles,
+  Check,
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
@@ -616,20 +928,44 @@ const brandingStore = useBrandingStore();
 const loading = ref(false);
 const saving = ref(false);
 const uploadingLogo = ref(false);
+const uploadingDarkLogo = ref(false);
+const uploadingFavicon = ref(false);
 const feedback = ref('');
 const feedbackError = ref(false);
 const activeLegalSection = ref('privacy');
+
 const logoInputRef = ref(null);
+const darkLogoInputRef = ref(null);
+const faviconInputRef = ref(null);
 
 const timezones = ref([]);
 const recordingModes = ref([]);
 const aiPolicies = ref([]);
 
+const colorPresets = [
+  { name: 'Sky Blue', hex: '#0ea5e9' },
+  { name: 'Indigo', hex: '#6366f1' },
+  { name: 'Emerald', hex: '#10b981' },
+  { name: 'Violet', hex: '#8b5cf6' },
+  { name: 'Rose', hex: '#f43f5e' },
+  { name: 'Amber', hex: '#f59e0b' },
+  { name: 'Blue', hex: '#2563eb' },
+  { name: 'Slate', hex: '#475569' },
+];
+
 const form = ref({
   org_name: '',
   org_logo_url: '',
+  org_logo_dark_url: '',
+  org_favicon_url: '',
+  org_tagline: '',
+  org_primary_color: '#0ea5e9',
+  org_footer_text: '',
   org_support_email: '',
   org_website: '',
+  org_help_url: '',
+  org_login_heading: '',
+  org_login_subtext: '',
   org_timezone: 'Asia/Kolkata',
 
   privacy_policy_type: 'none',
@@ -650,6 +986,7 @@ const form = ref({
   org_default_recording_mode: 'none',
 });
 
+// Primary Logo Handlers
 const triggerLogoUpload = () => {
   if (logoInputRef.value) {
     logoInputRef.value.click();
@@ -707,6 +1044,138 @@ const removeLogo = async () => {
   }
 };
 
+// Dark Mode Logo Handlers
+const triggerDarkLogoUpload = () => {
+  if (darkLogoInputRef.value) {
+    darkLogoInputRef.value.click();
+  }
+};
+
+const onDarkLogoSelected = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  uploadingDarkLogo.value = true;
+  feedback.value = '';
+  feedbackError.value = false;
+
+  const data = new FormData();
+  data.append('logo_dark', file);
+
+  try {
+    const res = await axios.post('/spa/settings/general/logo-dark', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    form.value.org_logo_dark_url = res.data.logo_dark_url;
+    brandingStore.updateBranding({ org_logo_dark_url: res.data.logo_dark_url });
+    feedback.value = res.data.message || 'Dark mode logo uploaded successfully.';
+  } catch (err) {
+    console.error('Failed to upload dark mode logo', err);
+    feedback.value = err.response?.data?.message || 'Failed to upload dark mode logo.';
+    feedbackError.value = true;
+  } finally {
+    uploadingDarkLogo.value = false;
+    if (darkLogoInputRef.value) darkLogoInputRef.value.value = '';
+  }
+};
+
+const removeDarkLogo = async () => {
+  if (!confirm('Are you sure you want to remove the dark mode logo?')) {
+    return;
+  }
+
+  uploadingDarkLogo.value = true;
+  feedback.value = '';
+  feedbackError.value = false;
+
+  try {
+    const res = await axios.delete('/spa/settings/general/logo-dark');
+    form.value.org_logo_dark_url = '';
+    brandingStore.updateBranding({ org_logo_dark_url: '' });
+    feedback.value = res.data.message || 'Dark mode logo removed successfully.';
+  } catch (err) {
+    console.error('Failed to remove dark mode logo', err);
+    feedback.value = err.response?.data?.message || 'Failed to remove dark mode logo.';
+    feedbackError.value = true;
+  } finally {
+    uploadingDarkLogo.value = false;
+  }
+};
+
+// Favicon Handlers
+const triggerFaviconUpload = () => {
+  if (faviconInputRef.value) {
+    faviconInputRef.value.click();
+  }
+};
+
+const onFaviconSelected = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  uploadingFavicon.value = true;
+  feedback.value = '';
+  feedbackError.value = false;
+
+  const data = new FormData();
+  data.append('favicon', file);
+
+  try {
+    const res = await axios.post('/spa/settings/general/favicon', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    form.value.org_favicon_url = res.data.favicon_url;
+    brandingStore.updateBranding({ org_favicon_url: res.data.favicon_url });
+    feedback.value = res.data.message || 'Favicon updated successfully.';
+  } catch (err) {
+    console.error('Failed to upload favicon', err);
+    feedback.value = err.response?.data?.message || 'Failed to upload favicon.';
+    feedbackError.value = true;
+  } finally {
+    uploadingFavicon.value = false;
+    if (faviconInputRef.value) faviconInputRef.value.value = '';
+  }
+};
+
+const removeFavicon = async () => {
+  if (!confirm('Are you sure you want to remove the custom favicon and restore the default icon?')) {
+    return;
+  }
+
+  uploadingFavicon.value = true;
+  feedback.value = '';
+  feedbackError.value = false;
+
+  try {
+    const res = await axios.delete('/spa/settings/general/favicon');
+    form.value.org_favicon_url = '';
+    brandingStore.updateBranding({ org_favicon_url: '' });
+    feedback.value = res.data.message || 'Favicon restored to default.';
+  } catch (err) {
+    console.error('Failed to remove favicon', err);
+    feedback.value = err.response?.data?.message || 'Failed to remove favicon.';
+    feedbackError.value = true;
+  } finally {
+    uploadingFavicon.value = false;
+  }
+};
+
+const onFaviconUrlInput = () => {
+  brandingStore.applyFavicon(form.value.org_favicon_url);
+};
+
+// Brand Color Handlers
+const setPrimaryColor = (hex) => {
+  form.value.org_primary_color = hex;
+  brandingStore.applyPrimaryColor(hex);
+};
+
+const onColorChanged = () => {
+  if (form.value.org_primary_color && form.value.org_primary_color.startsWith('#')) {
+    brandingStore.applyPrimaryColor(form.value.org_primary_color);
+  }
+};
+
 const fetchSettings = async () => {
   loading.value = true;
   feedback.value = '';
@@ -716,6 +1185,20 @@ const fetchSettings = async () => {
     timezones.value = res.data.timezones || [];
     recordingModes.value = res.data.recording_modes || [];
     aiPolicies.value = res.data.ai_companion_policies || [];
+
+    // Sync branding store with fetched settings
+    brandingStore.updateBranding({
+      org_name: form.value.org_name,
+      org_logo_url: form.value.org_logo_url,
+      org_logo_dark_url: form.value.org_logo_dark_url,
+      org_favicon_url: form.value.org_favicon_url,
+      org_tagline: form.value.org_tagline,
+      org_primary_color: form.value.org_primary_color,
+      org_help_url: form.value.org_help_url,
+      org_footer_text: form.value.org_footer_text,
+      org_support_email: form.value.org_support_email,
+      org_website: form.value.org_website,
+    });
   } catch (err) {
     console.error('Failed to load settings', err);
     feedback.value = 'Failed to load general platform settings.';
@@ -734,10 +1217,16 @@ const saveSettings = async () => {
     feedback.value = res.data.message || 'General settings saved successfully.';
     feedbackError.value = false;
 
-    // Immediately synchronize the branding store so the Sidebar, Header, Title, and Footer update reactively across all pages!
+    // Immediately synchronize the branding store so the Sidebar, Header, Title, Tab Favicon, and Footer update reactively across all pages!
     brandingStore.updateBranding({
       org_name: form.value.org_name,
       org_logo_url: form.value.org_logo_url,
+      org_logo_dark_url: form.value.org_logo_dark_url,
+      org_favicon_url: form.value.org_favicon_url,
+      org_tagline: form.value.org_tagline,
+      org_primary_color: form.value.org_primary_color,
+      org_help_url: form.value.org_help_url,
+      org_footer_text: form.value.org_footer_text,
       org_support_email: form.value.org_support_email,
       org_website: form.value.org_website,
       privacy_policy_type: form.value.privacy_policy_type,

@@ -9,9 +9,23 @@
     @if(session('error')) <meta name="flash-error" content="{{ session('error') }}"> @endif
     @if(session('warning')) <meta name="flash-warning" content="{{ session('warning') }}"> @endif
 
-    <title>@yield('title', config('app.name', 'Zoom Pool Manager'))</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
+    <title>@yield('title', \App\Domain\Settings\Models\Setting::get('org.name', config('app.name', 'Zoom Pool Manager')))</title>
+    @php
+        $faviconUrl = \App\Domain\Settings\Models\Setting::get('org.favicon_url');
+        $primaryColor = \App\Domain\Settings\Models\Setting::get('org.primary_color', '#0ea5e9');
+    @endphp
+    @if(!empty($faviconUrl))
+        <link rel="icon" href="{{ $faviconUrl }}">
+    @else
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+        <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
+    @endif
+
+    <style>
+        :root {
+            --brand-primary: {{ $primaryColor }};
+        }
+    </style>
 
     <!-- Theme Initialization (System preference by default with localStorage persistence) -->
     <script>
@@ -97,10 +111,15 @@
                 <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 group">
                     @php
                         $customLogo = \App\Domain\Settings\Models\Setting::get('org.logo_url');
+                        $customLogoDark = \App\Domain\Settings\Models\Setting::get('org.logo_dark_url');
                         $orgName = \App\Domain\Settings\Models\Setting::get('org.name', config('app.name', 'Zoom Pool Manager'));
+                        $orgTagline = \App\Domain\Settings\Models\Setting::get('org.tagline', 'Resource Manager');
                     @endphp
-                    @if(!empty($customLogo))
-                        <img src="{{ $customLogo }}" alt="{{ $orgName }}" class="w-10 h-10 object-contain rounded-xl shadow-sm group-hover:scale-105 transition duration-200" />
+                    @if(!empty($customLogo) || !empty($customLogoDark))
+                        <img src="{{ $customLogo ?: $customLogoDark }}" alt="{{ $orgName }}" class="w-10 h-10 object-contain rounded-xl shadow-sm group-hover:scale-105 transition duration-200 {{ !empty($customLogoDark) ? 'dark:hidden' : '' }}" />
+                        @if(!empty($customLogoDark))
+                            <img src="{{ $customLogoDark }}" alt="{{ $orgName }}" class="w-10 h-10 object-contain rounded-xl shadow-sm group-hover:scale-105 transition duration-200 hidden dark:block" />
+                        @endif
                     @else
                         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-glow group-hover:scale-105 transition duration-200">
                             {{ strtoupper(substr($orgName, 0, 1)) }}
@@ -111,7 +130,7 @@
                             <span class="truncate max-w-[130px]" title="{{ $orgName }}">{{ $orgName }}</span>
                             <span class="px-1.5 py-0.5 text-[10px] font-semibold bg-sky-500/10 dark:bg-sky-500/20 border border-sky-500/30 text-sky-600 dark:text-sky-400 rounded-md">v{{ config('zpm.version', '1.0.0') }}</span>
                         </div>
-                        <p class="text-[10px] text-slate-500 dark:text-slate-400">Resource Manager</p>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[140px]" title="{{ $orgTagline }}">{{ $orgTagline }}</p>
                     </div>
                 </a>
                 <button type="button" @click="mobileMenuOpen = false" class="lg:hidden text-slate-400 hover:text-slate-700 dark:hover:text-white p-1" aria-label="Close menu">
@@ -324,22 +343,14 @@
         <footer class="bg-white/50 dark:bg-slate-900/40 backdrop-blur-md border-t border-slate-200 dark:border-white/5 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
             <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-300">
-                    <span>{{ config('zpm.attribution.label', 'Made with ❤️ by Senthil Nasa') }}</span>
-                    <span>•</span>
-                    <a href="{{ config('zpm.attribution.url', 'https://github.com/senthilnasa') }}" target="_blank" rel="noopener noreferrer" class="text-sky-600 dark:text-sky-400 hover:underline underline-offset-2">GitHub</a>
+                    <span>{{ \App\Domain\Settings\Models\Setting::get('org.footer_text') ?: ('© ' . date('Y') . ' ' . \App\Domain\Settings\Models\Setting::get('org.name', config('app.name', 'Zoom Pool Manager')) . '. All rights reserved.') }}</span>
                 </div>
                 <div class="flex items-center space-x-3 text-slate-500 dark:text-slate-400 text-[11px]">
                     <a href="{{ route('legal.privacy') }}" class="hover:text-slate-700 dark:hover:text-slate-200 transition">Privacy</a>
                     <span>•</span>
                     <a href="{{ route('legal.terms') }}" class="hover:text-slate-700 dark:hover:text-slate-200 transition">Terms</a>
                     <span>•</span>
-                    @if(Route::has('admin.system.updates.index'))
-                        <a href="{{ route('admin.system.updates.index') }}" class="hover:text-slate-700 dark:hover:text-slate-200 transition">v{{ config('zpm.version', '1.0.0') }}</a>
-                    @else
-                        <span>v{{ config('zpm.version', '1.0.0') }}</span>
-                    @endif
-                    <span>•</span>
-                    <p class="max-w-md truncate">Not affiliated with or endorsed by Zoom Video Communications, Inc.</p>
+                    <span>v{{ config('zpm.version', '1.0.0') }}</span>
                 </div>
             </div>
         </footer>

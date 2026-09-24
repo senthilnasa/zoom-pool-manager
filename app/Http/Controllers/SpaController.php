@@ -43,6 +43,12 @@ class SpaController extends Controller
         $branding = [
             'org_name' => (string) Setting::get('org.name', config('app.name', 'Zoom Pool Manager')),
             'org_logo_url' => (string) Setting::get('org.logo_url', ''),
+            'org_logo_dark_url' => (string) Setting::get('org.logo_dark_url', ''),
+            'org_favicon_url' => (string) Setting::get('org.favicon_url', ''),
+            'org_tagline' => (string) Setting::get('org.tagline', 'Zoom Pool Manager'),
+            'org_primary_color' => (string) Setting::get('org.primary_color', '#0ea5e9'),
+            'org_help_url' => (string) Setting::get('org.help_url', ''),
+            'org_footer_text' => (string) Setting::get('org.footer_text', ''),
             'org_support_email' => (string) Setting::get('org.support_email', 'support@zoompoolmanager.org'),
             'org_website' => (string) Setting::get('org.website', url('/')),
             'privacy_policy' => [

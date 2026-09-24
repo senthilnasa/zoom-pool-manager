@@ -6,8 +6,8 @@
     <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200/60 dark:border-slate-800/60">
       <router-link to="/app/dashboard" class="flex items-center gap-3 group min-w-0 w-full">
         <!-- Logo Image or Fallback Initial Mark -->
-        <div v-if="brandingStore.orgLogoUrl" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 p-1 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
-          <img :src="brandingStore.orgLogoUrl" :alt="brandingStore.orgName" class="w-full h-full object-contain" />
+        <div v-if="brandingStore.orgLogoUrl || brandingStore.orgLogoDarkUrl" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 p-1 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+          <img :src="effectiveLogoUrl" :alt="brandingStore.orgName" class="w-full h-full object-contain" />
         </div>
         <div v-else class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-black shrink-0 shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
           {{ brandingStore.orgName ? brandingStore.orgName.charAt(0).toUpperCase() : 'Z' }}
@@ -16,8 +16,8 @@
           <div class="font-bold text-sm leading-tight text-slate-900 dark:text-white truncate" :title="brandingStore.orgName">
             {{ brandingStore.orgName }}
           </div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold truncate">
-            Zoom Pool Manager
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold truncate" :title="brandingStore.orgTagline || 'Zoom Pool Manager'">
+            {{ brandingStore.orgTagline || 'Zoom Pool Manager' }}
           </div>
         </div>
       </router-link>
@@ -357,6 +357,16 @@
           </router-link>
 
           <router-link
+            v-if="authStore.can('pool.manage') || authStore.can('resource.view') || authStore.isAdmin"
+            to="/app/reports/zoom-usage"
+            class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all"
+            :class="isActive('/app/reports/zoom-usage') ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'"
+          >
+            <BarChart3 class="w-4 h-4 shrink-0" />
+            <span>Usage & Concurrency</span>
+          </router-link>
+
+          <router-link
             v-if="authStore.can('user.view') || authStore.isAdmin || authStore.isDeptAdmin"
             to="/app/users"
             class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all"
@@ -484,25 +494,26 @@
           </router-link>
         </nav>
       </div>
-    </div>
 
-    <!-- Attribution & Footer -->
-    <div class="border-t border-slate-200/60 dark:border-slate-800/60">
-      <!-- Attribution -->
-      <div class="px-4 py-2 text-center border-b border-slate-100 dark:border-slate-800/40">
+      <!-- Help Desk & External Documentation -->
+      <div v-if="brandingStore.orgHelpUrl" class="pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
         <a
-          href="https://github.com/senthilnasa"
+          :href="brandingStore.orgHelpUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="text-[10px] text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 transition inline-flex items-center gap-1"
+          class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200 transition-all"
         >
-          <span>Made with</span>
-          <span class="text-rose-500 animate-pulse">❤️</span>
-          <span>by <strong class="font-semibold underline">Senthil Nasa</strong></span>
+          <div class="flex items-center gap-3">
+            <BookOpen class="w-4 h-4 shrink-0 text-brand-500" />
+            <span>Help Desk & Docs</span>
+          </div>
+          <ExternalLink class="w-3.5 h-3.5 opacity-60" />
         </a>
       </div>
+    </div>
 
-      <!-- User / Session Footer -->
+    <!-- User / Session Footer -->
+    <div class="border-t border-slate-200/60 dark:border-slate-800/60">
       <div class="p-3.5 flex items-center justify-between">
         <div class="flex items-center gap-2.5 overflow-hidden">
           <div class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-300 shrink-0">
@@ -580,6 +591,14 @@ const authStore = useAuthStore();
 const brandingStore = useBrandingStore();
 
 const isActive = (path) => route.path === path;
+
+const effectiveLogoUrl = computed(() => {
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  if (isDark && brandingStore.orgLogoDarkUrl) {
+    return brandingStore.orgLogoDarkUrl;
+  }
+  return brandingStore.orgLogoUrl || brandingStore.orgLogoDarkUrl;
+});
 
 const canViewGovernance = computed(() => {
   return (

@@ -13,6 +13,14 @@
       </div>
 
       <div class="flex items-center gap-2 flex-wrap">
+        <router-link
+          to="/app/reports/zoom-usage"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-brand-700 dark:text-brand-300 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/50 dark:hover:bg-brand-900/60 border border-brand-200/80 dark:border-brand-800/80 transition cursor-pointer"
+        >
+          <BarChart2 class="w-4 h-4 text-brand-600 dark:text-brand-400" />
+          <span>Usage & Concurrency Report</span>
+        </router-link>
+
         <button
           type="button"
           @click="showHowItWorks = !showHowItWorks"
@@ -537,6 +545,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import {
   Layers,
+  BarChart2,
   Plus,
   RefreshCw,
   Search,

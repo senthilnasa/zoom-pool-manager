@@ -277,6 +277,7 @@ class GlobalSearchService
 
         $matchedUsers = [];
         foreach ($users as $u) {
+            $userKey = $u->public_id ?: $u->id;
             $matchedUsers[] = [
                 'id' => $u->id,
                 'public_id' => $u->public_id,
@@ -284,7 +285,9 @@ class GlobalSearchService
                 'email' => $u->email,
                 'department' => $u->department ? $u->department->name : 'No Department',
                 'role' => $u->getRoleNames()->first() ?? 'User',
-                'path' => '/app/users?search='.urlencode($u->email),
+                'path' => '/app/users/'.$userKey.'/profile',
+                'profile_path' => '/app/users/'.$userKey.'/profile',
+                'directory_path' => '/app/users?search='.urlencode($u->email),
             ];
         }
 

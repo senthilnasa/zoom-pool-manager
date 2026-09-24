@@ -86,8 +86,8 @@
     <!-- ========================================== -->
     <div v-if="activeTab === 'users'" class="space-y-4">
       <!-- Search & Filters Bar -->
-      <div class="flex flex-col sm:flex-row gap-3">
-        <div class="flex-1 relative">
+      <div class="flex flex-col md:flex-row gap-3">
+        <div class="flex-1 relative min-w-0">
           <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             v-model="searchQuery"
@@ -100,33 +100,35 @@
             autocapitalize="off"
             spellcheck="false"
             data-lpignore="true"
-            placeholder="Search users by name or email address... (↵ to search)"
+            placeholder="Search users by name or email... (↵ to search)"
             class="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
           />
         </div>
 
-        <div class="w-48">
-          <SearchableSelect
-            v-model="selectedDepartment"
-            :options="[{ id: '', name: 'All Departments' }, ...(departments || [])]"
-            @change="fetchUsers(1)"
-            placeholder="All Departments"
-            search-placeholder="Search department..."
-            label-key="name"
-            value-key="id"
-          />
-        </div>
+        <div class="flex flex-col sm:flex-row gap-2.5 sm:gap-3 shrink-0">
+          <div class="w-full sm:w-44 md:w-48">
+            <SearchableSelect
+              v-model="selectedDepartment"
+              :options="[{ id: '', name: 'All Departments' }, ...(departments || [])]"
+              @change="fetchUsers(1)"
+              placeholder="All Departments"
+              search-placeholder="Search department..."
+              label-key="name"
+              value-key="id"
+            />
+          </div>
 
-        <div class="w-48">
-          <SearchableSelect
-            v-model="selectedRole"
-            :options="[{ name: '', label: 'All Roles' }, ...dynamicRoleOptions.map(r => ({ name: r.name, label: r.name + (r.is_system ? ' (Core)' : ' (Custom)') }))]"
-            @change="fetchUsers(1)"
-            placeholder="All Roles"
-            search-placeholder="Search role..."
-            label-key="label"
-            value-key="name"
-          />
+          <div class="w-full sm:w-44 md:w-48">
+            <SearchableSelect
+              v-model="selectedRole"
+              :options="[{ name: '', label: 'All Roles' }, ...dynamicRoleOptions.map(r => ({ name: r.name, label: r.name + (r.is_system ? ' (Core)' : ' (Custom)') }))]"
+              @change="fetchUsers(1)"
+              placeholder="All Roles"
+              search-placeholder="Search role..."
+              label-key="label"
+              value-key="name"
+            />
+          </div>
         </div>
       </div>
 
@@ -143,16 +145,16 @@
           <p class="text-xs text-slate-400 mt-1">Try adjusting your search query or filter parameters.</p>
         </div>
 
-        <div v-else class="overflow-x-auto">
-          <table class="w-full text-left text-sm border-collapse">
+        <div v-else class="overflow-x-auto min-w-full">
+          <table class="w-full text-left text-sm border-collapse min-w-full">
             <thead>
               <tr class="border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
-                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">User</th>
-                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Department</th>
-                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Assigned Roles</th>
-                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Security</th>
-                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Status</th>
-                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider whitespace-nowrap">User</th>
+                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider whitespace-nowrap">Department</th>
+                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider whitespace-nowrap">Assigned Roles</th>
+                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider whitespace-nowrap">Security</th>
+                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th class="py-3.5 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -163,12 +165,23 @@
               >
                 <td class="py-3.5 px-4">
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center font-bold text-xs text-brand-600 dark:text-brand-400 shrink-0">
+                    <div
+                      @click="viewUserProfile(u)"
+                      class="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center font-bold text-xs text-brand-600 dark:text-brand-400 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                      title="View User Level Summary & Profile"
+                    >
                       {{ u.name.charAt(0).toUpperCase() }}
                     </div>
                     <div>
                       <div class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
-                        <span>{{ u.name }}</span>
+                        <button
+                          type="button"
+                          @click="viewUserProfile(u)"
+                          class="hover:text-brand-600 dark:hover:text-brand-400 hover:underline text-left cursor-pointer transition"
+                          title="View User Level Summary & Profile"
+                        >
+                          {{ u.name }}
+                        </button>
                         <span
                           v-if="u.designation"
                           class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60"
@@ -214,11 +227,19 @@
                     {{ u.is_active ? 'Active' : 'Disabled' }}
                   </span>
                 </td>
-                <td class="py-3.5 px-4 text-right">
+                <td class="py-3.5 px-4 text-right whitespace-nowrap">
                   <div class="flex items-center justify-end gap-1.5">
                     <button
+                      @click="viewUserProfile(u)"
+                      class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 transition flex items-center gap-1 cursor-pointer"
+                      title="View User Level Summary & Profile"
+                    >
+                      <User class="w-3.5 h-3.5" />
+                      <span>Profile</span>
+                    </button>
+                    <button
                       @click="inspectUserPermissions(u)"
-                      class="px-2 py-1 rounded-lg text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/40 transition flex items-center gap-1"
+                      class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1"
                       title="Inspect Effective Permissions"
                     >
                       <ShieldCheck class="w-3.5 h-3.5" />
@@ -854,11 +875,17 @@ import {
   Check,
   CheckCircle2,
   AlertCircle,
+  User,
 } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+
+const viewUserProfile = (u) => {
+  const targetId = u.public_id || u.id;
+  router.push(`/app/users/${targetId}/profile`);
+};
 
 // Tabs: 'users' | 'roles'
 const activeTab = ref(route.query.tab === 'roles' ? 'roles' : 'users');

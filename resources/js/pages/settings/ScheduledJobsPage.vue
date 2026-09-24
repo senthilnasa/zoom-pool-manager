@@ -292,21 +292,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Attribution Footer -->
-    <div class="pt-6 border-t border-slate-200/80 dark:border-slate-700/80 text-center">
-      <p class="text-xs text-slate-400 dark:text-slate-500">
-        Zoom Pool Manager &bull; Enterprise Resource Allocation &bull; Made with ❤️ by
-        <a
-          href="https://github.com/senthilnasa"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="font-semibold text-brand-500 hover:underline inline-flex items-center gap-1"
-        >
-          Senthil Nasa
-        </a>
-      </p>
-    </div>
   </div>
 </template>
 
