@@ -18,7 +18,7 @@ class MailSettingsController extends Controller
         protected MailProviderManager $providerManager
     ) {}
 
-    public function index(): View
+    public function index(): View|JsonResponse
     {
         $currentProvider = Setting::get('mail.provider', config('mail.default', 'smtp'));
         $fromAddress = Setting::get('mail.from_address', config('mail.from.address', 'noreply@zoompoolmanager.org'));
@@ -31,19 +31,25 @@ class MailSettingsController extends Controller
         $smtpEncryption = Setting::get('mail.smtp_encryption', config('mail.mailers.smtp.encryption', 'tls'));
         $smtpUsername = Setting::get('mail.smtp_username', config('mail.mailers.smtp.username', ''));
 
-        return view('mail.settings', compact(
-            'currentProvider',
-            'fromAddress',
-            'fromName',
-            'replyTo',
-            'smtpHost',
-            'smtpPort',
-            'smtpEncryption',
-            'smtpUsername'
-        ));
+        if (request()->wantsJson()) {
+            return response()->json([
+                'current_provider' => $currentProvider,
+                'from_address' => $fromAddress,
+                'from_name' => $fromName,
+                'reply_to' => $replyTo,
+                'smtp_host' => $smtpHost,
+                'smtp_port' => $smtpPort,
+                'smtp_encryption' => $smtpEncryption,
+                'smtp_username' => $smtpUsername,
+            ]);
+        }
+
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Mail Settings</h1>',
+        ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'provider' => 'required|in:smtp,gmail,graph,log',
@@ -86,6 +92,10 @@ class MailSettingsController extends Controller
             }
         }
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Mail settings updated successfully.']);
+        }
+
         return redirect()->route('admin.mail.index')->with('success', 'Mail settings updated successfully.');
     }
 
@@ -106,14 +116,19 @@ class MailSettingsController extends Controller
 
     public function testSend(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'test_email' => 'required|email',
-        ]);
+        $recipient = $request->input('test_email', $request->input('recipient'));
+
+        if (empty($recipient) || ! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A valid recipient email address is required.',
+            ], 422);
+        }
 
         try {
             $provider = $this->providerManager->getProvider();
             $success = $provider->send(
-                toEmail: $validated['test_email'],
+                toEmail: (string) $recipient,
                 toName: 'Test Recipient',
                 subject: 'Test Email from Zoom Pool Manager',
                 htmlBody: '<p>This is a test email sent from <strong>Zoom Pool Manager</strong>. Your mail provider is configured correctly.</p>',
@@ -122,7 +137,7 @@ class MailSettingsController extends Controller
 
             return response()->json([
                 'success' => $success,
-                'message' => "Test email successfully sent to {$validated['test_email']}.",
+                'message' => "Test email successfully sent to {$recipient}.",
             ]);
         } catch (Throwable $e) {
             return response()->json([
@@ -132,7 +147,7 @@ class MailSettingsController extends Controller
         }
     }
 
-    public function deliveries(Request $request): View
+    public function deliveries(Request $request): View|JsonResponse
     {
         $status = $request->input('status');
 
@@ -144,10 +159,16 @@ class MailSettingsController extends Controller
 
         $deliveries = $query->paginate(25);
 
-        return view('mail.deliveries', compact('deliveries', 'status'));
+        if ($request->wantsJson()) {
+            return response()->json($deliveries);
+        }
+
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Mail Deliveries</h1>',
+        ]);
     }
 
-    public function retryDelivery(string $id): RedirectResponse
+    public function retryDelivery(string $id): RedirectResponse|JsonResponse
     {
         $delivery = EmailDelivery::where('public_id', $id)
             ->orWhere('id', $id)
@@ -160,6 +181,10 @@ class MailSettingsController extends Controller
         ]);
 
         SendQueuedEmailJob::dispatch($delivery);
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Email delivery requeued.']);
+        }
 
         return back()->with('success', 'Email delivery requeued.');
     }

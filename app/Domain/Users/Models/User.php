@@ -16,9 +16,28 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Spatie\Permission\Traits\HasRoles;
 use Symfony\Component\Uid\Ulid;
 
+/**
+ * @property int $id
+ * @property string $public_id
+ * @property int|null $department_id
+ * @property string $name
+ * @property string $email
+ * @property string|null $designation
+ * @property string|null $password
+ * @property string|null $timezone
+ * @property string|null $locale
+ * @property string|null $theme
+ * @property bool $is_active
+ * @property bool $mfa_enabled
+ * @property Carbon|null $last_login_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Department|null $department
+ */
 class User extends Authenticatable
 {
     use HasDepartmentScope, HasRoles, Notifiable, SoftDeletes;
@@ -28,9 +47,11 @@ class User extends Authenticatable
         'department_id',
         'name',
         'email',
+        'designation',
         'password',
         'timezone',
         'locale',
+        'theme',
         'is_active',
         'mfa_enabled',
         'last_login_at',

@@ -46,10 +46,8 @@ class ApprovalController extends Controller
             ->orderBy('decided_at', 'desc')
             ->paginate(15, ['*'], 'resolved_page');
 
-        return view('approvals.index', [
-            'pendingApprovals' => $pendingApprovals,
-            'resolvedApprovals' => $resolvedApprovals,
-            'delegatorIds' => $delegatorIds,
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Workflow Approvals</h1>',
         ]);
     }
 
@@ -58,38 +56,8 @@ class ApprovalController extends Controller
      */
     public function show(Request $request, string $publicId): View
     {
-        /** @var User $user */
-        $user = $request->user();
-
-        /** @var MeetingApproval $approval */
-        $approval = MeetingApproval::with([
-            'meeting.requester',
-            'meeting.owner',
-            'meeting.department',
-            'meeting.template',
-            'meeting.securityProfile',
-            'meeting.approvals.approver',
-        ])
-            ->where('public_id', $publicId)
-            ->firstOrFail();
-
-        $meeting = $approval->meeting;
-
-        // Preview conflicts
-        $conflictResult = $this->meetingService->previewConflicts(
-            startsAt: $meeting->starts_at,
-            endsAt: $meeting->ends_at,
-            participantCount: $meeting->participant_count,
-            user: $meeting->requester,
-            template: $meeting->template,
-            securityProfile: $meeting->securityProfile,
-            ignoreMeetingId: $meeting->id
-        );
-
-        return view('approvals.show', [
-            'approval' => $approval,
-            'meeting' => $meeting,
-            'conflictResult' => $conflictResult,
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Approval Request</h1>',
         ]);
     }
 

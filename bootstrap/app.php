@@ -17,6 +17,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             SecurityHeaders::class,
             EnsureInstalled::class,
@@ -29,7 +31,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(except: [
-            'webhooks/zoom/*',
+            'webhooks/zoom*',
+            'api/webhooks/zoom*',
             'api/*',
         ]);
     })

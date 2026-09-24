@@ -28,7 +28,7 @@ class EnsureInstalled
         $isInstalled = $this->isInstalled();
         $isInstallerRoute = $request->is('installer*');
 
-        if ($request->is('admin/health') || $request->is('up')) {
+        if ($request->is('admin/health') || $request->is('up') || $request->is('webhooks/*') || $request->is('api/webhooks/*')) {
             return $next($request);
         }
 

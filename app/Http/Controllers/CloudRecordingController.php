@@ -43,7 +43,9 @@ class CloudRecordingController extends Controller
 
         $recordings = $query->paginate(15)->withQueryString();
 
-        return view('recordings.index', compact('recordings', 'search', 'status'));
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Cloud Recordings</h1>',
+        ]);
     }
 
     /**
@@ -67,7 +69,9 @@ class CloudRecordingController extends Controller
             abort(403, 'Unauthorized access to recording.');
         }
 
-        return view('recordings.show', compact('recording'));
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Recording Details</h1>',
+        ]);
     }
 
     /**

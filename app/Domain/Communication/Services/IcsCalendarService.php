@@ -40,6 +40,10 @@ class IcsCalendarService
             $description .= "Passcode: {$meeting->passcode}\n";
         }
 
+        if ($meeting->share_host_key && ! empty($meeting->host_key)) {
+            $description .= "Host Key PIN: {$meeting->host_key} (In Zoom client: Participants > Claim Host > enter Host Key)\n";
+        }
+
         $timezoneStr = $meeting->timezone ?: Setting::get('org.timezone', 'Asia/Kolkata');
         $tz = new DateTimeZone($timezoneStr);
 

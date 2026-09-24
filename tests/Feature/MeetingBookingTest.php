@@ -157,7 +157,7 @@ class MeetingBookingTest extends TestCase
         $this->assertNotNull($meeting);
 
         $response->assertRedirect(route('meetings.show', $meeting->public_id));
-        $this->assertEquals('allocating', $meeting->status);
+        $this->assertEquals('scheduled', $meeting->status);
         $this->assertEquals($this->resource->id, $meeting->zoom_resource_id);
         $this->assertCount(2, $meeting->invitees);
 
@@ -165,7 +165,7 @@ class MeetingBookingTest extends TestCase
         $reservation = ResourceReservation::where('meeting_id', $meeting->id)->first();
         $this->assertNotNull($reservation);
         $this->assertEquals($this->resource->id, $reservation->resource_id);
-        $this->assertEquals('held', $reservation->status);
+        $this->assertEquals('confirmed', $reservation->status);
         // Occupied from is starts_at, occupied until includes buffer: 15 min
         $this->assertEquals(
             $startsAt->timestamp,

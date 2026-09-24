@@ -109,6 +109,12 @@ class SeriesAllocationService
                 'until_date' => ! empty($data['until_date']) ? Carbon::parse($data['until_date'])->toDateString() : end($validOccurrences)['starts_at']->toDateString(),
                 'occurrence_count' => count($validOccurrences),
                 'series_mode' => $seriesMode,
+                'recording_mode' => $data['recording_mode'] ?? $resolvedPolicy->recordingMode,
+                'waiting_room' => isset($data['waiting_room']) ? (bool) $data['waiting_room'] : (bool) ($securityProfile?->settings['waiting_room'] ?? true),
+                'join_before_host' => isset($data['join_before_host']) ? (bool) $data['join_before_host'] : false,
+                'jbh_time' => isset($data['jbh_time']) ? (int) $data['jbh_time'] : 0,
+                'attendance_tracking' => isset($data['attendance_tracking']) ? (bool) $data['attendance_tracking'] : true,
+                'share_host_key' => isset($data['share_host_key']) ? (bool) $data['share_host_key'] : false,
                 'status' => 'active',
                 'source' => $data['source'] ?? 'web',
             ]);
@@ -207,8 +213,8 @@ class SeriesAllocationService
                 inviteeEmails: $inviteeEmails
             );
 
-            // Reserve resource
-            $this->allocationEngine->holdResource(
+            // Reserve and confirm resource
+            $reservation = $this->allocationEngine->holdResource(
                 startsAt: $occ['starts_at'],
                 endsAt: $occ['ends_at'],
                 participantCount: $participantCount,
@@ -217,6 +223,11 @@ class SeriesAllocationService
                 preferredResource: $selectedResource,
                 meetingId: $meeting->id
             );
+
+            $this->allocationEngine->confirmReservation($reservation, $meeting->id);
+            app(MeetingLifecycleService::class)->provisionZoomDetails($meeting);
+            $meeting->status = 'scheduled';
+            $meeting->save();
         }
     }
 
@@ -289,8 +300,10 @@ class SeriesAllocationService
                 inviteeEmails: $inviteeEmails
             );
 
-            $reservation->meeting_id = $meeting->id;
-            $reservation->save();
+            $this->allocationEngine->confirmReservation($reservation, $meeting->id);
+            app(MeetingLifecycleService::class)->provisionZoomDetails($meeting);
+            $meeting->status = 'scheduled';
+            $meeting->save();
         }
     }
 
@@ -334,7 +347,12 @@ class SeriesAllocationService
             'template_id' => $template?->id,
             'security_profile_id' => $securityProfile?->id,
             'ai_companion_policy' => $resolvedPolicy->aiCompanionPolicy,
-            'recording_mode' => $resolvedPolicy->recordingMode,
+            'recording_mode' => $data['recording_mode'] ?? $resolvedPolicy->recordingMode,
+            'waiting_room' => isset($data['waiting_room']) ? (bool) $data['waiting_room'] : (bool) ($securityProfile?->settings['waiting_room'] ?? true),
+            'join_before_host' => isset($data['join_before_host']) ? (bool) $data['join_before_host'] : false,
+            'jbh_time' => isset($data['jbh_time']) ? (int) $data['jbh_time'] : 0,
+            'attendance_tracking' => isset($data['attendance_tracking']) ? (bool) $data['attendance_tracking'] : true,
+            'share_host_key' => isset($data['share_host_key']) ? (bool) $data['share_host_key'] : false,
             'external_participants' => ! empty($data['external_participants']),
             'registration_enabled' => ! empty($data['registration_enabled']),
             'zoom_resource_id' => $resource->id,

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="zpmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2b7fff" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Background Rounded Tile -->
+  <rect width="32" height="32" rx="7" fill="url(#zpmGrad)" />
+  <!-- Glass Inner Highlight -->
+  <rect x="1" y="1" width="30" height="15" rx="6" fill="white" opacity="0.15" />
+  <!-- Camera / Z Glyph -->
+  <path d="M7 11.5C7 10.67 7.67 10 8.5 10H17.5C18.33 10 19 10.67 19 11.5V20.5C19 21.33 18.33 22 17.5 22H8.5C7.67 22 7 21.33 7 20.5V11.5Z" fill="white" />
+  <!-- Video Triangle -->
+  <path d="M20.5 13.2L24.1 11.1C24.7 10.75 25.5 11.18 25.5 11.9V20.1C25.5 20.82 24.7 21.25 24.1 20.9L20.5 18.8V13.2Z" fill="white" opacity="0.9" />
+  <!-- Inner Z Accent -->
+  <path d="M10.5 13H15.5L11 19H15.5" stroke="#2b7fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg>

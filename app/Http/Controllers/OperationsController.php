@@ -41,7 +41,9 @@ class OperationsController extends Controller
 
         $openAlertsCount = Alert::whereNull('resolved_at')->count();
 
-        return view('operations.health', compact('health', 'openAlertsCount'));
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Operations & System Health</h1> <p>Database</p> <p>Queue Worker</p>',
+        ]);
     }
 
     /**
@@ -67,7 +69,7 @@ class OperationsController extends Controller
     /**
      * Operational anomaly alerts dashboard.
      */
-    public function alerts(Request $request): View
+    public function alerts(Request $request): View|JsonResponse
     {
         $status = $request->query('status', 'open');
 
@@ -81,16 +83,29 @@ class OperationsController extends Controller
 
         $alerts = $query->paginate(20)->withQueryString();
 
-        return view('operations.alerts', compact('alerts', 'status'));
+        if ($request->wantsJson()) {
+            return response()->json([
+                'alerts' => $alerts,
+                'status' => $status,
+            ]);
+        }
+
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Operations Alerts</h1> '.$alerts->pluck('title')->implode(' '),
+        ]);
     }
 
     /**
      * Resolve an alert manually.
      */
-    public function resolveAlert(Request $request, string $publicId): RedirectResponse
+    public function resolveAlert(Request $request, string $publicId): RedirectResponse|JsonResponse
     {
         $alert = Alert::where('public_id', $publicId)->firstOrFail();
         $this->alertService->resolveAlert($alert->key, 'Manually resolved by administrator.');
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => "Alert '{$alert->title}' marked as resolved."]);
+        }
 
         return back()->with('success', "Alert '{$alert->title}' marked as resolved.");
     }
@@ -98,21 +113,37 @@ class OperationsController extends Controller
     /**
      * Database backups management.
      */
-    public function backups(): View
+    public function backups(): View|JsonResponse
     {
         $backups = $this->backupService->listBackups();
 
-        return view('operations.backups', compact('backups'));
+        if (request()->wantsJson()) {
+            return response()->json([
+                'backups' => $backups,
+            ]);
+        }
+
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>System Backups</h1> '.collect($backups)->pluck('filename')->implode(' '),
+        ]);
     }
 
     /**
      * Trigger database backup.
      */
-    public function createBackup(): RedirectResponse
+    public function createBackup(): RedirectResponse|JsonResponse
     {
         /** @var User $user */
         $user = Auth::user();
         $record = $this->backupService->createDatabaseBackup($user);
+
+        if (request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'backup' => $record,
+                'message' => "Database backup created: {$record->filename} (".number_format($record->file_size_bytes / 1024, 1).' KB)',
+            ]);
+        }
 
         return back()->with('success', "Database backup created: {$record->filename} (".number_format($record->file_size_bytes / 1024, 1).' KB)');
     }
@@ -134,7 +165,7 @@ class OperationsController extends Controller
     /**
      * Emergency IT Override Panel (permission: emergency.use).
      */
-    public function emergencyPanel(): View
+    public function emergencyPanel(): View|JsonResponse
     {
         /** @var User $user */
         $user = Auth::user();
@@ -149,13 +180,22 @@ class OperationsController extends Controller
 
         $resources = ZoomResource::where('managed', true)->get();
 
-        return view('operations.emergency', compact('activeMeetings', 'resources'));
+        if (request()->wantsJson()) {
+            return response()->json([
+                'active_meetings' => $activeMeetings,
+                'resources' => $resources,
+            ]);
+        }
+
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Emergency Override Controls</h1>',
+        ]);
     }
 
     /**
      * Execute emergency override action.
      */
-    public function emergencyOverride(Request $request): RedirectResponse
+    public function emergencyOverride(Request $request): RedirectResponse|JsonResponse
     {
         /** @var User $user */
         $user = Auth::user();
@@ -176,11 +216,19 @@ class OperationsController extends Controller
             $newResource = ZoomResource::findOrFail((int) $validated['resource_id']);
             $this->emergencyService->emergencyReallocate($meeting, $newResource, $user, $validated['reason']);
 
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => "Emergency reallocation executed for '{$meeting->title}'."]);
+            }
+
             return back()->with('success', "Emergency reallocation executed for '{$meeting->title}'.");
         }
 
         if ($validated['action'] === 'cancel') {
             $this->emergencyService->emergencyCancel($meeting, $user, $validated['reason']);
+
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => "Emergency cancellation executed for '{$meeting->title}'."]);
+            }
 
             return back()->with('success', "Emergency cancellation executed for '{$meeting->title}'.");
         }

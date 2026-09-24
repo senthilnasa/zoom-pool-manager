@@ -44,6 +44,16 @@ Route::prefix('auth')->name('auth.')->group(function () {
         ->withoutMiddleware([ValidateCsrfToken::class]);
 });
 
+use App\Http\Controllers\Api\SpaAdminController;
+use App\Http\Controllers\Api\SpaAuthController;
+use App\Http\Controllers\Api\SpaDashboardController;
+use App\Http\Controllers\Api\SpaDataController;
+use App\Http\Controllers\Api\SpaGeneralSettingsController;
+use App\Http\Controllers\Api\SpaIdentityController;
+use App\Http\Controllers\Api\SpaJobSettingsController;
+use App\Http\Controllers\Api\SpaRoleController;
+use App\Http\Controllers\Api\SpaSearchController;
+use App\Http\Controllers\Api\ZoomSettingsController;
 use App\Http\Controllers\ApiAdminController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\CloudRecordingController;
@@ -57,17 +67,146 @@ use App\Http\Controllers\MeetingSeriesController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\QuotaController;
+use App\Http\Controllers\SpaController;
 use App\Http\Controllers\SystemUpdateController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WorkflowRuleController;
 
 // Inbound Zoom Webhook Intake (SPEC Part F6)
-Route::post('/webhooks/zoom/{public_id}', [WebhookController::class, 'handle'])
+Route::post('/webhooks/zoom/{public_id?}', [WebhookController::class, 'handle'])
     ->name('webhooks.zoom')
+    ->withoutMiddleware([ValidateCsrfToken::class]);
+
+Route::post('/api/webhooks/zoom/{public_id?}', [WebhookController::class, 'handle'])
+    ->name('api.webhooks.zoom')
     ->withoutMiddleware([ValidateCsrfToken::class]);
 
 // Authenticated Application Routes
 Route::middleware('auth')->group(function () {
+    // Vue 3 SPA Application Shell
+    Route::get('/app/{any?}', [SpaController::class, 'index'])->where('any', '.*')->name('spa');
+
+    // SPA JSON Endpoints
+    Route::prefix('spa')->name('spa.')->group(function () {
+        Route::get('/auth/me', [SpaAuthController::class, 'me'])->name('auth.me');
+        Route::post('/auth/theme', [SpaAuthController::class, 'updateTheme'])->name('auth.theme');
+        Route::get('/dashboard/stats', [SpaDashboardController::class, 'stats'])->name('dashboard.stats');
+        Route::get('/meetings', [SpaDataController::class, 'meetings'])->name('meetings');
+        Route::get('/meetings/export', [SpaDataController::class, 'exportMeetings'])->name('meetings.export');
+        Route::get('/meetings/options', [SpaDataController::class, 'meetingOptions'])->name('meetings.options');
+        Route::get('/recordings', [SpaDataController::class, 'recordings'])->name('recordings');
+        Route::post('/recordings', [SpaDataController::class, 'storeRecording'])->name('recordings.store');
+        Route::post('/recordings/sync', [SpaDataController::class, 'syncRecordings'])->name('recordings.sync');
+        Route::post('/recordings/sync-from-zoom', [SpaDataController::class, 'syncRecordings'])->name('recordings.sync-from-zoom');
+        Route::get('/attendance', [SpaDataController::class, 'attendance'])->name('attendance');
+        Route::get('/attendance/{publicId}', [SpaDataController::class, 'attendanceDetails'])->name('attendance.details');
+        Route::post('/attendance/sync', [SpaDataController::class, 'syncAttendance'])->name('attendance.sync');
+        Route::get('/attendance/{publicId}/export', [SpaDataController::class, 'exportAttendanceCsv'])->name('attendance.export');
+        Route::get('/approvals', [SpaDataController::class, 'approvals'])->name('approvals');
+        Route::get('/series', [SpaDataController::class, 'series'])->name('series');
+        Route::get('/calendar', [SpaDataController::class, 'calendar'])->name('calendar');
+        Route::post('/calendar/quick-book', [SpaDataController::class, 'quickBook'])->name('calendar.quick-book');
+        Route::get('/meetings/{publicId}/ics', [SpaDataController::class, 'icsDownload'])->name('meetings.ics-download');
+        Route::put('/meetings/{publicId}', [SpaDataController::class, 'updateMeeting'])->name('meetings.update');
+        Route::post('/meetings/{publicId}/extend', [SpaDataController::class, 'extendMeeting'])->name('meetings.extend');
+        Route::post('/meetings/{publicId}/invitees', [SpaDataController::class, 'addInvitee'])->name('meetings.invitees.store');
+        Route::post('/meetings/{publicId}/end-early', [SpaDataController::class, 'endEarly'])->name('meetings.end-early');
+        Route::delete('/recordings/{id}', [SpaDataController::class, 'deleteRecording'])->name('recordings.delete');
+
+        // General Institutional & Platform Settings
+        Route::get('/settings/general', [SpaGeneralSettingsController::class, 'show'])->name('settings.general.show');
+        Route::put('/settings/general', [SpaGeneralSettingsController::class, 'update'])->name('settings.general.update');
+
+        // Zoom Settings in SPA
+        Route::get('/settings/zoom', [ZoomSettingsController::class, 'show'])->name('settings.zoom.show');
+        Route::post('/settings/zoom', [ZoomSettingsController::class, 'update'])->name('settings.zoom.update');
+        Route::post('/settings/zoom/test', [ZoomSettingsController::class, 'test'])->name('settings.zoom.test');
+
+        // SSO & SAML Identity Providers (Google, Microsoft, SAML 2.0)
+        Route::get('/settings/identity-providers', [SpaIdentityController::class, 'identityProviders'])->name('settings.idp.index');
+        Route::post('/settings/identity-providers', [SpaIdentityController::class, 'storeIdentityProvider'])->name('settings.idp.store');
+        Route::get('/settings/identity-providers/{publicId}', [SpaIdentityController::class, 'showIdentityProvider'])->name('settings.idp.show');
+        Route::put('/settings/identity-providers/{publicId}', [SpaIdentityController::class, 'updateIdentityProvider'])->name('settings.idp.update');
+        Route::delete('/settings/identity-providers/{publicId}', [SpaIdentityController::class, 'deleteIdentityProvider'])->name('settings.idp.delete');
+        Route::post('/settings/identity-providers/{publicId}/test', [SpaIdentityController::class, 'testIdentityProvider'])->name('settings.idp.test');
+        Route::get('/settings/identity-providers/{publicId}/sp-metadata', [SpaIdentityController::class, 'spMetadata'])->name('settings.idp.sp-metadata');
+
+        // Directory & Active Directory Synchronization (Microsoft Entra ID, Google Workspace, LDAP)
+        Route::get('/settings/directory-sync', [SpaIdentityController::class, 'directorySyncConfigs'])->name('settings.directory.index');
+        Route::post('/settings/directory-sync', [SpaIdentityController::class, 'storeDirectorySyncConfig'])->name('settings.directory.store');
+        Route::get('/settings/directory-sync/{publicId}', [SpaIdentityController::class, 'showDirectorySyncConfig'])->name('settings.directory.show');
+        Route::put('/settings/directory-sync/{publicId}', [SpaIdentityController::class, 'updateDirectorySyncConfig'])->name('settings.directory.update');
+        Route::delete('/settings/directory-sync/{publicId}', [SpaIdentityController::class, 'deleteDirectorySyncConfig'])->name('settings.directory.delete');
+        Route::post('/settings/directory-sync/{publicId}/sync-now', [SpaIdentityController::class, 'syncDirectoryNow'])->name('settings.directory.sync-now');
+        Route::post('/settings/directory-sync/{publicId}/test', [SpaIdentityController::class, 'testDirectoryConnection'])->name('settings.directory.test');
+
+        // Background Scheduled Jobs & Automation Cadence
+        Route::get('/settings/jobs', [SpaJobSettingsController::class, 'index'])->name('settings.jobs.index');
+        Route::put('/settings/jobs/{key}', [SpaJobSettingsController::class, 'update'])->name('settings.jobs.update');
+        Route::post('/settings/jobs/{key}/run', [SpaJobSettingsController::class, 'run'])->name('settings.jobs.run');
+
+        // System updates
+        Route::get('/settings/updates', [SystemUpdateController::class, 'index'])->name('settings.updates.index');
+        Route::post('/settings/updates/check', [SystemUpdateController::class, 'check'])->name('settings.updates.check');
+        Route::post('/settings/updates/apply', [SystemUpdateController::class, 'apply'])->name('settings.updates.apply');
+
+        // Pools & Zoom Resources
+        Route::get('/pools', [SpaAdminController::class, 'pools'])->name('pools');
+        Route::post('/pools', [SpaAdminController::class, 'storePool'])->name('pools.store');
+        Route::post('/pools/{id}/toggle', [SpaAdminController::class, 'togglePool'])->name('pools.toggle');
+        Route::get('/resources', [SpaAdminController::class, 'resources'])->name('resources');
+        Route::post('/resources/{id}/toggle', [SpaAdminController::class, 'toggleResource'])->name('resources.toggle');
+        Route::post('/resources/sync-from-zoom', [SpaAdminController::class, 'syncZoomUsers'])->name('resources.sync-from-zoom');
+        Route::post('/resources/{id}/pools', [SpaAdminController::class, 'assignResourcePools'])->name('resources.assign-pools');
+
+        // Users & Departments
+        Route::get('/users', [SpaAdminController::class, 'users'])->name('users');
+        Route::post('/users', [SpaAdminController::class, 'storeUser'])->name('users.store');
+        Route::post('/users/{id}/toggle', [SpaAdminController::class, 'toggleUser'])->name('users.toggle');
+        Route::get('/users/{id}/permissions', [SpaRoleController::class, 'userPermissions'])->name('users.permissions');
+        Route::get('/departments', [SpaAdminController::class, 'departments'])->name('departments');
+        Route::post('/departments', [SpaAdminController::class, 'storeDepartment'])->name('departments.store');
+        Route::delete('/departments/{id}', [SpaAdminController::class, 'deleteDepartment'])->name('departments.delete');
+
+        // Role Management & Permissions
+        Route::get('/roles', [SpaRoleController::class, 'index'])->name('roles.index');
+        Route::get('/roles/permissions-matrix', [SpaRoleController::class, 'permissionsMatrix'])->name('roles.matrix');
+        Route::post('/roles', [SpaRoleController::class, 'store'])->name('roles.store');
+        Route::put('/roles/{id}', [SpaRoleController::class, 'update'])->name('roles.update');
+        Route::delete('/roles/{id}', [SpaRoleController::class, 'destroy'])->name('roles.destroy');
+
+        // Global Search
+        Route::get('/search', [SpaSearchController::class, 'search'])->name('search');
+
+        // Meeting Templates & Security Profiles
+        Route::get('/templates', [SpaAdminController::class, 'templates'])->name('templates');
+        Route::post('/templates', [SpaAdminController::class, 'storeTemplate'])->name('templates.store');
+        Route::get('/security-profiles', [SpaAdminController::class, 'securityProfiles'])->name('security-profiles');
+        Route::post('/security-profiles', [SpaAdminController::class, 'storeSecurityProfile'])->name('security-profiles.store');
+
+        // Blackouts & Policies
+        Route::get('/blackouts', [SpaAdminController::class, 'blackouts'])->name('blackouts');
+        Route::post('/blackouts', [SpaAdminController::class, 'storeBlackout'])->name('blackouts.store');
+        Route::delete('/blackouts/{id}', [SpaAdminController::class, 'deleteBlackout'])->name('blackouts.delete');
+        Route::get('/policies', [SpaAdminController::class, 'policies'])->name('policies');
+        Route::post('/policies', [SpaAdminController::class, 'storePolicy'])->name('policies.store');
+
+        // Waitlist
+        Route::get('/waitlist', [SpaAdminController::class, 'waitlist'])->name('waitlist');
+        Route::post('/waitlist/{id}/promote', [SpaAdminController::class, 'promoteWaitlist'])->name('waitlist.promote');
+        Route::post('/waitlist/{id}/cancel', [SpaAdminController::class, 'cancelWaitlist'])->name('waitlist.cancel');
+
+        // Cryptographic Audit Trail
+        Route::get('/audit-logs', [SpaAdminController::class, 'auditLogs'])->name('audit-logs');
+        Route::post('/audit-logs/verify', [SpaAdminController::class, 'verifyAuditChain'])->name('audit-logs.verify');
+
+        // Privacy & Retention
+        Route::get('/privacy', [SpaAdminController::class, 'privacyStats'])->name('privacy');
+        Route::post('/privacy/export', [SpaAdminController::class, 'exportUser'])->name('privacy.export');
+        Route::post('/privacy/anonymize', [SpaAdminController::class, 'anonymizeUser'])->name('privacy.anonymize');
+        Route::post('/privacy/purge', [SpaAdminController::class, 'purgeRetention'])->name('privacy.purge');
+    });
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('meetings')->name('meetings.')->group(function () {

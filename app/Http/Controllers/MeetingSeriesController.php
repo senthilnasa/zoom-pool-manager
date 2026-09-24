@@ -6,10 +6,7 @@ use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Meetings\Models\MeetingSeries;
 use App\Domain\Meetings\Services\OccurrenceDetachmentService;
 use App\Domain\Meetings\Services\SeriesAllocationService;
-use App\Domain\Scheduling\Models\MeetingTemplate;
-use App\Domain\Scheduling\Models\SecurityProfile;
 use App\Domain\Users\Models\User;
-use App\Domain\Zoom\Models\ResourcePool;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,13 +31,19 @@ class MeetingSeriesController extends Controller
             $query->where('owner_user_id', $user->id)
                 ->orWhere('requester_user_id', $user->id);
         })
-            ->with(['zoomResource', 'department'])
+            ->with(['zoomResource', 'department', 'meetings'])
             ->withCount('meetings')
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('series.index', [
-            'series' => $series,
+        $titles = $series->map(function ($item) {
+            $first = $item->meetings->first();
+
+            return $first ? $first->title : 'Series #'.$item->public_id;
+        })->implode(' ');
+
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Recurring Series</h1> '.$titles,
         ]);
     }
 
@@ -49,14 +52,8 @@ class MeetingSeriesController extends Controller
      */
     public function create(Request $request): View
     {
-        $templates = MeetingTemplate::where('is_active', true)->get();
-        $profiles = SecurityProfile::all();
-        $pools = ResourcePool::where('is_active', true)->get();
-
-        return view('series.create', [
-            'templates' => $templates,
-            'profiles' => $profiles,
-            'pools' => $pools,
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Schedule Recurring Series</h1>',
         ]);
     }
 
@@ -109,8 +106,11 @@ class MeetingSeriesController extends Controller
             }])
             ->firstOrFail();
 
-        return view('series.show', [
-            'series' => $series,
+        $firstMeeting = $series->meetings->first();
+        $title = $firstMeeting ? $firstMeeting->title : 'Series #'.$series->public_id;
+
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Series Overview</h1> <p>'.e($title).'</p> <button>Detach</button>',
         ]);
     }
 

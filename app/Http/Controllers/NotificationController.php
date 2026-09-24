@@ -15,7 +15,7 @@ class NotificationController extends Controller
         protected NotificationCenterService $notificationCenter
     ) {}
 
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -26,7 +26,16 @@ class NotificationController extends Controller
 
         $unreadCount = $this->notificationCenter->getUnreadCount($user);
 
-        return view('notifications.index', compact('notifications', 'unreadCount'));
+        if ($request->wantsJson()) {
+            return response()->json([
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount,
+            ]);
+        }
+
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Notifications</h1>',
+        ]);
     }
 
     public function markAsRead(Request $request, string $id): RedirectResponse|JsonResponse

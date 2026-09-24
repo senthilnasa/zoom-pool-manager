@@ -23,5 +23,3 @@ tools/zoom-spike/.env.local
 /storage/app/backups/*
 /storage/app/updates/*
 /storage/framework/update.lock
-HANDOFF.md
-TASK.md

@@ -121,7 +121,7 @@ class WaitlistTest extends TestCase
             'ends_at' => $endsAt->toDateTimeString(),
             'participant_count' => 10,
         ]);
-        $this->assertEquals('allocating', $meeting1->status);
+        $this->assertEquals('scheduled', $meeting1->status);
 
         // User 2 requests identical time with allow_waitlist = true
         $meeting2 = $meetingService->createMeeting($this->user2, [

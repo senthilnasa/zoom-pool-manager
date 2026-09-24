@@ -22,16 +22,16 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
         // Content Security Policy (CSP)
-        // Allows Alpine.js, Tailwind CSS CDN and required assets while maintaining strict boundaries
+        // Allows Alpine.js, Tailwind CSS, Stoplight Elements (Scramble API Docs) and required assets
         $csp = "default-src 'self'; "
-            ."script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
-            ."script-src-elem 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
-            ."style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; "
+            ."script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com; "
+            ."script-src-elem 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com; "
+            ."style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com https://unpkg.com; "
             ."img-src 'self' data: https:; "
             ."font-src 'self' data: https://fonts.gstatic.com; "
-            ."connect-src 'self' https://cdn.tailwindcss.com; "
+            ."connect-src 'self' https://cdn.tailwindcss.com https://unpkg.com; "
             ."frame-ancestors 'self'; "
-            ."form-action 'self';";
+            ."form-action 'self' https: http:;";
 
         $response->headers->set('Content-Security-Policy', $csp);
 

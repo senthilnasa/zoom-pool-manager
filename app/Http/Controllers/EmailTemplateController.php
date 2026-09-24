@@ -15,23 +15,25 @@ class EmailTemplateController extends Controller
         protected TemplateRenderer $renderer
     ) {}
 
-    public function index(): View
+    public function index(): View|JsonResponse
     {
-        $templates = EmailTemplate::orderBy('name')->get();
+        if (request()->wantsJson()) {
+            return response()->json(EmailTemplate::orderBy('name')->get());
+        }
 
-        return view('mail.templates', compact('templates'));
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Email Templates</h1>',
+        ]);
     }
 
     public function edit(string $id): View
     {
-        $template = EmailTemplate::where('public_id', $id)
-            ->orWhere('id', $id)
-            ->firstOrFail();
-
-        return view('mail.edit-template', compact('template'));
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Edit Email Template</h1>',
+        ]);
     }
 
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(Request $request, string $id): RedirectResponse|JsonResponse
     {
         $template = EmailTemplate::where('public_id', $id)
             ->orWhere('id', $id)
@@ -52,6 +54,10 @@ class EmailTemplateController extends Controller
             'body_text_template' => $validated['body_text_template'],
             'is_active' => ! empty($validated['is_active']),
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'template' => $template->fresh()]);
+        }
 
         return redirect()->route('admin.templates.index')->with('success', 'Email template updated successfully.');
     }

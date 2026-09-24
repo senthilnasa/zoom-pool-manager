@@ -2,6 +2,7 @@
 
 namespace App\Domain\Meetings\Models;
 
+use App\Domain\Attendance\Models\MeetingAttendance;
 use App\Domain\Meetings\Services\MeetingStateMachine;
 use App\Domain\Reconciliation\Models\DriftConflict;
 use App\Domain\Recordings\Models\CloudRecording;
@@ -36,6 +37,13 @@ use Symfony\Component\Uid\Ulid;
  * @property string|null $join_url
  * @property string|null $zoom_meeting_id
  * @property string|null $cancellation_reason
+ * @property string $recording_mode
+ * @property bool $waiting_room
+ * @property bool $join_before_host
+ * @property int $jbh_time
+ * @property bool $attendance_tracking
+ * @property bool $share_host_key
+ * @property string|null $host_key
  * @property int $requester_user_id
  * @property int $owner_user_id
  * @property int|null $department_id
@@ -73,6 +81,11 @@ class Meeting extends Model
         'security_profile_id',
         'ai_companion_policy',
         'recording_mode',
+        'waiting_room',
+        'join_before_host',
+        'jbh_time',
+        'attendance_tracking',
+        'share_host_key',
         'external_participants',
         'registration_enabled',
         'zoom_resource_id',
@@ -80,6 +93,7 @@ class Meeting extends Model
         'zoom_uuid',
         'join_url',
         'passcode',
+        'host_key',
         'link_distributed_at',
         'status',
         'idempotency_key',
@@ -95,6 +109,11 @@ class Meeting extends Model
         'occurrence_index' => 'integer',
         'passcode' => 'encrypted',
         'link_distributed_at' => 'datetime',
+        'waiting_room' => 'boolean',
+        'join_before_host' => 'boolean',
+        'jbh_time' => 'integer',
+        'attendance_tracking' => 'boolean',
+        'share_host_key' => 'boolean',
         'external_participants' => 'boolean',
         'registration_enabled' => 'boolean',
         'is_detached_from_series' => 'boolean',
@@ -213,6 +232,14 @@ class Meeting extends Model
     public function approvals(): HasMany
     {
         return $this->hasMany(MeetingApproval::class, 'meeting_id');
+    }
+
+    /**
+     * @return HasMany<MeetingAttendance, $this>
+     */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(MeetingAttendance::class, 'meeting_id');
     }
 
     /**

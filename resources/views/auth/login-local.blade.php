@@ -45,6 +45,13 @@
                            class="mt-1 block w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none sm:text-sm">
                 </div>
 
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input type="checkbox" name="remember" value="1" class="rounded border-slate-300 dark:border-slate-600 text-amber-600 shadow-sm focus:border-amber-300 focus:ring focus:ring-amber-200 focus:ring-opacity-50 mr-2">
+                        <span>Remember this device (Auto Sign-In)</span>
+                    </label>
+                </div>
+
                 <button type="submit"
                         class="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-xl shadow-sm transition">
                     Authenticate Break-Glass Account

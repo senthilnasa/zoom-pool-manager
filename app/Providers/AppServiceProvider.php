@@ -8,6 +8,7 @@ use App\Domain\HostControl\Services\ZoomMeetingHostProvider;
 use App\Domain\Users\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -41,5 +42,9 @@ class AppServiceProvider extends ServiceProvider
             return app()->environment('local', 'testing')
                 || ($user && ($user->hasRole(['Super Administrator', 'IT Administrator']) || $user->can('api.manage')));
         });
+
+        if (str_starts_with((string) config('app.url'), 'https://') || request()->header('X-Forwarded-Proto') === 'https') {
+            URL::forceScheme('https');
+        }
     }
 }

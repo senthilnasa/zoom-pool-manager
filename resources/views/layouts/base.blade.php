@@ -10,6 +10,8 @@
     @if(session('warning')) <meta name="flash-warning" content="{{ session('warning') }}"> @endif
 
     <title>@yield('title', config('app.name', 'Zoom Pool Manager'))</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
 
     <!-- Theme Initialization (System preference by default with localStorage persistence) -->
     <script>

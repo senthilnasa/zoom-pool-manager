@@ -25,12 +25,20 @@ class WorkflowRuleController extends Controller
     /**
      * List all configured workflow rules.
      */
-    public function index(): View
+    public function index(Request $request): View|JsonResponse
     {
-        $rules = WorkflowRule::orderedByPriority()->paginate(20);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'rules' => WorkflowRule::orderedByPriority()->get(),
+                'departments' => Department::all(),
+                'templates' => MeetingTemplate::all(),
+                'profiles' => SecurityProfile::all(),
+                'pools' => ResourcePool::all(),
+            ]);
+        }
 
-        return view('workflows.index', [
-            'rules' => $rules,
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Workflow Rules</h1>',
         ]);
     }
 
@@ -39,18 +47,15 @@ class WorkflowRuleController extends Controller
      */
     public function create(): View
     {
-        return view('workflows.create', [
-            'departments' => Department::all(),
-            'templates' => MeetingTemplate::all(),
-            'profiles' => SecurityProfile::all(),
-            'pools' => ResourcePool::all(),
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Create Workflow Rule</h1>',
         ]);
     }
 
     /**
      * Store newly created workflow rule.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -79,6 +84,10 @@ class WorkflowRuleController extends Controller
             ]
         );
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'rule' => $rule]);
+        }
+
         return redirect()->route('workflows.index')
             ->with('status', 'Workflow rule created successfully.');
     }
@@ -88,22 +97,15 @@ class WorkflowRuleController extends Controller
      */
     public function edit(string $publicId): View
     {
-        /** @var WorkflowRule $rule */
-        $rule = WorkflowRule::where('public_id', $publicId)->firstOrFail();
-
-        return view('workflows.edit', [
-            'rule' => $rule,
-            'departments' => Department::all(),
-            'templates' => MeetingTemplate::all(),
-            'profiles' => SecurityProfile::all(),
-            'pools' => ResourcePool::all(),
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Edit Workflow Rule</h1>',
         ]);
     }
 
     /**
      * Update workflow rule.
      */
-    public function update(Request $request, string $publicId): RedirectResponse
+    public function update(Request $request, string $publicId): RedirectResponse|JsonResponse
     {
         /** @var WorkflowRule $rule */
         $rule = WorkflowRule::where('public_id', $publicId)->firstOrFail();
@@ -134,6 +136,10 @@ class WorkflowRuleController extends Controller
             newValues: $rule->only(['name', 'priority', 'conditions', 'actions', 'is_enabled'])
         );
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'rule' => $rule]);
+        }
+
         return redirect()->route('workflows.index')
             ->with('status', 'Workflow rule updated successfully.');
     }
@@ -141,7 +147,7 @@ class WorkflowRuleController extends Controller
     /**
      * Delete workflow rule.
      */
-    public function destroy(Request $request, string $publicId): RedirectResponse
+    public function destroy(Request $request, string $publicId): RedirectResponse|JsonResponse
     {
         /** @var WorkflowRule $rule */
         $rule = WorkflowRule::where('public_id', $publicId)->firstOrFail();
@@ -155,6 +161,10 @@ class WorkflowRuleController extends Controller
 
         $rule->delete();
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->route('workflows.index')
             ->with('status', 'Workflow rule deleted.');
     }
@@ -162,14 +172,25 @@ class WorkflowRuleController extends Controller
     /**
      * Toggle rule enabled status.
      */
-    public function toggle(Request $request, string $publicId): RedirectResponse
+    public function toggle(Request $request, string $publicId): RedirectResponse|JsonResponse
     {
         /** @var WorkflowRule $rule */
         $rule = WorkflowRule::where('public_id', $publicId)->firstOrFail();
-        $rule->is_enabled = ! $rule->is_enabled;
-        $rule->save();
+        $rule->update(['is_enabled' => ! $rule->is_enabled]);
 
-        return back()->with('status', "Rule '{$rule->name}' is now ".($rule->is_enabled ? 'enabled' : 'disabled').'.');
+        $this->auditService->log(
+            event: 'workflow_rule.toggled',
+            auditable: $rule,
+            actor: $request->user(),
+            newValues: ['is_enabled' => $rule->is_enabled]
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'rule' => $rule->fresh()]);
+        }
+
+        return redirect()->route('workflows.index')
+            ->with('status', "Workflow rule '{$rule->name}' ".($rule->is_enabled ? 'enabled' : 'disabled').'.');
     }
 
     /**

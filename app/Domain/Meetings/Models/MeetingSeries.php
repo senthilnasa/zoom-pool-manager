@@ -28,6 +28,12 @@ class MeetingSeries extends Model
         'until_date',
         'occurrence_count',
         'series_mode',
+        'recording_mode',
+        'waiting_room',
+        'join_before_host',
+        'jbh_time',
+        'attendance_tracking',
+        'share_host_key',
         'status',
         'zoom_meeting_id',
         'zoom_resource_id',
@@ -39,6 +45,11 @@ class MeetingSeries extends Model
         'start_date' => 'date',
         'until_date' => 'date',
         'occurrence_count' => 'integer',
+        'waiting_room' => 'boolean',
+        'join_before_host' => 'boolean',
+        'jbh_time' => 'integer',
+        'attendance_tracking' => 'boolean',
+        'share_host_key' => 'boolean',
     ];
 
     protected static function booted(): void

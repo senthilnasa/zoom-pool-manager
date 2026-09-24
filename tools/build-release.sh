@@ -1,8 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 set -e
 
 echo "=== Building Zoom Pool Manager (ZPM) Standalone Release ZIP ==="
 
+ROOT_DIR="$(pwd)"
 BUILD_DIR="dist"
 VERSION_TAG="${1:-$(date +%Y%m%d%H%M%S)}"
 RELEASE_NAME="zpm-release-${VERSION_TAG}"
@@ -20,6 +21,8 @@ rsync -av --exclude='.git' \
           --exclude='dist' \
           --exclude='tools' \
           --exclude='.env' \
+          --exclude='node_modules' \
+          --exclude='.phpunit.result.cache' \
           --exclude='storage/*.lock' \
           --exclude='storage/app/backups/*' \
           --exclude='storage/app/updates/*' \
@@ -34,8 +37,7 @@ cd "${TARGET_DIR}"
 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
 echo "3. Creating release archive & checksum..."
-cd -
-cd "${BUILD_DIR}"
+cd "${ROOT_DIR}/${BUILD_DIR}"
 zip -r "${RELEASE_NAME}.zip" "${RELEASE_NAME}"
 rm -rf "${RELEASE_NAME}"
 

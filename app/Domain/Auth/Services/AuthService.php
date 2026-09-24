@@ -25,7 +25,7 @@ class AuthService
     ) {}
 
     /**
-     * Authenticate via local credentials with rate-limiting and MFA detection.
+     * Authenticate a user via email and password (local break-glass credentials).
      *
      * @return array{status: string, user?: User, error?: string}
      */
@@ -33,7 +33,8 @@ class AuthService
         string $email,
         string $password,
         string $ipAddress,
-        ?string $userAgent
+        ?string $userAgent,
+        bool $remember = false
     ): array {
         $throttleKey = Str::lower($email).'|'.$ipAddress;
 
@@ -71,7 +72,7 @@ class AuthService
             ];
         }
 
-        Auth::login($user);
+        Auth::login($user, $remember);
         $user->last_login_at = now();
         $user->save();
 
@@ -93,7 +94,8 @@ class AuthService
         User $user,
         string $code,
         string $ipAddress,
-        ?string $userAgent
+        ?string $userAgent,
+        bool $remember = false
     ): array {
         $throttleKey = 'totp|'.$user->id.'|'.$ipAddress;
 
@@ -146,7 +148,7 @@ class AuthService
 
         RateLimiter::clear($throttleKey);
 
-        Auth::login($user);
+        Auth::login($user, $remember);
         $user->last_login_at = now();
         $user->save();
 
@@ -261,7 +263,7 @@ class AuthService
             throw new AuthorizationException('This account has been deactivated. Please contact IT support.');
         }
 
-        Auth::login($user);
+        Auth::login($user, true);
         $user->last_login_at = now();
         $user->save();
 

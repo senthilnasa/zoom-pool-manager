@@ -36,11 +36,9 @@ class SystemUpdateController extends Controller
     {
         $this->authorizeUpdates();
 
-        $currentVersion = $this->updateService->getCurrentVersion();
-        $releaseInfo = $this->updateService->checkForUpdates(force: false);
-        $isLocked = $this->updateService->isLocked();
-
-        return view('system.updates', compact('currentVersion', 'releaseInfo', 'isLocked'));
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>System Updates</h1> <p>Made with ❤️ by Senthil Nasa</p>',
+        ]);
     }
 
     /**

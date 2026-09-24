@@ -2,6 +2,7 @@
 
 namespace App\Domain\Audit\Services;
 
+use Illuminate\Log\Logger;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
@@ -49,10 +50,22 @@ class LogRedactionProcessor implements ProcessorInterface
     ];
 
     /**
-     * Handle monolog invoke.
+     * Handle monolog invoke or Laravel tap invocation.
      */
-    public function __invoke(LogRecord $record): LogRecord
+    public function __invoke(mixed $record): mixed
     {
+        if ($record instanceof Logger) {
+            $record->pushProcessor($this);
+
+            // @phpstan-ignore return.type
+            return $record;
+        }
+
+        if (! ($record instanceof LogRecord)) {
+            // @phpstan-ignore return.type
+            return $record;
+        }
+
         $message = $record->message;
         foreach ($this->regexPatterns as $pattern => $replacement) {
             $message = preg_replace($pattern, $replacement, $message);

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AvailabilityController;
 use App\Http\Controllers\Api\V1\MeetingController;
 use App\Http\Controllers\Api\V1\RecordingController;
 use App\Http\Controllers\Api\V1\ResourcePoolController;
+use App\Http\Controllers\Api\ZoomSettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,4 +49,15 @@ Route::prefix('v1')->middleware(['api', 'api.auth', 'idempotent'])->group(functi
     Route::get('/recordings/{publicId}', [RecordingController::class, 'show'])
         ->middleware('api.scope:recordings:read')
         ->name('api.v1.recordings.show');
+
+    // Zoom Settings
+    Route::get('/settings/zoom', [ZoomSettingsController::class, 'show'])
+        ->middleware('api.scope:admin')
+        ->name('api.v1.settings.zoom.show');
+    Route::post('/settings/zoom', [ZoomSettingsController::class, 'update'])
+        ->middleware('api.scope:admin')
+        ->name('api.v1.settings.zoom.update');
+    Route::post('/settings/zoom/test', [ZoomSettingsController::class, 'test'])
+        ->middleware('api.scope:admin')
+        ->name('api.v1.settings.zoom.test');
 });

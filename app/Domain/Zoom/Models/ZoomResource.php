@@ -51,6 +51,10 @@ class ZoomResource extends Model
         'daily_api_reset_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'name',
+    ];
+
     protected static function booted(): void
     {
         static::creating(function (ZoomResource $resource) {

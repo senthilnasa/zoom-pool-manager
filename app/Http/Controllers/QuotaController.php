@@ -7,9 +7,11 @@ use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
 use App\Domain\Workflow\Models\Quota;
 use App\Domain\Workflow\Services\QuotaService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class QuotaController extends Controller
@@ -22,7 +24,7 @@ class QuotaController extends Controller
     /**
      * Display listing of configured quotas and their monthly consumption.
      */
-    public function index(): View
+    public function index(): View|JsonResponse
     {
         $quotas = Quota::with(['usages'])->paginate(20);
         $year = (int) Carbon::now()->format('Y');
@@ -47,18 +49,24 @@ class QuotaController extends Controller
             ];
         });
 
-        return view('quotas.index', [
-            'quotas' => $quotasWithStats,
-            'departments' => Department::all(),
-            'users' => User::orderBy('name')->take(50)->get(),
-            'currentPeriod' => Carbon::now()->format('F Y'),
+        if (request()->wantsJson()) {
+            return response()->json([
+                'quotas' => $quotasWithStats,
+                'departments' => Department::all(),
+                'users' => User::orderBy('name')->take(50)->get(),
+                'current_period' => Carbon::now()->format('F Y'),
+            ]);
+        }
+
+        return app(SpaController::class)->index(request(), [
+            'fallbackHtml' => '<h1>Quota Management</h1>',
         ]);
     }
 
     /**
      * Store or update quota.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'scope_type' => ['required', 'string', 'in:user,department'],
@@ -88,14 +96,18 @@ class QuotaController extends Controller
             newValues: $validated
         );
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'quota' => $quota]);
+        }
+
         return redirect()->route('quotas.index')
-            ->with('status', 'Quota successfully saved.');
+            ->with('status', 'Quota configured successfully.');
     }
 
     /**
      * Delete quota.
      */
-    public function destroy(Request $request, string $publicId): RedirectResponse
+    public function destroy(string $publicId): RedirectResponse|JsonResponse
     {
         /** @var Quota $quota */
         $quota = Quota::where('public_id', $publicId)->firstOrFail();
@@ -103,13 +115,17 @@ class QuotaController extends Controller
         $this->auditService->log(
             event: 'quota.deleted',
             auditable: $quota,
-            actor: $request->user(),
+            actor: Auth::user(),
             oldValues: ['scope_type' => $quota->scope_type, 'scope_id' => $quota->scope_id]
         );
 
         $quota->delete();
 
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->route('quotas.index')
-            ->with('status', 'Quota deleted.');
+            ->with('status', 'Quota limit removed.');
     }
 }

@@ -154,13 +154,26 @@ Settings that are not enforceable per meeting become "advisory" in the UI.
 
 ## 3. Final required scope list
 
-Copy the confirmed list into `config/zpm-zoom-scopes.php` and the Zoom setup guide.
+Single source of truth defined in `config/zoom.php` and displayed in the Settings UI and Help Guide:
 
-| Scope (exact name) | Needed for | Rows |
-|---|---|---|
-| | | |
+| Scope (exact name) | Granular Alternative | Needed for | Priority |
+|---|---|---|---|
+| `meeting:write:admin` | `meeting:write:meeting:admin` | Schedule pooled sessions, update meeting topics/times, apply security profiles, delete/release cancelled bookings | Required (Core) |
+| `meeting:read:admin` | `meeting:read:meeting:admin` | Query meeting details, retrieve dynamic JIT host `start_url`, verify session status | Required (Core) |
+| `user:read:admin` | `user:read:user:admin` | Inspect pooled host accounts, verify license types (Basic vs Licensed) and seat capacities | Required (Core) |
+| `user:write:admin` | `user:update:user:admin` | Automated rotation of the 6-digit host key PIN after each meeting concludes | Required (Core) |
+| `recording:read:admin` | `recording:read:recording:admin` | Index completed cloud recordings, secure playback redirects, download AI audio transcripts | Recommended |
+| `report:read:admin` | `report:read:list_meeting_participants:admin` | Past meeting participant reports, attendance join/leave times, session duration (Milestone M12/V1.1) | Recommended |
+| `dashboard:read:admin` | `dashboard:read:list_meeting_participants:admin` | Live meeting telemetry, latency, and active session diagnostic metrics | Optional |
 
-## 4. Differences from SPEC (owner review required)
+### Webhook Event Subscriptions (Feature → Event Subscriptions):
+- `meeting.started` - Host started pooled meeting
+- `meeting.ended` - Meeting concluded; triggers host key rotation & resource release
+- `meeting.updated` - Sync modifications made from Zoom client
+- `meeting.deleted` - Clean up reservations cancelled on Zoom
+- `recording.completed` - Cloud recording processed and ready for viewing
+- `recording.transcript_completed` - Audio/video transcripts ready
+
 
 | SPEC section | SPEC says | Reality | Proposed change | Owner decision |
 |---|---|---|---|---|

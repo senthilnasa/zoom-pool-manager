@@ -124,7 +124,7 @@ class QuotaEnforcementTest extends TestCase
             'ends_at' => Carbon::now()->addDays(2)->setTime(11, 0)->toDateTimeString(),
             'participant_count' => 10,
         ]);
-        $this->assertEquals('allocating', $meeting1->status);
+        $this->assertEquals('scheduled', $meeting1->status);
 
         // 2nd booking in same month should be rejected
         $this->expectException(\RuntimeException::class);
@@ -199,7 +199,7 @@ class QuotaEnforcementTest extends TestCase
             'participant_count' => 10,
         ]);
 
-        $this->assertEquals('allocating', $meeting2->status);
+        $this->assertEquals('scheduled', $meeting2->status);
     }
 
     public function test_privileged_user_bypasses_quota_limits(): void
@@ -220,6 +220,6 @@ class QuotaEnforcementTest extends TestCase
             'participant_count' => 10,
         ]);
 
-        $this->assertEquals('allocating', $meeting->status);
+        $this->assertEquals('scheduled', $meeting->status);
     }
 }

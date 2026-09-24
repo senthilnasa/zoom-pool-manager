@@ -20,6 +20,16 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, pdo_mysql, bcmath, gmp
           coverage: none
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies & Build Assets
+        run: |
+          npm ci
+          npm run build
+
       - name: Install Dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
@@ -68,6 +78,16 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, pdo_mysql, bcmath, gmp
           coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies & Build Assets
+        run: |
+          npm ci
+          npm run build
 
       - name: Install Dependencies
         run: composer install --prefer-dist --no-progress --no-interaction

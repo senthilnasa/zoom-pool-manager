@@ -57,11 +57,14 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $remember = $request->boolean('remember');
+
         $result = $this->authService->validateLocalCredentials(
             email: $validated['email'],
             password: $validated['password'],
             ipAddress: $request->ip() ?? '127.0.0.1',
-            userAgent: $request->userAgent()
+            userAgent: $request->userAgent(),
+            remember: $remember
         );
 
         if ($result['status'] === 'error') {
@@ -72,6 +75,7 @@ class LoginController extends Controller
 
         if ($result['status'] === 'mfa_required' && isset($result['user'])) {
             $request->session()->put('auth.mfa_user_id', $result['user']->id);
+            $request->session()->put('auth.mfa_remember', $remember);
 
             return redirect()->route('auth.totp');
         }
@@ -140,11 +144,14 @@ class LoginController extends Controller
             return redirect()->route('login')->withErrors(['email' => 'User session expired.']);
         }
 
+        $remember = (bool) $request->session()->pull('auth.mfa_remember', false);
+
         $result = $this->authService->verifyTotpChallenge(
             user: $user,
             code: (string) $request->input('code'),
             ipAddress: $request->ip() ?? '127.0.0.1',
-            userAgent: $request->userAgent()
+            userAgent: $request->userAgent(),
+            remember: $remember
         );
 
         if (! $result['success']) {

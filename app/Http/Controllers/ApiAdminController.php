@@ -8,6 +8,7 @@ use App\Domain\Api\Models\WebhookSubscription;
 use App\Domain\Api\Services\ApiKeyService;
 use App\Domain\Api\Services\OutboundWebhookService;
 use App\Domain\Users\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,21 +23,25 @@ class ApiAdminController extends Controller
     /**
      * Display list of API keys.
      */
-    public function indexKeys(Request $request): View
+    public function indexKeys(Request $request): View|JsonResponse
     {
-        $keys = ApiKey::with('user')
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+        if ($request->wantsJson()) {
+            $keys = ApiKey::with('user')
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
 
-        return view('api.keys', [
-            'keys' => $keys,
+            return response()->json($keys);
+        }
+
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>API Keys Management</h1>',
         ]);
     }
 
     /**
      * Create a new API key.
      */
-    public function storeKey(Request $request): RedirectResponse
+    public function storeKey(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -64,6 +69,14 @@ class ApiAdminController extends Controller
             actor: $actor
         );
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'key' => $result['key'],
+                'plainTextToken' => $result['plainTextToken'],
+            ]);
+        }
+
         return redirect()->route('admin.api-keys.index')
             ->with('status', 'API key created successfully.')
             ->with('plainTextToken', $result['plainTextToken']);
@@ -72,7 +85,7 @@ class ApiAdminController extends Controller
     /**
      * Revoke an API key.
      */
-    public function revokeKey(string $publicId, Request $request): RedirectResponse
+    public function revokeKey(string $publicId, Request $request): RedirectResponse|JsonResponse
     {
         /** @var ApiKey $key */
         $key = ApiKey::where('public_id', $publicId)->firstOrFail();
@@ -82,6 +95,10 @@ class ApiAdminController extends Controller
 
         $this->apiKeyService->revokeKey($key, $actor);
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->route('admin.api-keys.index')
             ->with('status', 'API key revoked.');
     }
@@ -89,7 +106,7 @@ class ApiAdminController extends Controller
     /**
      * Display outbound webhook subscriptions and deliveries.
      */
-    public function indexWebhooks(Request $request): View
+    public function indexWebhooks(Request $request): View|JsonResponse
     {
         $subscriptions = WebhookSubscription::with('creator')
             ->orderBy('created_at', 'desc')
@@ -100,16 +117,22 @@ class ApiAdminController extends Controller
             ->limit(25)
             ->get();
 
-        return view('api.webhooks', [
-            'subscriptions' => $subscriptions,
-            'deliveries' => $deliveries,
+        if ($request->wantsJson()) {
+            return response()->json([
+                'subscriptions' => $subscriptions,
+                'deliveries' => $deliveries,
+            ]);
+        }
+
+        return app(SpaController::class)->index($request, [
+            'fallbackHtml' => '<h1>Outbound Webhooks</h1>',
         ]);
     }
 
     /**
      * Create an outbound webhook subscription.
      */
-    public function storeWebhook(Request $request): RedirectResponse
+    public function storeWebhook(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
@@ -122,7 +145,7 @@ class ApiAdminController extends Controller
         /** @var User $actor */
         $actor = $request->user();
 
-        WebhookSubscription::create([
+        $subscription = WebhookSubscription::create([
             'name' => $validated['name'],
             'url' => $validated['url'],
             'secret' => $validated['secret'],
@@ -131,6 +154,10 @@ class ApiAdminController extends Controller
             'created_by_user_id' => $actor->id,
         ]);
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'subscription' => $subscription]);
+        }
+
         return redirect()->route('admin.outbound-webhooks.index')
             ->with('status', 'Webhook subscription created.');
     }
@@ -138,12 +165,16 @@ class ApiAdminController extends Controller
     /**
      * Send test ping to webhook subscription.
      */
-    public function testWebhook(string $publicId, Request $request): RedirectResponse
+    public function testWebhook(string $publicId, Request $request): RedirectResponse|JsonResponse
     {
         /** @var WebhookSubscription $subscription */
         $subscription = WebhookSubscription::where('public_id', $publicId)->firstOrFail();
 
         $this->webhookService->testPing($subscription);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => "Test ping dispatched to {$subscription->url}."]);
+        }
 
         return redirect()->route('admin.outbound-webhooks.index')
             ->with('status', "Test ping dispatched to {$subscription->url}.");
@@ -152,12 +183,16 @@ class ApiAdminController extends Controller
     /**
      * Toggle webhook subscription active state.
      */
-    public function toggleWebhook(string $publicId, Request $request): RedirectResponse
+    public function toggleWebhook(string $publicId, Request $request): RedirectResponse|JsonResponse
     {
         /** @var WebhookSubscription $subscription */
         $subscription = WebhookSubscription::where('public_id', $publicId)->firstOrFail();
 
         $subscription->update(['is_active' => ! $subscription->is_active]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'subscription' => $subscription->fresh()]);
+        }
 
         return redirect()->route('admin.outbound-webhooks.index')
             ->with('status', 'Webhook subscription updated.');

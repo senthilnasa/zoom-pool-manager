@@ -161,7 +161,7 @@ class WorkflowRulesTest extends TestCase
             'participant_count' => 5,
         ]);
 
-        $this->assertEquals('allocating', $meeting->status);
+        $this->assertEquals('scheduled', $meeting->status);
         $this->assertEquals($this->resource->id, $meeting->zoom_resource_id);
     }
 

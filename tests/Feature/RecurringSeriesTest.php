@@ -204,7 +204,7 @@ class RecurringSeriesTest extends TestCase
             $this->assertDatabaseHas('resource_reservations', [
                 'meeting_id' => $m->id,
                 'resource_id' => $series->zoom_resource_id,
-                'status' => 'held',
+                'status' => 'confirmed',
             ]);
         }
     }
