@@ -66,7 +66,7 @@ class SyncCloudRecordingsCommand extends Command
             }
 
             // Check active managed resources
-            $resources = ZoomResource::with('zoomUser')->where('managed', true)->limit(10)->get();
+            $resources = ZoomResource::with('zoomUser')->where('managed', true)->get();
             $totalSynced = 0;
 
             foreach ($resources as $res) {
@@ -75,7 +75,7 @@ class SyncCloudRecordingsCommand extends Command
                     continue;
                 }
 
-                $url = "https://api.zoom.us/v2/users/{$email}/recordings?from=".now()->subDays(3)->toDateString();
+                $url = "https://api.zoom.us/v2/users/{$email}/recordings?from=".now()->subDays(30)->toDateString();
                 $resp = Http::timeout(10)->withHeaders(['Authorization' => 'Bearer '.$token])->get($url);
 
                 if ($resp->successful()) {

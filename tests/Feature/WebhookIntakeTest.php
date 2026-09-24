@@ -296,4 +296,21 @@ class WebhookIntakeTest extends TestCase
         $eventEnded->refresh();
         $this->assertEquals('processed', $eventEnded->status);
     }
+
+    public function test_get_webhook_endpoint_returns_informational_response(): void
+    {
+        $response = $this->get('/webhooks/zoom');
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => 'active',
+                'supported_method' => 'POST',
+            ]);
+
+        $apiResponse = $this->get('/api/webhooks/zoom');
+        $apiResponse->assertStatus(200)
+            ->assertJson([
+                'status' => 'active',
+                'supported_method' => 'POST',
+            ]);
+    }
 }

@@ -58,6 +58,12 @@ class SpaGeneralSettingsController extends Controller
             // Recording & Governance Policies
             'org_ai_companion_policy' => (string) Setting::get('org.ai_companion_policy', 'ALLOWED'),
             'org_default_recording_mode' => (string) Setting::get('org.default_recording_mode', 'none'),
+
+            // Workflow & Approval Policies
+            'require_meeting_approval' => (bool) Setting::get('org.require_meeting_approval', true),
+
+            // NOC Wallboard API Token
+            'noc_api_token' => (string) Setting::get('noc.api_token', 'noc_live_'.substr(hash('sha256', config('app.key', 'zpm_noc_default_secret')), 0, 32)),
         ];
 
         // Curated list of timezones
@@ -328,6 +334,8 @@ class SpaGeneralSettingsController extends Controller
 
             'org_ai_companion_policy' => 'required|string|in:ALLOWED,RESTRICTED,DISABLED',
             'org_default_recording_mode' => 'required|string|in:none,cloud,local,mandatory_cloud',
+            'require_meeting_approval' => 'nullable|boolean',
+            'noc_api_token' => 'nullable|string|max:100',
         ]);
 
         $oldSettings = [
@@ -398,6 +406,13 @@ class SpaGeneralSettingsController extends Controller
 
         Setting::set('org.ai_companion_policy', $validated['org_ai_companion_policy']);
         Setting::set('org.default_recording_mode', $validated['org_default_recording_mode']);
+
+        if (array_key_exists('require_meeting_approval', $validated)) {
+            Setting::set('org.require_meeting_approval', (bool) $validated['require_meeting_approval']);
+        }
+        if (! empty($validated['noc_api_token'])) {
+            Setting::set('noc.api_token', trim((string) $validated['noc_api_token']));
+        }
 
         $this->auditService->log(
             event: 'settings.general.updated',

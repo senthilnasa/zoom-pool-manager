@@ -71,9 +71,9 @@ class MeetingNotificationService
     /**
      * Send notifications when a meeting requires approval.
      *
-     * @param  array<int, User>  $approvers
+     * @param  iterable<User>  $approvers
      */
-    public function notifyMeetingRequested(Meeting $meeting, array $approvers, bool $sync = false): void
+    public function notifyMeetingRequested(Meeting $meeting, iterable $approvers, bool $sync = false): void
     {
         foreach ($approvers as $approver) {
             $this->mailService->queueEmail(
@@ -93,7 +93,19 @@ class MeetingNotificationService
                 user: $approver,
                 type: 'approval_required',
                 title: 'Approval Required: '.$meeting->title,
-                message: "{$meeting->requester->name} requested a meeting requiring your sign-off.",
+                message: "{$meeting->requester?->name} requested a meeting requiring your sign-off.",
+                data: ['meeting_id' => $meeting->public_id]
+            );
+        }
+
+        // Notify requester that meeting was submitted for approval
+        $requester = $meeting->requester;
+        if ($requester) {
+            $this->notificationCenter->notify(
+                user: $requester,
+                type: 'approval_pending',
+                title: 'Meeting Request Submitted: '.$meeting->title,
+                message: 'Your meeting request has been submitted and is pending workflow approval.',
                 data: ['meeting_id' => $meeting->public_id]
             );
         }

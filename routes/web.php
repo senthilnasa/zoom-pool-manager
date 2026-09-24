@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\SpaDataController;
 use App\Http\Controllers\Api\SpaGeneralSettingsController;
 use App\Http\Controllers\Api\SpaIdentityController;
 use App\Http\Controllers\Api\SpaJobSettingsController;
+use App\Http\Controllers\Api\SpaMeetingCustomFieldController;
 use App\Http\Controllers\Api\SpaReportController;
 use App\Http\Controllers\Api\SpaRoleController;
 use App\Http\Controllers\Api\SpaSearchController;
@@ -81,10 +82,12 @@ use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WorkflowRuleController;
 
 // Inbound Zoom Webhook Intake (SPEC Part F6)
+Route::get('/webhooks/zoom/{public_id?}', [WebhookController::class, 'ping'])->name('webhooks.zoom.ping');
 Route::post('/webhooks/zoom/{public_id?}', [WebhookController::class, 'handle'])
     ->name('webhooks.zoom')
     ->withoutMiddleware([ValidateCsrfToken::class]);
 
+Route::get('/api/webhooks/zoom/{public_id?}', [WebhookController::class, 'ping'])->name('api.webhooks.zoom.ping');
 Route::post('/api/webhooks/zoom/{public_id?}', [WebhookController::class, 'handle'])
     ->name('api.webhooks.zoom')
     ->withoutMiddleware([ValidateCsrfToken::class]);
@@ -123,6 +126,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/meetings/{publicId}/invitees', [SpaDataController::class, 'addInvitee'])->name('meetings.invitees.store');
         Route::post('/meetings/{publicId}/end-early', [SpaDataController::class, 'endEarly'])->name('meetings.end-early');
         Route::delete('/recordings/{id}', [SpaDataController::class, 'deleteRecording'])->name('recordings.delete');
+
+        // Meeting Custom Fields Management
+        Route::get('/meeting-custom-fields', [SpaMeetingCustomFieldController::class, 'index'])->name('spa.custom-fields.index');
+        Route::post('/meeting-custom-fields', [SpaMeetingCustomFieldController::class, 'store'])->name('spa.custom-fields.store');
+        Route::put('/meeting-custom-fields/{publicId}', [SpaMeetingCustomFieldController::class, 'update'])->name('spa.custom-fields.update');
+        Route::delete('/meeting-custom-fields/{publicId}', [SpaMeetingCustomFieldController::class, 'destroy'])->name('spa.custom-fields.destroy');
 
         // General Institutional & Platform Settings
         Route::get('/settings/general', [SpaGeneralSettingsController::class, 'show'])->name('settings.general.show');

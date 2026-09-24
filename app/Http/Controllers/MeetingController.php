@@ -124,6 +124,7 @@ class MeetingController extends Controller
             'attendance_tracking' => ['nullable', 'boolean'],
             'share_host_key' => ['nullable', 'boolean'],
             'passcode' => ['nullable', 'string', 'max:32'],
+            'custom_fields' => ['nullable', 'array'],
             'is_recurring' => ['nullable', 'boolean'],
             'rrule' => ['nullable', 'string'],
             'frequency' => ['nullable', 'string', 'in:DAILY,WEEKLY,MONTHLY'],

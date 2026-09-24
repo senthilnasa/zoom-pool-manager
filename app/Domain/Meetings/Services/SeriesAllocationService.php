@@ -117,6 +117,7 @@ class SeriesAllocationService
                 'share_host_key' => isset($data['share_host_key']) ? (bool) $data['share_host_key'] : false,
                 'status' => 'active',
                 'source' => $data['source'] ?? 'web',
+                'custom_fields' => $data['custom_fields'] ?? null,
             ]);
 
             if ($seriesMode === 'SINGLE_RESOURCE') {
@@ -358,6 +359,7 @@ class SeriesAllocationService
             'zoom_resource_id' => $resource->id,
             'status' => 'allocating',
             'source' => $data['source'] ?? 'web',
+            'custom_fields' => $data['custom_fields'] ?? null,
             'is_detached_from_series' => false,
         ]);
 

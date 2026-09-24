@@ -6,6 +6,7 @@ use App\Domain\Communication\Jobs\SendQueuedEmailJob;
 use App\Domain\Communication\Models\EmailDelivery;
 use App\Domain\Communication\Models\EmailTemplate;
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Settings\Models\Setting;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -86,7 +87,8 @@ class MailDeliveryService
         $delivery->save();
 
         // 5. Dispatch job
-        if ($sync) {
+        $sendImmediately = (bool) Setting::get('mail.send_immediately', true);
+        if ($sync || config('queue.default') === 'sync' || $sendImmediately) {
             try {
                 SendQueuedEmailJob::dispatchSync($delivery, $attachments);
             } catch (Throwable $e) {

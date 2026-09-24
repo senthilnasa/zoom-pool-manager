@@ -6,6 +6,7 @@ use App\Domain\Attendance\Models\MeetingAttendance;
 use App\Domain\Attendance\Services\ZoomAttendanceSyncService;
 use App\Domain\Communication\Services\IcsCalendarService;
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Meetings\Models\MeetingCustomField;
 use App\Domain\Meetings\Models\MeetingInvitee;
 use App\Domain\Meetings\Models\MeetingSeries;
 use App\Domain\Meetings\Services\MeetingLifecycleService;
@@ -246,12 +247,18 @@ class SpaDataController extends Controller
             ? User::where('is_active', true)->select('id', 'name', 'email', 'department_id', 'designation')->with('department:id,name')->orderBy('name')->limit(50)->get()
             : [];
 
+        $customFields = MeetingCustomField::where('is_active', true)
+            ->orderBy('display_order', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
         return response()->json([
             'templates' => $templates,
             'profiles' => $profiles,
             'pools' => $pools,
             'can_book_on_behalf' => $canBookOnBehalf,
             'users' => $users,
+            'custom_fields' => $customFields,
         ]);
     }
 
@@ -368,10 +375,11 @@ class SpaDataController extends Controller
 
         // Live Mode
         \Artisan::call('zpm:recordings:sync');
+        $output = trim(\Artisan::output());
 
         return response()->json([
             'success' => true,
-            'message' => 'Triggered Zoom cloud recordings synchronization.',
+            'message' => $output ?: 'Triggered Zoom cloud recordings synchronization.',
         ]);
     }
 
@@ -663,6 +671,8 @@ class SpaDataController extends Controller
             'attendance_tracking' => ['nullable', 'boolean'],
             'share_host_key' => ['nullable', 'boolean'],
             'passcode' => ['nullable', 'string', 'max:32'],
+            'custom_fields' => ['nullable', 'array'],
+            'invitees' => ['nullable', 'string'],
             'is_recurring' => ['nullable', 'boolean'],
             'rrule' => ['nullable', 'string'],
             'frequency' => ['nullable', 'string', 'in:DAILY,WEEKLY,MONTHLY'],
@@ -678,6 +688,11 @@ class SpaDataController extends Controller
 
         if (! empty($validated['pool_id']) && empty($validated['preferred_pool_id'])) {
             $validated['preferred_pool_id'] = $validated['pool_id'];
+        }
+
+        $inviteeEmails = [];
+        if (! empty($validated['invitees'])) {
+            $inviteeEmails = array_map('trim', explode(',', $validated['invitees']));
         }
 
         try {
@@ -708,7 +723,7 @@ class SpaDataController extends Controller
                 $validated['duration_minutes'] = max(15, (int) $startsAt->diffInMinutes($endsAt));
                 $validated['series_mode'] = $validated['series_mode'] ?? 'SINGLE_RESOURCE';
 
-                $series = $this->seriesAllocationService->createSeries($user, $validated);
+                $series = $this->seriesAllocationService->createSeries($user, $validated, $inviteeEmails);
                 $firstMeeting = $series->meetings()->first();
 
                 return response()->json([
@@ -719,7 +734,7 @@ class SpaDataController extends Controller
                 ]);
             }
 
-            $meeting = $this->meetingService->createMeeting($user, $validated);
+            $meeting = $this->meetingService->createMeeting($user, $validated, $inviteeEmails);
 
             return response()->json([
                 'success' => true,
@@ -824,6 +839,7 @@ class SpaDataController extends Controller
             'attendance_tracking' => ['nullable', 'boolean'],
             'share_host_key' => ['nullable', 'boolean'],
             'passcode' => ['nullable', 'string', 'max:32'],
+            'custom_fields' => ['nullable', 'array'],
             'invitees' => ['nullable', 'string'],
         ]);
 

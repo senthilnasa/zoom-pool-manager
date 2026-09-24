@@ -39,6 +39,7 @@ class MeetingSeries extends Model
         'zoom_resource_id',
         'term_id',
         'source',
+        'custom_fields',
     ];
 
     protected $casts = [
@@ -50,6 +51,7 @@ class MeetingSeries extends Model
         'jbh_time' => 'integer',
         'attendance_tracking' => 'boolean',
         'share_host_key' => 'boolean',
+        'custom_fields' => 'array',
     ];
 
     protected static function booted(): void

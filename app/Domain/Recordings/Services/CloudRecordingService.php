@@ -59,28 +59,45 @@ class CloudRecordingService
         $zoomResourceId = $meeting?->zoom_resource_id;
 
         // Upsert the recording
-        /** @var CloudRecording $recording */
-        $recording = CloudRecording::updateOrCreate(
-            [
-                'zoom_meeting_id' => $zoomMeetingId ?: 'UNKNOWN',
-                'recording_start' => $recordingStartTime,
-            ],
-            [
-                'meeting_id' => $meeting?->id,
-                'zoom_resource_id' => $zoomResourceId,
-                'logical_owner_user_id' => $logicalOwnerUserId,
-                'zoom_recording_id' => (string) ($object['uuid'] ?? null),
-                'topic' => $topic,
-                'storage_provider' => 'zoom',
-                'recording_end' => $recordingEndTime,
-                'duration_minutes' => $durationMinutes,
-                'file_size_bytes' => $totalSize,
-                'share_url' => $shareUrl ?: null,
-                'play_url' => $shareUrl ?: null,
-                'passcode' => ! empty($object['password']) ? (string) $object['password'] : null,
-                'status' => 'completed',
-            ]
-        );
+        $zoomRecordingUuid = ! empty($object['uuid']) ? (string) $object['uuid'] : null;
+        $existing = null;
+
+        if ($zoomRecordingUuid) {
+            $existing = CloudRecording::where('zoom_recording_id', $zoomRecordingUuid)->first();
+        }
+
+        if (! $existing && $zoomMeetingId !== '' && $recordingStartTime) {
+            $existing = CloudRecording::where('zoom_meeting_id', $zoomMeetingId)
+                ->where('recording_start', $recordingStartTime)
+                ->first();
+        }
+
+        $recordingData = [
+            'meeting_id' => $meeting?->id,
+            'zoom_resource_id' => $zoomResourceId,
+            'logical_owner_user_id' => $logicalOwnerUserId,
+            'zoom_meeting_id' => $zoomMeetingId ?: 'UNKNOWN',
+            'zoom_recording_id' => $zoomRecordingUuid,
+            'topic' => $topic,
+            'storage_provider' => 'zoom',
+            'recording_start' => $recordingStartTime,
+            'recording_end' => $recordingEndTime,
+            'duration_minutes' => $durationMinutes,
+            'file_size_bytes' => $totalSize,
+            'share_url' => $shareUrl ?: null,
+            'play_url' => $shareUrl ?: null,
+            'passcode' => ! empty($object['password']) ? (string) $object['password'] : null,
+            'status' => 'completed',
+        ];
+
+        if ($existing) {
+            $existing->update($recordingData);
+            /** @var CloudRecording $recording */
+            $recording = $existing;
+        } else {
+            /** @var CloudRecording $recording */
+            $recording = CloudRecording::create($recordingData);
+        }
 
         // Ingest files
         /** @var array<int, array<string, mixed>> $recordingFiles */

@@ -13,6 +13,7 @@ use App\Domain\Scheduling\Models\SecurityProfile;
 use App\Domain\Scheduling\Services\AllocationEngine;
 use App\Domain\Scheduling\Services\ConflictDetectionService;
 use App\Domain\Scheduling\Services\EffectivePolicyResolver;
+use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\User;
 use App\Domain\Workflow\Services\ApprovalWorkflowService;
 use App\Domain\Workflow\Services\QuotaService;
@@ -166,6 +167,21 @@ class MeetingService
                 $approvalSteps = [
                     ['step' => 1, 'approver_type' => 'dept_admin', 'mode' => 'ANY'],
                 ];
+            } else {
+                $orgRequiresApproval = (bool) Setting::get('org.require_meeting_approval', false);
+                $canBypassApproval = $requester->can('meeting.approve')
+                    || $requester->can('meeting.override')
+                    || $requester->hasRole('super_admin')
+                    || $requester->hasRole('Super Administrator')
+                    || $requester->hasRole('Administrator')
+                    || $requester->hasRole('it_admin');
+
+                if ($orgRequiresApproval && ! $canBypassApproval) {
+                    $requiresApproval = true;
+                    $approvalSteps = [
+                        ['step' => 1, 'approver_type' => 'dept_admin', 'mode' => 'ANY'],
+                    ];
+                }
             }
         }
 
@@ -217,6 +233,7 @@ class MeetingService
                 'external_participants' => ! empty($data['external_participants']),
                 'registration_enabled' => ! empty($data['registration_enabled']),
                 'passcode' => $data['passcode'] ?? null,
+                'custom_fields' => $data['custom_fields'] ?? null,
                 'status' => 'draft',
                 'source' => $data['source'] ?? 'web',
             ]);
@@ -236,7 +253,15 @@ class MeetingService
 
             // Handle approvals
             if ($initialStatus === 'pending_approval') {
-                $this->approvalService->createApprovals($meeting, $approvalSteps);
+                $approvals = $this->approvalService->createApprovals($meeting, $approvalSteps);
+                try {
+                    $approverIds = $approvals->pluck('approver_user_id')->filter()->unique();
+                    $approvers = User::whereIn('id', $approverIds)->get();
+                    $notificationService = app(MeetingNotificationService::class);
+                    $notificationService->notifyMeetingRequested($meeting, $approvers);
+                } catch (\Throwable $e) {
+                    Log::warning("Notification dispatch failed for pending approval meeting #{$meeting->id}: {$e->getMessage()}");
+                }
             }
 
             // If auto-allocating, hold and confirm resource immediately
@@ -435,6 +460,9 @@ class MeetingService
             }
             if (! empty($data['passcode'])) {
                 $meeting->passcode = (string) $data['passcode'];
+            }
+            if (array_key_exists('custom_fields', $data)) {
+                $meeting->custom_fields = $data['custom_fields'];
             }
 
             $meeting->save();

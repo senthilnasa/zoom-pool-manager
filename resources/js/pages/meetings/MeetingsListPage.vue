@@ -548,6 +548,17 @@
           <p>{{ selectedMeeting.description }}</p>
         </div>
 
+        <!-- Custom Fields if present -->
+        <div v-if="selectedMeeting.custom_fields && Object.keys(selectedMeeting.custom_fields).length > 0" class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/60 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Custom Fields</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div v-for="(val, key) in selectedMeeting.custom_fields" :key="key" class="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
+              <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">{{ formatCustomFieldKey(key) }}</span>
+              <span class="font-medium text-slate-800 dark:text-slate-200 break-words">{{ val }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Attendees & Invitees -->
         <div class="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/60 space-y-2.5">
           <div class="flex items-center justify-between">
@@ -838,6 +849,10 @@ const extendMeeting = async (meeting, minutes = 15) => {
   }
 };
 
+const formatCustomFieldKey = (key) => {
+  return String(key).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 const openEditModal = (meeting) => {
   const formatInput = (dStr) => {
     if (!dStr) return '';
@@ -859,6 +874,7 @@ const openEditModal = (meeting) => {
     share_host_key: Boolean(meeting.share_host_key),
     recording_mode: meeting.recording_mode || 'none',
     attendance_tracking: Boolean(meeting.attendance_tracking),
+    custom_fields: meeting.custom_fields ? { ...meeting.custom_fields } : {},
   };
   showEditModal.value = true;
 };

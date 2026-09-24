@@ -3,7 +3,9 @@
 namespace App\Domain\Workflow\Services;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Communication\Services\MeetingNotificationService;
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Meetings\Services\MeetingLifecycleService;
 use App\Domain\Meetings\Services\MeetingStateMachine;
 use App\Domain\Scheduling\Models\ResourceReservation;
 use App\Domain\Scheduling\Services\AllocationEngine;
@@ -15,6 +17,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class ApprovalWorkflowService
@@ -172,6 +175,13 @@ class ApprovalWorkflowService
                     $this->allocationEngine->releaseReservation($heldReservation);
                 }
 
+                try {
+                    $notificationService = app(MeetingNotificationService::class);
+                    $notificationService->notifyMeetingRejected($meeting, $notes ?? 'Meeting request was rejected during review.');
+                } catch (\Throwable $e) {
+                    Log::warning("Notification dispatch failed for rejected meeting #{$meeting->id}: {$e->getMessage()}");
+                }
+
                 return $approval;
             }
 
@@ -259,6 +269,19 @@ class ApprovalWorkflowService
             actor: $actor,
             reason: 'Resource confirmed and meeting scheduled.'
         );
+
+        try {
+            if (! $meeting->zoom_meeting_id) {
+                app(MeetingLifecycleService::class)->provisionZoomDetails($meeting);
+                $meeting->save();
+            }
+
+            $notificationService = app(MeetingNotificationService::class);
+            $notificationService->notifyMeetingApproved($meeting);
+            $notificationService->notifyMeetingConfirmed($meeting);
+        } catch (\Throwable $e) {
+            Log::warning("Notification dispatch failed for approved meeting #{$meeting->id}: {$e->getMessage()}");
+        }
     }
 
     /**

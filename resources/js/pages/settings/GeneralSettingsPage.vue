@@ -825,6 +825,21 @@
             />
             <p class="text-[10px] text-slate-400 mt-1">Minutes before meeting when host key becomes visible/claimable.</p>
           </div>
+
+          <div class="md:col-span-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+            <div>
+              <label class="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                Require Workflow Approval for Meeting Bookings
+              </label>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                When enabled, booking requests made by regular users and faculty require department admin approval before Zoom resources are confirmed.
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+              <input type="checkbox" v-model="form.require_meeting_approval" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-brand-600"></div>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -873,6 +888,221 @@
         </div>
       </div>
 
+      <!-- Section 5: Meeting Custom Fields Management (Dropdown, Text, Textarea, Int) -->
+      <div class="glass-card p-6 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 space-y-4">
+        <div class="border-b border-slate-200/60 dark:border-slate-800/60 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <ListPlus class="w-4 h-4 text-brand-500" />
+              <span>Meeting Custom Fields</span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Configure custom metadata fields (Dropdown, Text, Textarea, Integer) captured when users book pooled Zoom meetings.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="openCustomFieldModal()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer self-start sm:self-auto"
+          >
+            <Plus class="w-3.5 h-3.5" />
+            <span>Add Custom Field</span>
+          </button>
+        </div>
+
+        <!-- Custom Fields Table / List -->
+        <div v-if="loadingCustomFields" class="py-8 text-center text-slate-400 text-xs">
+          <RefreshCw class="w-5 h-5 mx-auto mb-2 animate-spin text-brand-500" />
+          Loading custom fields...
+        </div>
+
+        <div v-else-if="customFields.length === 0" class="py-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+          <p class="text-xs text-slate-500 dark:text-slate-400">No meeting custom fields defined yet.</p>
+          <button
+            type="button"
+            @click="openCustomFieldModal()"
+            class="mt-2 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
+          >
+            Create your first custom field
+          </button>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-200/60 dark:border-slate-800/60 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                <th class="pb-2">Field Label</th>
+                <th class="pb-2">Field Key</th>
+                <th class="pb-2">Type</th>
+                <th class="pb-2">Required</th>
+                <th class="pb-2">Status</th>
+                <th class="pb-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+              <tr v-for="cf in customFields" :key="cf.id" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                <td class="py-2.5 font-bold text-slate-900 dark:text-white">
+                  {{ cf.name }}
+                  <span v-if="cf.help_text" class="block text-[10px] font-normal text-slate-400 truncate max-w-xs">{{ cf.help_text }}</span>
+                </td>
+                <td class="py-2.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                  {{ cf.field_key }}
+                </td>
+                <td class="py-2.5">
+                  <span
+                    class="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono uppercase"
+                    :class="{
+                      'bg-purple-500/10 text-purple-600 dark:text-purple-400': cf.field_type === 'dropdown',
+                      'bg-sky-500/10 text-sky-600 dark:text-sky-400': cf.field_type === 'text',
+                      'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400': cf.field_type === 'textarea',
+                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400': cf.field_type === 'int',
+                    }"
+                  >
+                    {{ cf.field_type }}
+                  </span>
+                </td>
+                <td class="py-2.5">
+                  <span
+                    class="px-2 py-0.5 rounded-md text-[10px] font-bold"
+                    :class="cf.is_required ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-slate-500/10 text-slate-500 dark:text-slate-400'"
+                  >
+                    {{ cf.is_required ? 'Required' : 'Optional' }}
+                  </span>
+                </td>
+                <td class="py-2.5">
+                  <span
+                    class="px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer"
+                    :class="cf.is_active ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-500/10 text-slate-400'"
+                    @click="toggleCustomFieldActive(cf)"
+                    title="Click to toggle active"
+                  >
+                    {{ cf.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="py-2.5 text-right space-x-1">
+                  <button
+                    type="button"
+                    @click="openCustomFieldModal(cf)"
+                    class="p-1 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                    title="Edit Field"
+                  >
+                    <Edit2 class="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    @click="deleteCustomField(cf)"
+                    class="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                    title="Delete Field"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 6: NOC / Operations Wallboard API & Monitoring -->
+      <div class="glass-card p-6 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 space-y-4">
+        <div class="border-b border-slate-200/60 dark:border-slate-800/60 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Monitor class="w-4 h-4 text-amber-500" />
+              <span>NOC Wallboard & Real-Time Monitoring API</span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Dedicated autonomous read endpoint for wallboards, operations dashboards, and NOC screens without requiring web sessions or CSRF.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="testNocApi"
+            :disabled="testingNoc"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer self-start sm:self-auto disabled:opacity-50"
+          >
+            <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': testingNoc }" />
+            <span>Test NOC Endpoint</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              NOC Access Token / API Key *
+            </label>
+            <div class="flex gap-2">
+              <input
+                v-model="form.noc_api_token"
+                type="text"
+                required
+                class="w-full text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+                placeholder="e.g. noc_live_..."
+              />
+              <button
+                type="button"
+                @click="generateNocToken"
+                class="px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 whitespace-nowrap transition cursor-pointer"
+              >
+                Generate
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400">
+              Pass this token in <code class="font-mono">X-NOC-Token</code>, <code class="font-mono">X-API-KEY</code>, <code class="font-mono">Authorization: Bearer</code>, or query parameter <code class="font-mono">?api_key=</code>.
+            </p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Available Query Filters
+            </label>
+            <div class="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div><strong class="font-mono text-slate-800 dark:text-slate-200">from:</strong> ISO 8601 start time (default: current moment)</div>
+              <div><strong class="font-mono text-slate-800 dark:text-slate-200">to_time:</strong> Cutoff time today/tomorrow (e.g. <span class="font-mono">18:00:00</span>)</div>
+              <div><strong class="font-mono text-slate-800 dark:text-slate-200">to_date / next_date:</strong> Up to end of target date (e.g. <span class="font-mono">2026-09-26</span>)</div>
+              <div><strong class="font-mono text-slate-800 dark:text-slate-200">hours:</strong> Next N hours window (e.g. <span class="font-mono">8</span>)</div>
+              <div><strong class="font-mono text-slate-800 dark:text-slate-200">status:</strong> Comma-separated (e.g. <span class="font-mono">started,scheduled</span>)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live cURL Snippet -->
+        <div class="space-y-1.5 pt-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Terminal class="w-3.5 h-3.5 text-slate-400" />
+              <span>NOC Wallboard HTTP Request Example</span>
+            </label>
+            <button
+              type="button"
+              @click="copyNocCurl"
+              class="text-[11px] text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 cursor-pointer font-semibold"
+            >
+              <Copy class="w-3 h-3" />
+              <span>Copy cURL</span>
+            </button>
+          </div>
+          <pre class="p-3 rounded-xl bg-slate-900 text-slate-200 text-xs font-mono overflow-x-auto whitespace-pre-wrap select-all">curl -X GET "{{ currentOrigin }}/api/v1/noc/meetings?to_time=23:59:59" \
+  -H "X-NOC-Token: {{ form.noc_api_token || 'YOUR_NOC_TOKEN' }}" \
+  -H "Accept: application/json"</pre>
+        </div>
+
+        <!-- NOC Live Test Output Preview -->
+        <div v-if="nocTestResult" class="p-3.5 rounded-xl border text-xs space-y-2" :class="nocTestResult.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-200' : 'bg-rose-500/10 border-rose-500/20 text-rose-800 dark:text-rose-200'">
+          <div class="flex items-center justify-between font-bold">
+            <div class="flex items-center gap-2">
+              <CheckCircle2 v-if="nocTestResult.success" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <AlertCircle v-else class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+              <span>{{ nocTestResult.message }}</span>
+            </div>
+            <button type="button" @click="nocTestResult = null" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-normal">Close</button>
+          </div>
+          <div v-if="nocTestResult.data" class="font-mono text-[11px] bg-slate-900 text-slate-200 p-2.5 rounded-lg overflow-x-auto max-h-48">
+            <pre>{{ JSON.stringify(nocTestResult.data, null, 2) }}</pre>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div v-if="authStore.isAdmin" class="flex justify-end gap-2 pt-2">
         <button
@@ -892,6 +1122,148 @@
         </button>
       </div>
     </form>
+
+    <!-- Custom Field Create / Edit Modal -->
+    <div
+      v-if="showCustomFieldModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+    >
+      <div class="glass-card w-full max-w-lg p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4 shadow-2xl bg-white dark:bg-slate-900">
+        <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800 pb-3">
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+            {{ customFieldForm.id ? 'Edit Custom Field' : 'Add New Custom Field' }}
+          </h3>
+          <button @click="showCustomFieldModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none cursor-pointer">
+            &times;
+          </button>
+        </div>
+
+        <form @submit.prevent="saveCustomField" class="space-y-3.5 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Field Label / Name *
+            </label>
+            <input
+              v-model="customFieldForm.name"
+              type="text"
+              required
+              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
+              placeholder="e.g. Project Code, Cost Center, Course ID"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Field Key (Slug)
+              </label>
+              <input
+                v-model="customFieldForm.field_key"
+                type="text"
+                class="w-full text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
+                placeholder="project_code (auto if blank)"
+              />
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Field Type *
+              </label>
+              <select
+                v-model="customFieldForm.field_type"
+                required
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white cursor-pointer"
+              >
+                <option value="text">Text (Single-line)</option>
+                <option value="textarea">Textarea (Multi-line)</option>
+                <option value="dropdown">Dropdown (Select)</option>
+                <option value="int">Integer (Number)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dropdown Options (When Dropdown selected) -->
+          <div v-if="customFieldForm.field_type === 'dropdown'">
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Dropdown Options (One per line or comma-separated) *
+            </label>
+            <textarea
+              v-model="customFieldForm.options_raw"
+              rows="3"
+              required
+              class="w-full text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
+              placeholder="Undergraduate&#10;Postgraduate&#10;Faculty Research&#10;Executive Education"
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Placeholder
+              </label>
+              <input
+                v-model="customFieldForm.placeholder"
+                type="text"
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
+                placeholder="e.g. Enter project ID"
+              />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Default Value
+              </label>
+              <input
+                v-model="customFieldForm.default_value"
+                type="text"
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
+                placeholder="Optional default"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Help Text
+            </label>
+            <input
+              v-model="customFieldForm.help_text"
+              type="text"
+              class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
+              placeholder="Subtext shown below the field"
+            />
+          </div>
+
+          <div class="flex items-center gap-6 pt-1">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" v-model="customFieldForm.is_required" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+              <span class="font-semibold text-slate-800 dark:text-slate-200">Required Field</span>
+            </label>
+
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" v-model="customFieldForm.is_active" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+              <span class="font-semibold text-slate-800 dark:text-slate-200">Active</span>
+            </label>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+            <button
+              type="button"
+              @click="showCustomFieldModal = false"
+              class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              :disabled="savingCustomField"
+              class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-xs disabled:opacity-50"
+            >
+              {{ savingCustomField ? 'Saving...' : 'Save Field' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -920,6 +1292,12 @@ import {
   Lock,
   Sparkles,
   Check,
+  ListPlus,
+  Plus,
+  Edit2,
+  Monitor,
+  Terminal,
+  Copy,
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
@@ -933,6 +1311,31 @@ const uploadingFavicon = ref(false);
 const feedback = ref('');
 const feedbackError = ref(false);
 const activeLegalSection = ref('privacy');
+
+// Custom Fields State
+const customFields = ref([]);
+const loadingCustomFields = ref(false);
+const showCustomFieldModal = ref(false);
+const savingCustomField = ref(false);
+const customFieldForm = ref({
+  id: null,
+  public_id: null,
+  name: '',
+  field_key: '',
+  field_type: 'text',
+  options_raw: '',
+  placeholder: '',
+  help_text: '',
+  default_value: '',
+  is_required: false,
+  is_active: true,
+  display_order: 0,
+});
+
+// NOC Wallboard API State
+const testingNoc = ref(false);
+const nocTestResult = ref(null);
+const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
 
 const logoInputRef = ref(null);
 const darkLogoInputRef = ref(null);
@@ -984,6 +1387,9 @@ const form = ref({
 
   org_ai_companion_policy: 'ALLOWED',
   org_default_recording_mode: 'none',
+
+  require_meeting_approval: true,
+  noc_api_token: '',
 });
 
 // Primary Logo Handlers
@@ -1243,5 +1649,159 @@ const saveSettings = async () => {
   }
 };
 
-onMounted(fetchSettings);
+// Custom Field Handlers
+const fetchCustomFields = async () => {
+  loadingCustomFields.value = true;
+  try {
+    const res = await axios.get('/spa/meeting-custom-fields');
+    customFields.value = res.data.fields || [];
+  } catch (err) {
+    console.error('Failed to load custom fields', err);
+  } finally {
+    loadingCustomFields.value = false;
+  }
+};
+
+const openCustomFieldModal = (field = null) => {
+  if (field) {
+    customFieldForm.value = {
+      id: field.id,
+      public_id: field.public_id,
+      name: field.name,
+      field_key: field.field_key,
+      field_type: field.field_type,
+      options_raw: Array.isArray(field.options) ? field.options.join('\n') : '',
+      placeholder: field.placeholder || '',
+      help_text: field.help_text || '',
+      default_value: field.default_value || '',
+      is_required: Boolean(field.is_required),
+      is_active: Boolean(field.is_active),
+      display_order: field.display_order || 0,
+    };
+  } else {
+    customFieldForm.value = {
+      id: null,
+      public_id: null,
+      name: '',
+      field_key: '',
+      field_type: 'text',
+      options_raw: '',
+      placeholder: '',
+      help_text: '',
+      default_value: '',
+      is_required: false,
+      is_active: true,
+      display_order: customFields.value.length,
+    };
+  }
+  showCustomFieldModal.value = true;
+};
+
+const saveCustomField = async () => {
+  savingCustomField.value = true;
+  try {
+    const payload = { ...customFieldForm.value };
+    if (payload.field_type === 'dropdown') {
+      payload.options = payload.options_raw
+        ? payload.options_raw.split('\n').map((s) => s.trim()).filter(Boolean)
+        : [];
+    }
+
+    if (payload.public_id) {
+      await axios.put(`/spa/meeting-custom-fields/${payload.public_id}`, payload);
+      feedback.value = 'Custom field updated successfully.';
+    } else {
+      await axios.post('/spa/meeting-custom-fields', payload);
+      feedback.value = 'Custom field created successfully.';
+    }
+    showCustomFieldModal.value = false;
+    await fetchCustomFields();
+  } catch (err) {
+    console.error('Failed to save custom field', err);
+    feedback.value = err.response?.data?.message || 'Failed to save custom field.';
+    feedbackError.value = true;
+  } finally {
+    savingCustomField.value = false;
+  }
+};
+
+const toggleCustomFieldActive = async (field) => {
+  try {
+    await axios.put(`/spa/meeting-custom-fields/${field.public_id}`, {
+      name: field.name,
+      field_type: field.field_type,
+      is_active: !field.is_active,
+      is_required: field.is_required,
+      options: field.options,
+    });
+    field.is_active = !field.is_active;
+  } catch (err) {
+    console.error('Failed to toggle active state', err);
+  }
+};
+
+const deleteCustomField = async (field) => {
+  if (!confirm(`Are you sure you want to delete the custom field "${field.name}"?`)) {
+    return;
+  }
+  try {
+    await axios.delete(`/spa/meeting-custom-fields/${field.public_id}`);
+    customFields.value = customFields.value.filter((f) => f.id !== field.id);
+    feedback.value = 'Custom field deleted successfully.';
+  } catch (err) {
+    console.error('Failed to delete custom field', err);
+    feedback.value = err.response?.data?.message || 'Failed to delete custom field.';
+    feedbackError.value = true;
+  }
+};
+
+// NOC API Helpers
+const generateNocToken = () => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let rand = '';
+  for (let i = 0; i < 32; i++) {
+    rand += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  form.value.noc_api_token = 'noc_live_' + rand;
+};
+
+const copyNocCurl = () => {
+  const cmd = `curl -X GET "${currentOrigin}/api/v1/noc/meetings?to_time=23:59:59" \\\n  -H "X-NOC-Token: ${form.value.noc_api_token || 'YOUR_NOC_TOKEN'}" \\\n  -H "Accept: application/json"`;
+  navigator.clipboard?.writeText(cmd);
+  feedback.value = 'cURL command copied to clipboard.';
+};
+
+const testNocApi = async () => {
+  testingNoc.value = true;
+  nocTestResult.value = null;
+  try {
+    const token = form.value.noc_api_token;
+    const res = await axios.get('/api/v1/noc/meetings', {
+      headers: {
+        'X-NOC-Token': token,
+      },
+      params: {
+        to_time: '23:59:59',
+      },
+    });
+    nocTestResult.value = {
+      success: true,
+      message: `Endpoint active: 200 OK (${res.data.total_count} meetings retrieved)`,
+      data: res.data,
+    };
+  } catch (err) {
+    nocTestResult.value = {
+      success: false,
+      message: err.response?.data?.message || `HTTP ${err.response?.status || 500} Error testing NOC endpoint.`,
+      data: err.response?.data || null,
+    };
+  } finally {
+    testingNoc.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchSettings();
+  fetchCustomFields();
+});
 </script>

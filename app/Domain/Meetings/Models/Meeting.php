@@ -100,6 +100,7 @@ class Meeting extends Model
         'source',
         'is_detached_from_series',
         'cancelled_reason',
+        'custom_fields',
     ];
 
     protected $casts = [
@@ -117,6 +118,7 @@ class Meeting extends Model
         'external_participants' => 'boolean',
         'registration_enabled' => 'boolean',
         'is_detached_from_series' => 'boolean',
+        'custom_fields' => 'array',
     ];
 
     protected static function booted(): void

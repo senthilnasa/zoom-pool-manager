@@ -42,6 +42,7 @@ class MailSettingsController extends Controller
                 'smtp_port' => $smtpPort,
                 'smtp_encryption' => $smtpEncryption,
                 'smtp_username' => $smtpUsername,
+                'send_immediately' => (bool) Setting::get('mail.send_immediately', true),
             ]);
         }
 
@@ -104,6 +105,10 @@ class MailSettingsController extends Controller
             if (! empty($validated['graph_sender_user'])) {
                 Setting::set('mail.graph_sender_user', $validated['graph_sender_user']);
             }
+        }
+
+        if ($request->has('send_immediately')) {
+            Setting::set('mail.send_immediately', $request->boolean('send_immediately'));
         }
 
         if ($request->wantsJson()) {

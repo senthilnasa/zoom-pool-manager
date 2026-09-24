@@ -19,6 +19,20 @@ class WebhookController extends Controller
     ) {}
 
     /**
+     * Informational health check response for GET requests (e.g., browser navigation or health probes).
+     */
+    public function ping(Request $request, ?string $public_id = null): JsonResponse
+    {
+        return response()->json([
+            'status' => 'active',
+            'service' => 'Zoom Pool Manager - Zoom Webhook Intake Endpoint',
+            'supported_method' => 'POST',
+            'message' => 'This endpoint accepts incoming HTTP POST webhooks from Zoom (URL validation CRC handshake and event notifications). Direct browser GET requests are not processed.',
+            'docs' => 'Configure this URL in your Zoom Marketplace App under Feature -> Event Subscriptions.',
+        ], 200);
+    }
+
+    /**
      * Intake endpoint for Zoom incoming webhooks.
      */
     public function handle(Request $request, ?string $public_id = null): JsonResponse

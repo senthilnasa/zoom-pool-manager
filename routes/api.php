@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AvailabilityController;
 use App\Http\Controllers\Api\V1\MeetingController;
+use App\Http\Controllers\Api\V1\NocMeetingController;
 use App\Http\Controllers\Api\V1\RecordingController;
 use App\Http\Controllers\Api\V1\ResourcePoolController;
 use App\Http\Controllers\Api\ZoomSettingsController;
@@ -60,4 +61,10 @@ Route::prefix('v1')->middleware(['api', 'api.auth', 'idempotent'])->group(functi
     Route::post('/settings/zoom/test', [ZoomSettingsController::class, 'test'])
         ->middleware('api.scope:admin')
         ->name('api.v1.settings.zoom.test');
+});
+
+// NOC Wallboard & Operations Monitoring (Standalone API Key / Token Authentication)
+Route::prefix('v1')->middleware(['api'])->group(function () {
+    Route::get('/noc/meetings', [NocMeetingController::class, 'meetings'])
+        ->name('api.v1.noc.meetings');
 });

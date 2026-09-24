@@ -487,6 +487,71 @@
         </div>
       </GlassCard>
 
+      <!-- 6. Custom Fields (Dropdown, Text, Textarea, Integer) -->
+      <GlassCard v-if="options.custom_fields && options.custom_fields.length > 0" title="Custom Meeting Fields">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            v-for="field in options.custom_fields"
+            :key="field.id"
+            :class="field.field_type === 'textarea' ? 'md:col-span-2' : ''"
+            class="space-y-1.5"
+          >
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {{ field.name }}
+              <span v-if="field.is_required" class="text-rose-500 font-bold ml-0.5">*</span>
+            </label>
+
+            <!-- Text Field -->
+            <input
+              v-if="field.field_type === 'text'"
+              v-model="form.custom_fields[field.field_key]"
+              type="text"
+              :placeholder="field.placeholder || 'Enter ' + field.name"
+              class="w-full glass-input text-xs"
+              :required="field.is_required"
+            />
+
+            <!-- Textarea Field -->
+            <textarea
+              v-else-if="field.field_type === 'textarea'"
+              v-model="form.custom_fields[field.field_key]"
+              rows="3"
+              :placeholder="field.placeholder || 'Enter ' + field.name"
+              class="w-full glass-input text-xs"
+              :required="field.is_required"
+            ></textarea>
+
+            <!-- Integer Field -->
+            <input
+              v-else-if="field.field_type === 'int'"
+              v-model.number="form.custom_fields[field.field_key]"
+              type="number"
+              step="1"
+              :placeholder="field.placeholder || '0'"
+              class="w-full glass-input text-xs"
+              :required="field.is_required"
+            />
+
+            <!-- Dropdown Field -->
+            <select
+              v-else-if="field.field_type === 'dropdown'"
+              v-model="form.custom_fields[field.field_key]"
+              class="w-full glass-input text-xs cursor-pointer"
+              :required="field.is_required"
+            >
+              <option value="">{{ field.placeholder || '-- Select ' + field.name + ' --' }}</option>
+              <option v-for="(opt, optIdx) in (field.options || [])" :key="optIdx" :value="opt">
+                {{ opt }}
+              </option>
+            </select>
+
+            <p v-if="field.help_text" class="text-[10px] text-slate-400 mt-0.5">
+              {{ field.help_text }}
+            </p>
+          </div>
+        </div>
+      </GlassCard>
+
       <!-- Live Conflict Preview -->
       <div v-if="conflictStatus" class="p-4 rounded-xl text-xs flex items-center gap-2.5" :class="conflictStatus.has_conflict ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'">
         <CheckCircle2 v-if="!conflictStatus.has_conflict" class="w-4 h-4 shrink-0" />
@@ -561,6 +626,7 @@ const options = ref({
   pools: [],
   can_book_on_behalf: false,
   users: [],
+  custom_fields: [],
 });
 
 const form = ref({
@@ -572,6 +638,7 @@ const form = ref({
   template_id: null,
   pool_id: null,
   owner_user_id: null,
+  custom_fields: {},
   // Extended Flags
   waiting_room: true,
   join_before_host: false,
@@ -656,6 +723,13 @@ const loadOptions = async () => {
   try {
     const res = await axios.get('/spa/meetings/options');
     options.value = res.data;
+    if (res.data.custom_fields && Array.isArray(res.data.custom_fields)) {
+      res.data.custom_fields.forEach((f) => {
+        if (f.default_value !== null && f.default_value !== undefined && form.value.custom_fields[f.field_key] === undefined) {
+          form.value.custom_fields[f.field_key] = f.field_type === 'int' ? Number(f.default_value) : f.default_value;
+        }
+      });
+    }
   } catch (e) {
     console.error('Failed to load meeting options', e);
   }
@@ -685,6 +759,19 @@ const submitBooking = async () => {
     return;
   }
 
+  // Validate custom fields
+  if (options.value.custom_fields && Array.isArray(options.value.custom_fields)) {
+    for (const field of options.value.custom_fields) {
+      if (field.is_required) {
+        const val = form.value.custom_fields[field.field_key];
+        if (val === undefined || val === null || val === '') {
+          toast.error(`Please provide a value for required field "${field.name}".`);
+          return;
+        }
+      }
+    }
+  }
+
   try {
     submitting.value = true;
     const payload = {
@@ -697,6 +784,7 @@ const submitBooking = async () => {
       template_id: form.value.template_id,
       pool_id: form.value.pool_id,
       owner_user_id: bookOnBehalf.value ? form.value.owner_user_id : null,
+      custom_fields: form.value.custom_fields,
       // Extended Flags
       waiting_room: form.value.waiting_room,
       join_before_host: form.value.join_before_host,
