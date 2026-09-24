@@ -90,7 +90,7 @@ class PrivacyAndRetentionTest extends TestCase
     {
         // Insert old and new records in zoom_webhook_events
         DB::table('zoom_webhook_events')->insert([
-            'public_id' => (string) Str::uuid(),
+            'public_id' => (string) Str::ulid(),
             'event_id' => 'evt_old_123',
             'event_type' => 'meeting.ended',
             'payload' => json_encode(['test' => true]),
@@ -100,7 +100,7 @@ class PrivacyAndRetentionTest extends TestCase
         ]);
 
         DB::table('zoom_webhook_events')->insert([
-            'public_id' => (string) Str::uuid(),
+            'public_id' => (string) Str::ulid(),
             'event_id' => 'evt_new_456',
             'event_type' => 'meeting.started',
             'payload' => json_encode(['test' => true]),

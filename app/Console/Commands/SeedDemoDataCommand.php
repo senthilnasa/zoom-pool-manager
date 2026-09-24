@@ -72,11 +72,12 @@ class SeedDemoDataCommand extends Command
         $demoProf->assignRole($facultyRole);
 
         // 4. Default Policy & Profiles
-        BookingPolicy::firstOrCreate(['scope_type' => 'organization'], [
-            'name' => 'Organization Standard Policy',
+        BookingPolicy::firstOrCreate(['name' => 'Organization Standard Policy'], [
+            'department_id' => null,
             'min_notice_hours' => 2,
             'max_advance_days' => 60,
-            'buffer_minutes' => 10,
+            'min_buffer_minutes' => 10,
+            'default_buffer_minutes' => 10,
             'is_active' => true,
         ]);
 

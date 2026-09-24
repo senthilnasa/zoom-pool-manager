@@ -30,6 +30,9 @@ class DirectorySyncService
             'last_sync_message' => 'Synchronization in progress...',
         ]);
 
+        $targetRole = ! empty($config->default_role) ? $config->default_role : 'Standard User';
+        Role::firstOrCreate(['name' => $targetRole, 'guard_name' => 'web']);
+
         try {
             $directoryUsers = match ($config->provider_type) {
                 'microsoft_entra' => $this->fetchMicrosoftEntraUsers($config),
