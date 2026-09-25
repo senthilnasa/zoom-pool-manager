@@ -26,7 +26,7 @@ class MeetingAuthorizationPolicy
         }
 
         // 3. Department Administrators cannot approve meetings outside their department
-        if ($approver->hasRole('dept_admin')) {
+        if ($approver->hasAnyRole(['dept_admin', 'department_admin', 'Department Administrator'])) {
             if (empty($approver->department_id) || empty($meeting->department_id) || (int) $approver->department_id !== (int) $meeting->department_id) {
                 return false;
             }

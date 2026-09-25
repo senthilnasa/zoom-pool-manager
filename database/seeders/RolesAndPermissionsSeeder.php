@@ -105,7 +105,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // 4. Department Administrator (scoped to department)
         $deptAdmin = Role::firstOrCreate(['name' => 'dept_admin', 'guard_name' => 'web']);
-        $deptAdmin->syncPermissions([
+        $deptAdminPermissions = [
             'meeting.create', 'meeting.view', 'meeting.edit', 'meeting.cancel', 'meeting.reschedule',
             'meeting.approve', 'meeting.book_on_behalf',
             'recording.view', 'recording.share',
@@ -113,7 +113,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'workflow.view',
             'quota.manage',
             'user.view', 'user.manage',
-        ]);
+        ];
+        $deptAdmin->syncPermissions($deptAdminPermissions);
+
+        $departmentAdmin = Role::firstOrCreate(['name' => 'department_admin', 'guard_name' => 'web']);
+        $departmentAdmin->syncPermissions($deptAdminPermissions);
 
         // 5. Approver
         $approver = Role::firstOrCreate(['name' => 'approver', 'guard_name' => 'web']);

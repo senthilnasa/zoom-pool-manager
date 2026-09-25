@@ -64,7 +64,9 @@ class ApprovalWorkflowService
 
             // If anti-self-approval filtered everyone out, fallback to an IT admin who is not the requester
             if ($filteredApprovers->isEmpty()) {
-                $fallbackAdmin = User::role(['it_admin', 'super_admin'])
+                $fallbackAdmin = User::whereHas('roles', function ($q) {
+                    $q->whereIn('name', ['it_admin', 'super_admin', 'Super Administrator', 'Super Admin', 'Administrator']);
+                })
                     ->where('id', '!=', $meeting->requester_user_id)
                     ->where('id', '!=', $meeting->owner_user_id)
                     ->first();
@@ -296,10 +298,24 @@ class ApprovalWorkflowService
 
         return match ($approverType) {
             'manager', 'dept_admin' => $this->getDepartmentApprovers($meeting),
-            'it_admin' => User::role(['it_admin', 'super_admin'])->get(),
+            'it_admin' => User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['it_admin', 'super_admin', 'Super Administrator', 'Super Admin', 'Administrator']);
+            })->get(),
             'role' => ! empty($stepConfig['approver_role'])
-                ? User::role((string) $stepConfig['approver_role'])->get()
-                : User::role(['it_admin', 'super_admin'])->get(),
+                ? User::whereHas('roles', function ($q) use ($stepConfig) {
+                    $roleName = (string) $stepConfig['approver_role'];
+                    $candidates = [$roleName];
+                    if ($roleName === 'dept_admin') {
+                        $candidates[] = 'department_admin';
+                        $candidates[] = 'Department Administrator';
+                    } elseif ($roleName === 'department_admin') {
+                        $candidates[] = 'dept_admin';
+                    }
+                    $q->whereIn('name', $candidates);
+                })->get()
+                : User::whereHas('roles', function ($q) {
+                    $q->whereIn('name', ['it_admin', 'super_admin', 'Super Administrator', 'Super Admin', 'Administrator']);
+                })->get(),
             'specific_users' => ! empty($stepConfig['approver_ids'])
                 ? User::whereIn('id', (array) $stepConfig['approver_ids'])->get()
                 : new Collection,
@@ -313,7 +329,9 @@ class ApprovalWorkflowService
     protected function getDepartmentApprovers(Meeting $meeting): Collection
     {
         if ($meeting->department_id) {
-            $deptUsers = User::role('dept_admin')
+            $deptUsers = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['dept_admin', 'department_admin', 'Department Administrator']);
+            })
                 ->where('department_id', $meeting->department_id)
                 ->get();
 
@@ -323,7 +341,9 @@ class ApprovalWorkflowService
         }
 
         // Fallback to IT admins if department has no dept_admin
-        return User::role(['it_admin', 'super_admin'])->get();
+        return User::whereHas('roles', function ($q) {
+            $q->whereIn('name', ['it_admin', 'super_admin', 'Super Administrator', 'Super Admin', 'Administrator']);
+        })->get();
     }
 
     /**
@@ -342,7 +362,9 @@ class ApprovalWorkflowService
 
         foreach ($overdueApprovals as $approval) {
             // Find IT Admin to escalate to
-            $itAdmin = User::role(['it_admin', 'super_admin'])
+            $itAdmin = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['it_admin', 'super_admin', 'Super Administrator', 'Super Admin', 'Administrator']);
+            })
                 ->where('id', '!=', $approval->meeting->requester_user_id)
                 ->first();
 

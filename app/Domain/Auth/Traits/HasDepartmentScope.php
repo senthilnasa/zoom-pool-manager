@@ -21,7 +21,7 @@ trait HasDepartmentScope
         }
 
         // Department Administrators are strictly scoped to their assigned department
-        if ($user->hasRole('dept_admin')) {
+        if ($user->hasAnyRole(['dept_admin', 'department_admin', 'Department Administrator'])) {
             return $query->where('department_id', $user->department_id);
         }
 

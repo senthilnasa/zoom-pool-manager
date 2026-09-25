@@ -223,6 +223,7 @@ class InstallerService
             'it_admin' => 'IT Administrator',
             'meeting_admin' => 'Meeting Administrator',
             'approver' => 'Approver',
+            'dept_admin' => 'Department Administrator',
             'department_admin' => 'Department Administrator',
             'faculty' => 'Faculty',
             'staff' => 'Staff',
