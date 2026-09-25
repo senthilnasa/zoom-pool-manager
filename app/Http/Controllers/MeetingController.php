@@ -211,16 +211,22 @@ class MeetingController extends Controller
 
             $meeting = $this->meetingService->createMeeting($user, $validated, $inviteeEmails);
 
+            $message = $meeting->status === 'pending_approval'
+                ? 'Meeting request submitted successfully. It is pending review and approval.'
+                : ($meeting->status === 'waitlisted'
+                    ? 'Meeting request placed on waitlist due to resource conflict.'
+                    : 'Meeting booked successfully.');
+
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Meeting booked successfully.',
+                    'message' => $message,
                     'meeting' => $meeting,
                 ]);
             }
 
             return redirect()->route('meetings.show', $meeting->public_id)
-                ->with('status', 'Meeting booked successfully.');
+                ->with('status', $message);
         } catch (Exception $e) {
             if ($request->wantsJson()) {
                 return response()->json(['message' => $e->getMessage()], 422);

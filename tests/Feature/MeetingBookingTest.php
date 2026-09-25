@@ -39,6 +39,7 @@ class MeetingBookingTest extends TestCase
         Setting::set('org.min_notice_hours', 0);
         Setting::set('org.max_advance_days', 90);
         Setting::set('org.max_duration_minutes', 300);
+        Setting::set('org.require_meeting_approval', false);
 
         $dept = Department::create(['name' => 'Computer Science', 'code' => 'CS']);
 

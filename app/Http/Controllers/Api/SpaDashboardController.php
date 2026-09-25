@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Users\Models\User;
 use App\Domain\Workflow\Models\MeetingApproval;
 use App\Domain\Zoom\Models\ResourcePool;
 use App\Domain\Zoom\Models\ZoomResource;
@@ -20,39 +21,130 @@ class SpaDashboardController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
+        /** @var User|null $user */
         $user = Auth::user();
+        $isAdmin = $user && (
+            $user->can('pool.manage') ||
+            $user->can('meeting.view_any') ||
+            $user->hasRole('Super Administrator') ||
+            $user->hasRole('Super Admin') ||
+            $user->hasRole('super_admin') ||
+            $user->hasRole('Administrator') ||
+            $user->hasRole('it_admin')
+        );
+
         $todayStart = Carbon::today()->startOfDay();
         $todayEnd = Carbon::today()->endOfDay();
 
-        $meetingsTodayCount = Meeting::whereBetween('starts_at', [$todayStart, $todayEnd])
-            ->whereNotIn('status', ['cancelled'])
-            ->count();
+        if ($isAdmin) {
+            $meetingsTodayCount = Meeting::whereBetween('starts_at', [$todayStart, $todayEnd])
+                ->whereNotIn('status', ['cancelled'])
+                ->count();
 
-        $activeMeetingsCount = Meeting::where('status', 'started')->count();
+            $activeMeetingsCount = Meeting::where('status', 'started')->count();
 
-        $upcomingMeetingsCount = Meeting::where('starts_at', '>=', Carbon::now())
-            ->whereIn('status', ['scheduled', 'allocating'])
-            ->count();
+            $upcomingMeetingsCount = Meeting::where('starts_at', '>=', Carbon::now())
+                ->whereIn('status', ['scheduled', 'allocating'])
+                ->count();
 
-        $totalPools = ResourcePool::count();
-        $totalResources = ZoomResource::count();
-        $activeResources = ZoomResource::where('status', 'active')->count();
+            $totalPools = ResourcePool::count();
+            $totalResources = ZoomResource::count();
+            $activeResources = ZoomResource::where('status', 'active')->count();
 
-        $pendingApprovalsCount = MeetingApproval::pending()->count();
+            $pendingApprovalsCount = MeetingApproval::pending()->count();
+            $myPendingRequestsCount = 0;
+            $myTotalRequestsCount = 0;
+            $myApprovedMeetingsCount = 0;
 
-        // Get recent/upcoming meetings accessible to user
-        $meetingsQuery = Meeting::with(['owner', 'zoomResource'])
-            ->whereNotIn('status', ['cancelled'])
-            ->orderBy('starts_at', 'asc');
+            // Get recent/upcoming meetings accessible to admin
+            $meetingsQuery = Meeting::with(['owner', 'zoomResource'])
+                ->whereNotIn('status', ['cancelled'])
+                ->orderBy('starts_at', 'asc');
 
-        if ($user && ! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator')) {
-            $meetingsQuery->where(function ($q) use ($user) {
-                $q->where('owner_user_id', $user->id)
-                    ->orWhere('requester_user_id', $user->id);
+            $recentMeetingsModels = $meetingsQuery->take(10)->get();
+
+            /** @var Collection<int, ResourcePool> $poolCollection */
+            $poolCollection = ResourcePool::withCount('resources')->get();
+            $pools = $poolCollection->map(function (ResourcePool $pool) {
+                return [
+                    'id' => $pool->id,
+                    'public_id' => $pool->public_id,
+                    'name' => $pool->name,
+                    'strategy' => $pool->pool_strategy,
+                    'resources_count' => $pool->resources_count,
+                ];
             });
+
+            /** @var Collection<int, Meeting> $activeMeetings */
+            $activeMeetings = Meeting::with(['owner', 'zoomResource.zoomUser', 'department'])
+                ->where('status', 'started')
+                ->orderBy('starts_at', 'asc')
+                ->get();
+        } else {
+            // User-scoped queries
+            $userMeetings = Meeting::where(function ($q) use ($user) {
+                if ($user) {
+                    $q->where('owner_user_id', $user->id)
+                        ->orWhere('requester_user_id', $user->id);
+                }
+            });
+
+            $meetingsTodayCount = (clone $userMeetings)
+                ->whereBetween('starts_at', [$todayStart, $todayEnd])
+                ->whereNotIn('status', ['cancelled'])
+                ->count();
+
+            $activeMeetingsCount = (clone $userMeetings)
+                ->where('status', 'started')
+                ->count();
+
+            $myPendingRequestsCount = (clone $userMeetings)
+                ->whereIn('status', ['pending_approval', 'waitlisted'])
+                ->count();
+
+            $myTotalRequestsCount = (clone $userMeetings)->count();
+
+            $myApprovedMeetingsCount = (clone $userMeetings)
+                ->whereIn('status', ['scheduled', 'started', 'ended'])
+                ->count();
+
+            $upcomingMeetingsCount = (clone $userMeetings)
+                ->where('starts_at', '>=', Carbon::now())
+                ->whereIn('status', ['scheduled', 'allocating', 'pending_approval'])
+                ->count();
+
+            $totalPools = 0;
+            $totalResources = 0;
+            $activeResources = 0;
+            $pendingApprovalsCount = $myPendingRequestsCount;
+            $pools = collect([]);
+
+            $recentMeetingsModels = Meeting::with(['owner', 'zoomResource'])
+                ->where(function ($q) use ($user) {
+                    if ($user) {
+                        $q->where('owner_user_id', $user->id)
+                            ->orWhere('requester_user_id', $user->id);
+                    }
+                })
+                ->whereNotIn('status', ['cancelled'])
+                ->orderByRaw("CASE WHEN status = 'pending_approval' THEN 0 WHEN status = 'started' THEN 1 WHEN status = 'scheduled' THEN 2 ELSE 3 END")
+                ->orderBy('starts_at', 'asc')
+                ->take(10)
+                ->get();
+
+            $activeMeetings = Meeting::with(['owner', 'zoomResource.zoomUser', 'department'])
+                ->where('status', 'started')
+                ->where(function ($q) use ($user) {
+                    if ($user) {
+                        $q->where('owner_user_id', $user->id)
+                            ->orWhere('requester_user_id', $user->id);
+                    }
+                })
+                ->orderBy('starts_at', 'asc')
+                ->get();
         }
 
-        $recentMeetings = $meetingsQuery->take(8)->get()->map(function (Meeting $meeting) {
+        $recentMeetings = $recentMeetingsModels->map(function (Meeting $meeting) {
             return [
                 'public_id' => $meeting->public_id,
                 'title' => $meeting->title,
@@ -64,25 +156,6 @@ class SpaDashboardController extends Controller
                 'resource_name' => $meeting->zoomResource->name ?? 'Dedicated Pool',
             ];
         });
-
-        // Pool utilization summary
-        /** @var Collection<int, ResourcePool> $poolCollection */
-        $poolCollection = ResourcePool::withCount('resources')->get();
-        $pools = $poolCollection->map(function (ResourcePool $pool) {
-            return [
-                'id' => $pool->id,
-                'public_id' => $pool->public_id,
-                'name' => $pool->name,
-                'strategy' => $pool->pool_strategy,
-                'resources_count' => $pool->resources_count,
-            ];
-        });
-
-        /** @var Collection<int, Meeting> $activeMeetings */
-        $activeMeetings = Meeting::with(['owner', 'zoomResource.zoomUser', 'department'])
-            ->where('status', 'started')
-            ->orderBy('starts_at', 'asc')
-            ->get();
 
         $activeMeetingsList = $activeMeetings->map(function (Meeting $meeting): array {
             $elapsed = (int) max(0, $meeting->starts_at ? $meeting->starts_at->diffInMinutes(now()) : 0);
@@ -106,6 +179,7 @@ class SpaDashboardController extends Controller
 
         return response()->json([
             'stats' => [
+                'is_admin' => $isAdmin,
                 'meetings_today' => $meetingsTodayCount,
                 'active_meetings' => $activeMeetingsCount,
                 'upcoming_meetings' => $upcomingMeetingsCount,
@@ -113,6 +187,9 @@ class SpaDashboardController extends Controller
                 'total_licenses' => $totalResources,
                 'active_licenses' => $activeResources,
                 'pending_approvals' => $pendingApprovalsCount,
+                'my_pending_requests' => $myPendingRequestsCount,
+                'my_total_requests' => $myTotalRequestsCount,
+                'my_approved_meetings' => $myApprovedMeetingsCount,
             ],
             'recent_meetings' => $recentMeetings,
             'active_meetings_list' => $activeMeetingsList,

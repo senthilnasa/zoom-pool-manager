@@ -4,10 +4,10 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
         <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Welcome back, {{ authStore.user?.name || 'Administrator' }}
+          Welcome back, {{ authStore.user?.name || 'User' }}
         </h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          High-performance resource scheduling & Zoom license optimization pool.
+          {{ stats.is_admin ? 'High-performance resource scheduling & Zoom license optimization pool.' : 'Submit and monitor your Zoom meeting requests, active sessions, and booking schedule.' }}
         </p>
       </div>
 
@@ -17,7 +17,7 @@
           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-md shadow-brand-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           <Plus class="w-4 h-4" />
-          <span>Book Meeting</span>
+          <span>{{ stats.is_admin ? 'Book Meeting' : 'Request Meeting' }}</span>
         </router-link>
 
         <button
@@ -37,7 +37,7 @@
       <GlassCard :padding="true" customClass="relative overflow-hidden">
         <div class="flex items-center justify-between">
           <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Meetings Today
+            {{ stats.is_admin ? 'Meetings Today' : 'My Meetings Today' }}
           </div>
           <div class="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
             <Calendar class="w-5 h-5" />
@@ -47,7 +47,7 @@
           <span class="text-3xl font-black text-slate-900 dark:text-white">
             {{ stats.meetings_today }}
           </span>
-          <span class="text-xs text-slate-500">scheduled</span>
+          <span class="text-xs text-slate-500">{{ stats.is_admin ? 'scheduled' : 'today' }}</span>
         </div>
       </GlassCard>
 
@@ -55,7 +55,7 @@
       <GlassCard :padding="true" customClass="relative overflow-hidden">
         <div class="flex items-center justify-between">
           <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Active Now
+            {{ stats.is_admin ? 'Active Now' : 'My Active Sessions' }}
           </div>
           <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <Radio class="w-5 h-5 animate-pulse" />
@@ -69,8 +69,8 @@
         </div>
       </GlassCard>
 
-      <!-- Available Licenses -->
-      <GlassCard :padding="true" customClass="relative overflow-hidden">
+      <!-- Card 3: Pool Resources (Admin) OR My Pending Requests (User) -->
+      <GlassCard v-if="stats.is_admin" :padding="true" customClass="relative overflow-hidden">
         <div class="flex items-center justify-between">
           <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Pool Resources
@@ -87,8 +87,25 @@
         </div>
       </GlassCard>
 
-      <!-- Pending Approvals -->
-      <GlassCard :padding="true" customClass="relative overflow-hidden">
+      <GlassCard v-else :padding="true" customClass="relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Pending Requests
+          </div>
+          <div class="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <Clock class="w-5 h-5" />
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline gap-2">
+          <span class="text-3xl font-black text-slate-900 dark:text-white">
+            {{ stats.my_pending_requests }}
+          </span>
+          <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">awaiting review</span>
+        </div>
+      </GlassCard>
+
+      <!-- Card 4: Approvals Queue (Admin) OR Confirmed Bookings (User) -->
+      <GlassCard v-if="stats.is_admin" :padding="true" customClass="relative overflow-hidden">
         <div class="flex items-center justify-between">
           <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Approvals Queue
@@ -102,6 +119,23 @@
             {{ stats.pending_approvals }}
           </span>
           <span class="text-xs text-slate-500">requests waiting</span>
+        </div>
+      </GlassCard>
+
+      <GlassCard v-else :padding="true" customClass="relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Confirmed Bookings
+          </div>
+          <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 class="w-5 h-5" />
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline gap-2">
+          <span class="text-3xl font-black text-slate-900 dark:text-white">
+            {{ stats.my_approved_meetings }}
+          </span>
+          <span class="text-xs text-slate-500">of {{ stats.my_total_requests }} total requests</span>
         </div>
       </GlassCard>
     </div>
@@ -183,7 +217,7 @@
     </GlassCard>
 
     <!-- Recent Meetings Grid -->
-    <GlassCard title="Upcoming & Recent Meetings">
+    <GlassCard :title="stats.is_admin ? 'Upcoming & Recent Meetings' : 'My Meeting Requests & Bookings'">
       <template #actions>
         <router-link
           to="/app/meetings"
@@ -201,15 +235,17 @@
         <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mx-auto mb-3">
           <Calendar class="w-6 h-6" />
         </div>
-        <div class="text-sm font-semibold text-slate-700 dark:text-slate-300">No upcoming meetings</div>
+        <div class="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          {{ stats.is_admin ? 'No upcoming meetings' : 'No meeting requests found' }}
+        </div>
         <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-          Reserve your first Zoom meeting resource using our intelligent conflict-free scheduler.
+          {{ stats.is_admin ? 'Reserve your first Zoom meeting resource using our intelligent conflict-free scheduler.' : 'Submit your first Zoom meeting request using the request form.' }}
         </p>
         <router-link
           to="/app/meetings/create"
           class="inline-block mt-4 text-xs font-semibold text-brand-600 dark:text-brand-400"
         >
-          + Schedule Meeting
+          {{ stats.is_admin ? '+ Schedule Meeting' : '+ Submit Request' }}
         </router-link>
       </div>
 
@@ -243,11 +279,12 @@
                   :class="{
                     'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20': meeting.status === 'started' || meeting.status === 'scheduled',
                     'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20': meeting.status === 'allocating' || meeting.status === 'pending_approval',
-                    'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20': meeting.status === 'completed',
-                    'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20': meeting.status === 'cancelled',
+                    'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20': meeting.status === 'waitlisted',
+                    'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20': meeting.status === 'completed' || meeting.status === 'ended',
+                    'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20': meeting.status === 'cancelled' || meeting.status === 'rejected',
                   }"
                 >
-                  {{ meeting.status }}
+                  {{ formatStatus(meeting.status) }}
                 </span>
               </td>
               <td class="py-3 px-3 text-xs text-slate-600 dark:text-slate-300">
@@ -290,8 +327,8 @@
       </div>
     </GlassCard>
 
-    <!-- Resource Pools Overview -->
-    <div v-if="pools.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- Resource Pools Overview (Admin Only) -->
+    <div v-if="stats.is_admin && pools.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       <GlassCard
         v-for="pool in pools"
         :key="pool.id"
@@ -320,6 +357,7 @@ import {
   Radio,
   Server,
   Clock,
+  CheckCircle2,
   Plus,
   RefreshCw,
   ExternalLink,
@@ -332,6 +370,7 @@ const toast = useToastStore();
 const loading = ref(false);
 
 const stats = ref({
+  is_admin: true,
   meetings_today: 0,
   active_meetings: 0,
   upcoming_meetings: 0,
@@ -339,11 +378,29 @@ const stats = ref({
   total_licenses: 0,
   active_licenses: 0,
   pending_approvals: 0,
+  my_pending_requests: 0,
+  my_total_requests: 0,
+  my_approved_meetings: 0,
 });
 
 const recentMeetings = ref([]);
 const activeMeetingsList = ref([]);
 const pools = ref([]);
+
+const formatStatus = (s) => {
+  const map = {
+    pending_approval: 'Pending Review',
+    allocating: 'Allocating',
+    waitlisted: 'Waitlisted',
+    scheduled: 'Scheduled',
+    started: 'Live Now',
+    ended: 'Ended',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    rejected: 'Rejected',
+  };
+  return map[s] || s;
+};
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return 'N/A';

@@ -5,10 +5,10 @@
       <div>
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
           <CalendarIcon class="w-6 h-6 text-brand-600 dark:text-brand-400" />
-          Schedule Pooled Meeting
+          {{ canBypassApproval ? 'Schedule Pooled Meeting' : 'Request Pooled Meeting' }}
         </h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Reserve an intelligent pooled Zoom host license with automated security, recording, attendance, and host key delegation.
+          {{ canBypassApproval ? 'Reserve an intelligent pooled Zoom host license with automated security, recording, attendance, and host key delegation.' : 'Submit a Zoom host license reservation request for review and automated allocation.' }}
         </p>
       </div>
 
@@ -574,7 +574,7 @@
           class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-md shadow-brand-500/20 transition-all disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw v-if="submitting" class="w-4 h-4 animate-spin" />
-          <span>{{ submitting ? 'Reserving...' : (form.is_recurring ? 'Schedule Recurring Series' : 'Confirm Reservation') }}</span>
+          <span>{{ submitting ? (canBypassApproval ? 'Reserving...' : 'Submitting Request...') : (form.is_recurring ? (canBypassApproval ? 'Schedule Recurring Series' : 'Request Recurring Series') : (canBypassApproval ? 'Confirm Reservation' : 'Submit Meeting Request')) }}</span>
         </button>
       </div>
     </form>
@@ -582,11 +582,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import GlassCard from '@/components/GlassCard.vue';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import {
   Calendar as CalendarIcon,
@@ -604,7 +605,16 @@ import {
 } from 'lucide-vue-next';
 
 const router = useRouter();
+const authStore = useAuthStore();
 const toast = useToastStore();
+
+const canBypassApproval = computed(() => {
+  return Boolean(
+    authStore.isAdmin ||
+    authStore.can('meeting.approve') ||
+    authStore.can('meeting.override')
+  );
+});
 
 const submitting = ref(false);
 const bookOnBehalf = ref(false);
@@ -804,7 +814,10 @@ const submitBooking = async () => {
     };
 
     const res = await axios.post('/meetings', payload);
-    toast.success(res.data?.message || 'Meeting scheduled successfully!');
+    const defaultMsg = canBypassApproval.value
+      ? 'Meeting scheduled successfully!'
+      : 'Meeting request submitted successfully! It is pending approval.';
+    toast.success(res.data?.message || defaultMsg);
     router.push('/app/meetings');
   } catch (e) {
     const msg = e.response?.data?.message || 'Failed to schedule meeting.';

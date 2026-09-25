@@ -43,6 +43,7 @@ class WaitlistTest extends TestCase
         Setting::set('org.min_notice_hours', 0);
         Setting::set('org.max_advance_days', 365);
         Setting::set('org.max_duration_minutes', 480);
+        Setting::set('org.require_meeting_approval', false);
 
         $this->department = Department::create([
             'name' => 'Mathematics',

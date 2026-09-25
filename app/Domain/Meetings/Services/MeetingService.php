@@ -168,7 +168,7 @@ class MeetingService
                     ['step' => 1, 'approver_type' => 'dept_admin', 'mode' => 'ANY'],
                 ];
             } else {
-                $orgRequiresApproval = (bool) Setting::get('org.require_meeting_approval', false);
+                $orgRequiresApproval = (bool) Setting::get('org.require_meeting_approval', true);
                 $canBypassApproval = $requester->can('meeting.approve')
                     || $requester->can('meeting.override')
                     || $requester->hasRole('super_admin')

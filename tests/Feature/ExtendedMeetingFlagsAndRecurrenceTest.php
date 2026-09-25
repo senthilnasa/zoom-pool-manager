@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Communication\Services\IcsCalendarService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Meetings\Models\MeetingSeries;
+use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
 use App\Domain\Zoom\Models\ResourcePool;
@@ -36,6 +37,7 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->seed(TemplatesAndSecurityProfilesSeeder::class);
+        Setting::set('org.require_meeting_approval', false);
 
         $this->department = Department::create([
             'name' => 'Computer Science',
