@@ -104,7 +104,7 @@
                 <div>To: {{ formatDate(b.ends_at) }}</div>
               </td>
               <td class="py-3.5 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate" :title="b.reason">
-                {{ b.reason || '—' }}
+                {{ b.reason || '-' }}
               </td>
               <td class="py-3.5 px-4 text-right">
                 <button

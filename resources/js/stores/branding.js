@@ -93,9 +93,9 @@ export const useBrandingStore = defineStore('branding', () => {
         }
 
         // Update document title if needed
-        const pageTitle = document.title.split('—')[0]?.trim();
+        const pageTitle = document.title.split(/\s*[-—]\s*/)[0]?.trim();
         if (pageTitle && pageTitle !== orgName.value) {
-            document.title = `${pageTitle} — ${orgName.value}`;
+            document.title = `${pageTitle} - ${orgName.value}`;
         }
     };
 

@@ -401,7 +401,7 @@ const router = createRouter({
 router.afterEach((to) => {
     const orgName = window.__ZPM__?.branding?.org_name || 'Zoom Pool Manager';
     document.title = to.meta?.title
-        ? `${to.meta.title} — ${orgName}`
+        ? `${to.meta.title} - ${orgName}`
         : orgName;
 });
 

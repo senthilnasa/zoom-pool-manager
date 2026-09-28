@@ -1,6 +1,6 @@
 @extends('layouts.base')
 
-@section('title', 'Sign In — Zoom Pool Manager')
+@section('title', 'Sign In - Zoom Pool Manager')
 
 @section('content')
 <div class="max-w-md mx-auto my-8">

@@ -50,7 +50,7 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => 'Zoom Pool Manager (ZPM) — Automate Your Zoom Resource Pool. REST API v1 documentation.',
+        'description' => 'Zoom Pool Manager (ZPM) - Automate Your Zoom Resource Pool. REST API v1 documentation.',
     ],
 
     'ui' => [

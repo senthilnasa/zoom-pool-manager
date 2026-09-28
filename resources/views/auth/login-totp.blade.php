@@ -1,6 +1,6 @@
 @extends('layouts.base')
 
-@section('title', 'Two-Factor Authentication — Zoom Pool Manager')
+@section('title', 'Two-Factor Authentication - Zoom Pool Manager')
 
 @section('content')
 <div class="max-w-md mx-auto my-8" x-data="{ useRecovery: false }">

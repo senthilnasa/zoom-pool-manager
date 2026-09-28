@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes — Zoom Pool Manager (ZPM)
+| API Routes - Zoom Pool Manager (ZPM)
 |--------------------------------------------------------------------------
 */
 

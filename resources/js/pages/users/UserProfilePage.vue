@@ -611,7 +611,7 @@
                       {{ appr.decided_at ? formatDateTime(appr.decided_at) : 'Pending Review' }}
                     </td>
                     <td class="py-3.5 px-4 text-slate-500 italic max-w-xs truncate">
-                      {{ appr.decision_notes || '—' }}
+                      {{ appr.decision_notes || '-' }}
                     </td>
                   </tr>
                 </tbody>
@@ -655,10 +655,10 @@
                       {{ formatDateTime(rec.recording_start || rec.created_at) }}
                     </td>
                     <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 font-medium">
-                      {{ rec.duration_minutes ? rec.duration_minutes + ' mins' : '—' }}
+                      {{ rec.duration_minutes ? rec.duration_minutes + ' mins' : '-' }}
                     </td>
                     <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 font-medium">
-                      {{ rec.file_size_bytes ? formatBytes(rec.file_size_bytes) : '—' }}
+                      {{ rec.file_size_bytes ? formatBytes(rec.file_size_bytes) : '-' }}
                     </td>
                     <td class="py-3.5 px-4">
                       <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
@@ -1065,19 +1065,19 @@ const toggleUserActive = async () => {
 
 // Utilities
 const formatDate = (dateStr) => {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 const formatDateTime = (dateStr) => {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
 const formatTime = (dateStr) => {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 };

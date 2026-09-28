@@ -110,7 +110,7 @@
                 </span>
               </td>
               <td class="py-3.5 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">
-                {{ ev.ip_address || '—' }}
+                {{ ev.ip_address || '-' }}
               </td>
               <td class="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400">
                 {{ formatDate(ev.created_at) }}

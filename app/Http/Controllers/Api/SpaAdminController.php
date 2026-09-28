@@ -367,7 +367,7 @@ class SpaAdminController extends Controller
                     'zoom_meeting_id' => $m->zoom_meeting_id,
                     'participant_count' => $m->participant_count,
                     'resource_name' => $m->zoomResource->name ?? 'Pooled Host',
-                    'department_name' => $m->department->name ?? '—',
+                    'department_name' => $m->department->name ?? '-',
                 ];
             });
 

@@ -1,7 +1,7 @@
 {
     "name": "zpm/zoom-pool-manager",
     "type": "project",
-    "description": "Zoom Pool Manager (ZPM) — Automate Your Zoom Resource Pool",
+    "description": "Zoom Pool Manager (ZPM) - Automate Your Zoom Resource Pool",
     "keywords": ["laravel", "zoom", "resource-pool", "scheduler", "higher-ed"],
     "license": "proprietary",
     "require": {

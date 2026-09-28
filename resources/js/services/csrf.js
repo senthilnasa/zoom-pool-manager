@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 /**
- * Zoom Pool Manager (ZPM) — CSRF Token & Session Keepalive Service
+ * Zoom Pool Manager (ZPM) - CSRF Token & Session Keepalive Service
  * 
  * Provides:
  * 1. Dynamic token extraction and synchronization across DOM, Axios headers, and window.__ZPM__.

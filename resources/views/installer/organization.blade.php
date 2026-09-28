@@ -1,6 +1,6 @@
 @extends('layouts.base')
 
-@section('title', 'Organization Settings — Installer')
+@section('title', 'Organization Settings - Installer')
 
 @section('content')
 <div class="max-w-2xl mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">

@@ -40,7 +40,7 @@
     <div v-if="newPlainToken" class="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
       <div class="flex items-center gap-2 text-amber-800 dark:text-amber-200 text-xs font-bold">
         <Key class="w-4 h-4 text-amber-500" />
-        <span>New API Token Generated — Copy Now</span>
+        <span>New API Token Generated - Copy Now</span>
       </div>
       <p class="text-xs text-amber-700 dark:text-amber-300">
         This secret token will <strong>never be shown again</strong>. Please copy and store it securely in your environment variables or secrets manager.

@@ -194,7 +194,7 @@
                   </div>
                 </td>
                 <td class="py-3.5 px-4 text-slate-600 dark:text-slate-300">
-                  {{ u.department?.name || '—' }}
+                  {{ u.department?.name || '-' }}
                 </td>
                 <td class="py-3.5 px-4">
                   <div class="flex flex-wrap gap-1">

@@ -43,7 +43,7 @@ Instead of purchasing expensive dedicated licenses for every user or manually ju
 ### Why Choose ZPM?
 
 - 💰 **Maximize License ROI:** Share 20 Zoom licenses across 500+ instructors and departments with zero scheduling collisions.
-- 🔒 **Zero Host Password Exposure:** Organizers receive join links and one-click 6-digit Host Key PINs to start and claim host control directly inside Zoom client—without ever knowing the host account's password.
+- 🔒 **Zero Host Password Exposure:** Organizers receive join links and one-click 6-digit Host Key PINs to start and claim host control directly inside Zoom client - without ever knowing the host account's password.
 - ⚡ **Concurrency-Safe Atomic Allocation:** Uses database-level `SELECT ... FOR UPDATE` locking to guarantee zero double-bookings or race conditions.
 - 🔄 **Full Recurring Series Engine:** Full RFC 5545 recurrence expansion (Daily, Weekly, Monthly) with single-resource dedication or pool-wide smart reallocation.
 - 🏢 **Enterprise Directory Sync & SSO:** Out-of-the-box integration with Microsoft Entra ID (Azure AD), Google Workspace, and LDAP / Active Directory with automatic designation and department ingestion.
@@ -323,12 +323,12 @@ curl -X GET "https://zpm.institution.edu/api/v1/availability?starts_at=2026-10-0
 ```
 
 ### Core API Endpoints
-- `GET /api/v1/availability` — Check pooled resource availability for a timeframe.
-- `GET /api/v1/meetings` — List scheduled meetings with filtering and pagination.
-- `POST /api/v1/meetings` — Book a meeting with pool allocation, waiting room, JBH, and host key.
-- `GET /api/v1/meetings/{publicId}` — Inspect meeting details and Zoom join credentials.
-- `POST /api/v1/meetings/{publicId}/cancel` — Cancel a meeting and immediately release resources.
-- `GET /api/v1/recordings` — Access synchronized cloud recordings.
+- `GET /api/v1/availability` - Check pooled resource availability for a timeframe.
+- `GET /api/v1/meetings` - List scheduled meetings with filtering and pagination.
+- `POST /api/v1/meetings` - Book a meeting with pool allocation, waiting room, JBH, and host key.
+- `GET /api/v1/meetings/{publicId}` - Inspect meeting details and Zoom join credentials.
+- `POST /api/v1/meetings/{publicId}/cancel` - Cancel a meeting and immediately release resources.
+- `GET /api/v1/recordings` - Access synchronized cloud recordings.
 
 ---
 

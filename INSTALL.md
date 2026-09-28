@@ -1,4 +1,4 @@
-# Zoom Pool Manager (ZPM) — Web Installation & Deployment Guide
+# Zoom Pool Manager (ZPM) - Web Installation & Deployment Guide
 
 This package is a standalone production build of **Zoom Pool Manager**.
 All frontend assets are pre-compiled in `public/build/`, and production PHP dependencies are bundled in `vendor/`.

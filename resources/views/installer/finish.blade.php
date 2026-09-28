@@ -1,6 +1,6 @@
 @extends('layouts.base')
 
-@section('title', 'Installation Complete — Zoom Pool Manager')
+@section('title', 'Installation Complete - Zoom Pool Manager')
 
 @section('content')
 <div class="max-w-2xl mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden text-center p-8">

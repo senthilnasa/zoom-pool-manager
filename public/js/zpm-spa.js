@@ -1,5 +1,5 @@
 /**
- * Zoom Pool Manager (ZPM) — Modern SPA Micro-Interactions & AJAX Layer
+ * Zoom Pool Manager (ZPM) - Modern SPA Micro-Interactions & AJAX Layer
  * Made with ❤️ by Senthil Nasa (https://github.com/senthilnasa)
  */
 

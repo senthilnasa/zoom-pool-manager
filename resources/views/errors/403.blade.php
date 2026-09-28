@@ -1,6 +1,6 @@
 @extends('layouts.base')
 
-@section('title', '403 — Forbidden')
+@section('title', '403 - Forbidden')
 
 @section('content')
 <div class="max-w-md mx-auto text-center py-16">
@@ -9,7 +9,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
         </svg>
     </div>
-    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">403 — Access Forbidden</h1>
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">403 - Access Forbidden</h1>
     <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
         {{ $exception->getMessage() ?: 'You do not have permission to access this resource.' }}
     </p>
