@@ -10,6 +10,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost:8000'),
 
+    'installed' => (bool) env('APP_INSTALLED', false),
+
     'timezone' => env('APP_TIMEZONE', 'Asia/Kolkata'),
 
     'locale' => env('APP_LOCALE', 'en'),

@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.1.0 or v1.1.0)'
+        required: true
+        default: '1.1.0'
 
 permissions:
   contents: write
@@ -16,6 +22,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -27,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Frontend Dependencies & Build Assets
         run: |
@@ -48,23 +56,62 @@ jobs:
           DB_DATABASE: ':memory:'
         run: ./vendor/bin/pest
 
-      - name: Extract Tag Name
-        id: tag
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - name: Determine Release Tag
+        id: release_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            INPUT_TAG="${{ github.event.inputs.version }}"
+            # Ensure tag starts with v
+            if [[ ! "$INPUT_TAG" =~ ^v ]]; then
+              TAG_NAME="v${INPUT_TAG}"
+            else
+              TAG_NAME="${INPUT_TAG}"
+            fi
+          else
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Building package for tag: ${TAG_NAME}"
 
       - name: Build Standalone Release Package
         run: |
-          bash tools/build-release.sh ${{ steps.tag.outputs.TAG_NAME }}
+          bash tools/build-release.sh ${{ steps.release_tag.outputs.TAG_NAME }}
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Zoom Pool Manager ${{ steps.tag.outputs.TAG_NAME }}"
-          body_path: CHANGELOG.md
+          tag_name: ${{ steps.release_tag.outputs.TAG_NAME }}
+          name: "Zoom Pool Manager ${{ steps.release_tag.outputs.TAG_NAME }}"
+          body: |
+            ## Zoom Pool Manager ${{ steps.release_tag.outputs.TAG_NAME }}
+            
+            ### Production Release Package
+            This standalone release package includes pre-compiled production assets (`public/build`), bundled vendor dependencies, and automated installation scripts.
+            
+            ### Quick Deployment
+            ```bash
+            # Download and extract
+            unzip zoom-pool-manager-${{ steps.release_tag.outputs.TAG_NAME }}.zip
+            cd zoom-pool-manager-${{ steps.release_tag.outputs.TAG_NAME }}
+            
+            # Run automated setup
+            ./setup.sh
+            ```
+            
+            ### SHA256 Checksums
+            Verify archive integrity using the included `.sha256` files.
           draft: false
           prerelease: false
           files: |
-            dist/zpm-release-*.zip
-            dist/zpm-release-*.zip.sha256
+            dist/*.zip
+            dist/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zpm-release-${{ steps.release_tag.outputs.TAG_NAME }}
+          path: |
+            dist/*.zip
+            dist/*.sha256

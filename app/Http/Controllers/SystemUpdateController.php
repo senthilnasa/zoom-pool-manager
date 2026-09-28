@@ -24,21 +24,35 @@ class SystemUpdateController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
-        if (! $user || (! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator') && ! $user->can('settings.manage'))) {
+        if (! $user || (! $user->hasAnyRole(['super_admin', 'it_admin', 'Super Administrator', 'Administrator']) && ! $user->can('settings.manage'))) {
             abort(403, 'Unauthorized. Administrator privileges required to manage application updates.');
         }
     }
 
     /**
-     * System updates overview page.
+     * System updates overview page or JSON payload.
      */
-    public function index(): View
+    public function index(Request $request): View|JsonResponse
     {
         $this->authorizeUpdates();
+
+        if ($request->wantsJson()) {
+            return response()->json($this->updateService->getStatus());
+        }
 
         return app(SpaController::class)->index(request(), [
             'fallbackHtml' => '<h1>System Updates</h1> <p>Made with ❤️ by Senthil Nasa</p>',
         ]);
+    }
+
+    /**
+     * Get real-time update progress for polling.
+     */
+    public function progress(Request $request): JsonResponse
+    {
+        $this->authorizeUpdates();
+
+        return response()->json($this->updateService->getProgress());
     }
 
     /**

@@ -23,7 +23,7 @@ test('redirects root route to /installer when lock file and db flag are missing'
     }
 });
 
-test('blocks access to /installer when installed.lock exists', function () {
+test('redirects /installer to /login when installed.lock exists', function () {
     EnsureInstalled::$bypassForTesting = null;
     $lockFile = storage_path(EnsureInstalled::LOCK_FILE);
     $hadLockFile = file_exists($lockFile);
@@ -32,7 +32,7 @@ test('blocks access to /installer when installed.lock exists', function () {
 
     try {
         $response = $this->get('/installer');
-        $response->assertStatus(403);
+        $response->assertRedirect(route('login'));
     } finally {
         if ($hadLockFile && $lockContent !== null) {
             file_put_contents($lockFile, $lockContent);

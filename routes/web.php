@@ -173,6 +173,7 @@ Route::middleware('auth')->group(function () {
 
         // System updates
         Route::get('/settings/updates', [SystemUpdateController::class, 'index'])->name('settings.updates.index');
+        Route::get('/settings/updates/progress', [SystemUpdateController::class, 'progress'])->name('settings.updates.progress');
         Route::post('/settings/updates/check', [SystemUpdateController::class, 'check'])->name('settings.updates.check');
         Route::post('/settings/updates/apply', [SystemUpdateController::class, 'apply'])->name('settings.updates.apply');
 
@@ -384,6 +385,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('/outbound-webhooks/{publicId}/toggle', [ApiAdminController::class, 'toggleWebhook'])->name('outbound-webhooks.toggle');
     // System Updates & Releases
     Route::get('/system/updates', [SystemUpdateController::class, 'index'])->name('system.updates.index');
+    Route::get('/system/updates/progress', [SystemUpdateController::class, 'progress'])->name('system.updates.progress');
     Route::post('/system/updates/check', [SystemUpdateController::class, 'check'])->name('system.updates.check');
     Route::post('/system/updates/apply', [SystemUpdateController::class, 'apply'])->name('system.updates.apply');
 });

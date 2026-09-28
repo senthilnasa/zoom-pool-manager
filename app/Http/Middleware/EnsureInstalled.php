@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Domain\Settings\Models\Setting;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -37,7 +38,7 @@ class EnsureInstalled
         }
 
         if ($isInstalled && $isInstallerRoute) {
-            abort(403, 'Zoom Pool Manager is already installed. To re-run the installer, execute: php artisan zpm:installer:unlock');
+            return redirect()->route('login');
         }
 
         return $next($request);
@@ -45,7 +46,7 @@ class EnsureInstalled
 
     /**
      * Determine if the application has been installed.
-     * Checks both the lock file and database flag per SPEC Part H1.
+     * Checks both the lock file, environment, and database state per SPEC Part H1.
      */
     public function isInstalled(): bool
     {
@@ -54,6 +55,10 @@ class EnsureInstalled
         }
 
         if (file_exists(storage_path(self::LOCK_FILE))) {
+            return true;
+        }
+
+        if ((bool) config('app.installed', false)) {
             return true;
         }
 
@@ -69,6 +74,16 @@ class EnsureInstalled
 
                     return true;
                 }
+            }
+
+            // If .env is already configured with an existing user in database, consider installed
+            if (Schema::hasTable('users') && DB::table('users')->exists()) {
+                @file_put_contents(storage_path(self::LOCK_FILE), json_encode([
+                    'installed_at' => now()->toIso8601String(),
+                    'auto_detected' => true,
+                ], JSON_PRETTY_PRINT));
+
+                return true;
             }
         } catch (\Throwable $e) {
             // DB not reachable or not migrated yet during initial setup

@@ -11,6 +11,7 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Database\Seeders\TemplatesAndSecurityProfilesSeeder;
 use Exception;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -72,7 +73,7 @@ class InstallerService
     public function checkRequirements(): array
     {
         $phpVersion = PHP_VERSION;
-        $phpSatisfied = version_compare($phpVersion, '8.3.0', '>=');
+        $phpSatisfied = version_compare($phpVersion, '8.2.0', '>=');
 
         $extensions = [];
         $extensionsSatisfied = true;
@@ -107,7 +108,7 @@ class InstallerService
         return [
             'php' => [
                 'version' => $phpVersion,
-                'required' => '8.3.0',
+                'required' => '8.2.0',
                 'satisfied' => $phpSatisfied,
             ],
             'extensions' => $extensions,
@@ -200,6 +201,14 @@ class InstallerService
             $output = Artisan::output();
 
             $this->seedInitialRolesAndPermissions();
+
+            try {
+                Artisan::call('db:seed', [
+                    '--class' => TemplatesAndSecurityProfilesSeeder::class,
+                    '--force' => true,
+                ]);
+            } catch (\Throwable) {
+            }
 
             return [
                 'success' => true,
@@ -356,18 +365,59 @@ class InstallerService
      */
     public function completeInstallation(): void
     {
+        $version = '1.0.0';
+        $versionFile = base_path('version.json');
+        if (file_exists($versionFile)) {
+            try {
+                $meta = json_decode((string) file_get_contents($versionFile), true);
+                if (! empty($meta['version'])) {
+                    $version = (string) $meta['version'];
+                }
+            } catch (\Throwable) {
+            }
+        }
+
         $lockFile = storage_path(EnsureInstalled::LOCK_FILE);
         file_put_contents($lockFile, json_encode([
             'installed_at' => now()->toIso8601String(),
-            'version' => '1.0.0-dev',
+            'version' => $version,
         ], JSON_PRETTY_PRINT));
 
         Setting::set('installed_at', now()->toIso8601String());
-        Setting::set('app_version', '1.0.0-dev');
+        Setting::set('app_version', $version);
 
         // Regenerate app key if missing
-        if (empty(config('app.key'))) {
-            Artisan::call('key:generate', ['--force' => true]);
+        if (empty(config('app.key')) || ! str_contains((string) config('app.key'), 'base64:')) {
+            try {
+                Artisan::call('key:generate', ['--force' => true]);
+            } catch (\Throwable) {
+            }
+        }
+
+        // Storage link
+        try {
+            Artisan::call('storage:link');
+        } catch (\Throwable) {
+        }
+
+        // Update .env with APP_INSTALLED=true
+        $envPath = base_path('.env');
+        if (file_exists($envPath)) {
+            $content = (string) file_get_contents($envPath);
+            if (preg_match('/^APP_INSTALLED=.*/m', $content)) {
+                $content = preg_replace('/^APP_INSTALLED=.*/m', 'APP_INSTALLED=true', $content);
+            } else {
+                $content .= "\nAPP_INSTALLED=true\n";
+            }
+            file_put_contents($envPath, $content);
+        }
+
+        // Optimize caches
+        try {
+            Artisan::call('config:cache');
+            Artisan::call('route:cache');
+            Artisan::call('view:cache');
+        } catch (\Throwable) {
         }
     }
 }

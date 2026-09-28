@@ -1,59 +1,63 @@
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">
-          System Updates & GitHub Releases
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <span>System Updates</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-mono bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300">
+            v{{ updateInfo?.installed_version || authStore.appVersion }}
+          </span>
         </h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Verify and apply authenticated release packages directly from GitHub with automated pre-update backups.
+          Automated one-click application updates, pre-update snapshots, and database schema migrations.
         </p>
       </div>
 
       <button
         @click="checkUpdates"
-        :disabled="checking || applying"
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-md shadow-brand-500/20 transition-all disabled:opacity-50"
+        :disabled="checking || isUpdating"
+        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold transition-all disabled:opacity-50"
       >
         <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': checking }" />
         <span>{{ checking ? 'Checking...' : 'Check for Updates' }}</span>
       </button>
     </div>
 
-    <!-- Current Version Status Card -->
+    <!-- Version Status Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-      <GlassCard title="Installed Version">
+      <GlassCard title="Application Version">
         <div class="flex items-center gap-4 mt-2">
           <div class="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-xl">
-            v
+            <Layers class="w-6 h-6" />
           </div>
           <div>
-            <div class="text-2xl font-black text-slate-900 dark:text-white">
-              {{ updateInfo?.current_version || authStore.appVersion }}
+            <div class="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <span>v{{ updateInfo?.installed_version || authStore.appVersion }}</span>
             </div>
-            <div class="text-xs text-slate-500">
-              Target Repository: <span class="font-mono font-medium text-slate-700 dark:text-slate-300">senthilnasa/zoom-pool-manager</span>
+            <div class="text-xs text-slate-500 mt-0.5 space-x-2">
+              <span>Build: <strong class="font-mono text-slate-700 dark:text-slate-300">{{ updateInfo?.metadata?.build || 'stable' }}</strong></span>
+              <span v-if="updateInfo?.metadata?.release_date">• Released: {{ formatDate(updateInfo.metadata.release_date) }}</span>
             </div>
           </div>
         </div>
       </GlassCard>
 
-      <GlassCard title="Latest Release Available">
+      <GlassCard title="Latest Version">
         <div class="flex items-center gap-4 mt-2">
           <div
             class="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-xl"
             :class="updateInfo?.update_available ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'"
           >
-            <CheckCircle2 v-if="!updateInfo?.update_available" class="w-6 h-6" />
-            <ArrowUpCircle v-else class="w-6 h-6" />
+            <ArrowUpCircle v-if="updateInfo?.update_available" class="w-6 h-6 text-emerald-500 animate-pulse" />
+            <CheckCircle2 v-else class="w-6 h-6 text-emerald-500" />
           </div>
           <div>
             <div class="text-2xl font-black text-slate-900 dark:text-white">
-              {{ updateInfo?.latest_version || 'v' + authStore.appVersion }}
+              v{{ updateInfo?.latest_version || updateInfo?.installed_version || authStore.appVersion }}
             </div>
-            <div class="text-xs" :class="updateInfo?.update_available ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-500'">
-              {{ updateInfo?.update_available ? 'New Version Available!' : 'You are running the latest version' }}
+            <div class="text-xs font-medium mt-0.5" :class="updateInfo?.update_available ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'">
+              {{ updateInfo?.update_available ? 'New update available' : 'You are running the latest version' }}
             </div>
           </div>
         </div>
@@ -63,29 +67,34 @@
     <!-- Update Action Banner if Update Available -->
     <div
       v-if="updateInfo?.update_available"
-      class="p-6 rounded-2xl border border-brand-200 dark:border-brand-800/80 bg-brand-50/50 dark:bg-brand-950/40 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+      class="p-6 rounded-2xl border border-emerald-200 dark:border-emerald-800/80 bg-gradient-to-r from-emerald-50/70 to-teal-50/70 dark:from-emerald-950/30 dark:to-teal-950/30 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm"
     >
-      <div>
-        <h4 class="font-bold text-slate-900 dark:text-white">
-          Release {{ updateInfo.latest_version }} is ready to apply
-        </h4>
-        <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-xl">
-          An automated pre-update backup of your database and environment will be taken. Release checksums and zip directory integrity are validated before file replacement.
+      <div class="space-y-1">
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>New Release Ready</span>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+          {{ updateInfo.release_name || 'Release v' + updateInfo.latest_version }}
+        </h3>
+        <p class="text-xs text-slate-600 dark:text-slate-300 max-w-xl">
+          Automated one-click deployment will create a full database snapshot, update code files (safely preserving your <code class="font-mono text-xs">.env</code> and uploads), and run database migrations.
         </p>
       </div>
 
       <button
         @click="confirmModal = true"
-        :disabled="applying"
-        class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md shadow-emerald-500/20 transition-all shrink-0"
+        :disabled="isUpdating"
+        class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold shadow-lg shadow-emerald-600/25 transition-all shrink-0 flex items-center gap-2"
       >
-        <span>Apply Update Now</span>
+        <Download class="w-4 h-4" />
+        <span>Update Now</span>
       </button>
     </div>
 
-    <!-- Changelog & Release Notes -->
-    <GlassCard v-if="updateInfo?.release_notes" title="Release Notes">
-      <div class="prose prose-sm dark:prose-invert max-w-none text-xs whitespace-pre-line text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-900/50 p-4 rounded-xl font-mono">
+    <!-- Release Notes / Changelog -->
+    <GlassCard v-if="updateInfo?.release_notes" title="Release Notes & Changelog">
+      <div class="text-xs whitespace-pre-line text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl font-mono leading-relaxed border border-slate-200/60 dark:border-slate-800 max-h-96 overflow-y-auto">
         {{ updateInfo.release_notes }}
       </div>
     </GlassCard>
@@ -96,13 +105,25 @@
       title="Confirm System Update"
       @close="confirmModal = false"
     >
-      <div class="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+      <div class="space-y-4 text-sm text-slate-600 dark:text-slate-300">
         <p>
-          You are about to update Zoom Pool Manager to version
-          <span class="font-bold text-slate-900 dark:text-white">{{ updateInfo?.latest_version }}</span>.
+          You are about to update Zoom Pool Manager from
+          <span class="font-semibold text-slate-900 dark:text-white">v{{ updateInfo?.installed_version }}</span>
+          to
+          <span class="font-bold text-emerald-600 dark:text-emerald-400">v{{ updateInfo?.latest_version }}</span>.
         </p>
-        <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs">
-          <strong>Safety Protections:</strong> An exclusive update lock is acquired to prevent concurrent writes, a full database snapshot is archived to <code class="font-mono">storage/app/backups/</code>, and migrations are run automatically.
+
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+          <div class="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+            <ShieldCheck class="w-4 h-4 text-brand-600" />
+            <span>Automated Production Safeguards</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-600 dark:text-slate-400 pl-1">
+            <li>Full database backup stored in <code class="font-mono">storage/app/backups/</code></li>
+            <li>Zero loss of your <code class="font-mono">.env</code> configurations and uploaded files</li>
+            <li>Automatic rollback to previous state if installation fails</li>
+            <li>Database migrations applied automatically with zero manual SQL</li>
+          </ul>
         </div>
       </div>
 
@@ -116,11 +137,136 @@
         </button>
         <button
           type="button"
-          @click="applyUpdate"
-          :disabled="applying"
-          class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-all disabled:opacity-50"
+          @click="startUpdate"
+          class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-all shadow-md shadow-emerald-600/20"
         >
-          {{ applying ? 'Applying Update...' : 'Proceed with Update' }}
+          Proceed with Update
+        </button>
+      </template>
+    </Modal>
+
+    <!-- Akaunting-Style Update Progress Modal -->
+    <Modal
+      :show="progressModal"
+      title="Updating Zoom Pool Manager"
+      :closeable="updateDone"
+      @close="updateDone ? closeProgressModal() : null"
+    >
+      <div class="space-y-6">
+        <!-- Progress Bar -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs font-semibold">
+            <span class="text-slate-700 dark:text-slate-300">
+              {{ currentStepMessage || 'Preparing update...' }}
+            </span>
+            <span class="text-brand-600 dark:text-brand-400 font-mono">
+              {{ progressPercent }}%
+            </span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div
+              class="h-full transition-all duration-500 rounded-full"
+              :class="updateFailed ? 'bg-rose-500' : 'bg-gradient-to-r from-brand-500 to-emerald-500'"
+              :style="{ width: progressPercent + '%' }"
+            />
+          </div>
+        </div>
+
+        <!-- 7-Step Checklist -->
+        <div class="divide-y divide-slate-100 dark:divide-slate-800/80 border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/40">
+          <div
+            v-for="(step, idx) in updateSteps"
+            :key="step.id || idx"
+            class="flex items-center justify-between p-3.5 text-xs transition-colors"
+            :class="getStepRowClass(step.status)"
+          >
+            <div class="flex items-center gap-3">
+              <!-- Status Icon -->
+              <div class="w-5 h-5 flex items-center justify-center shrink-0">
+                <CheckCircle2 v-if="step.status === 'completed'" class="w-5 h-5 text-emerald-500" />
+                <Loader2 v-else-if="step.status === 'running'" class="w-5 h-5 text-brand-600 animate-spin" />
+                <AlertCircle v-else-if="step.status === 'failed'" class="w-5 h-5 text-rose-500" />
+                <Circle v-else class="w-4 h-4 text-slate-300 dark:text-slate-600" />
+              </div>
+              <span class="font-medium" :class="getStepTextClass(step.status)">
+                {{ step.name }}
+              </span>
+            </div>
+
+            <span
+              v-if="step.message && step.status !== 'pending'"
+              class="text-[11px] truncate max-w-[200px] text-slate-500"
+            >
+              {{ step.status === 'completed' ? 'Done' : step.message }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Success Completion Alert -->
+        <div
+          v-if="updateDone && !updateFailed"
+          class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-start gap-3"
+        >
+          <CheckCircle2 class="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+          <div class="text-xs space-y-1">
+            <div class="font-bold text-sm">Update completed successfully!</div>
+            <p>Application files, database schema, and caches are now up to date on version <strong>v{{ updateInfo?.latest_version }}</strong>.</p>
+            <p class="text-emerald-600 dark:text-emerald-400 font-medium">Reloading page in {{ countdown }} seconds...</p>
+          </div>
+        </div>
+
+        <!-- Failure Alert -->
+        <div
+          v-if="updateFailed"
+          class="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 flex items-start gap-3"
+        >
+          <AlertTriangle class="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+          <div class="text-xs space-y-1">
+            <div class="font-bold text-sm">Update Failed</div>
+            <p>{{ errorMessage || 'An unexpected error occurred during update.' }}</p>
+            <p v-if="rollbackStatus" class="font-semibold text-amber-700 dark:text-amber-300">
+              Rollback Status: {{ rollbackStatus }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Detailed Execution Logs Expander -->
+        <div>
+          <button
+            type="button"
+            @click="showLogs = !showLogs"
+            class="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 inline-flex items-center gap-1"
+          >
+            <span>{{ showLogs ? 'Hide detailed execution log' : 'Show detailed execution log' }}</span>
+            <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': showLogs }" />
+          </button>
+          <div
+            v-if="showLogs"
+            class="mt-2 p-3 bg-slate-900 text-slate-200 rounded-xl text-[11px] font-mono max-h-48 overflow-y-auto space-y-1 border border-slate-800"
+          >
+            <div v-for="(log, idx) in executionLogs" :key="idx">
+              {{ log }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <button
+          v-if="updateDone && !updateFailed"
+          type="button"
+          @click="reloadPage"
+          class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+        >
+          Reload Application Now
+        </button>
+        <button
+          v-if="updateFailed"
+          type="button"
+          @click="closeProgressModal"
+          class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold"
+        >
+          Close
         </button>
       </template>
     </Modal>
@@ -128,37 +274,105 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import GlassCard from '@/components/GlassCard.vue';
 import Modal from '@/components/Modal.vue';
-import { RefreshCw, CheckCircle2, ArrowUpCircle } from 'lucide-vue-next';
+import {
+  RefreshCw,
+  CheckCircle2,
+  ArrowUpCircle,
+  Download,
+  ShieldCheck,
+  Layers,
+  Sparkles,
+  Loader2,
+  AlertCircle,
+  AlertTriangle,
+  Circle,
+  ChevronDown
+} from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const toast = useToastStore();
 
 const checking = ref(false);
-const applying = ref(false);
+const isUpdating = ref(false);
 const confirmModal = ref(false);
+const progressModal = ref(false);
+const showLogs = ref(false);
+
+const updateDone = ref(false);
+const updateFailed = ref(false);
+const errorMessage = ref('');
+const rollbackStatus = ref('');
+const countdown = ref(5);
+let countdownTimer = null;
+let pollInterval = null;
 
 const updateInfo = ref({
-  current_version: '1.0.0',
+  installed_version: '1.0.0',
   latest_version: '1.0.0',
   update_available: false,
+  release_name: '',
   release_notes: '',
+  metadata: {
+    build: 'stable',
+    release_date: '',
+  }
 });
+
+const defaultSteps = [
+  { id: 'checking', name: 'Checking latest version...', status: 'pending', message: null },
+  { id: 'downloading', name: 'Downloading update...', status: 'pending', message: null },
+  { id: 'backing_up', name: 'Creating backup...', status: 'pending', message: null },
+  { id: 'installing', name: 'Installing update...', status: 'pending', message: null },
+  { id: 'migrating', name: 'Running migrations...', status: 'pending', message: null },
+  { id: 'restarting', name: 'Restarting application...', status: 'pending', message: null },
+  { id: 'verifying', name: 'Verifying installation...', status: 'pending', message: null },
+];
+
+const updateSteps = ref([...defaultSteps]);
+const progressPercent = ref(0);
+const currentStepMessage = ref('');
+const executionLogs = ref([]);
+
+const formatDate = (isoString) => {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    return isNaN(d.getTime()) ? isoString : d.toLocaleDateString();
+  } catch {
+    return isoString;
+  }
+};
+
+const getStepRowClass = (status) => {
+  if (status === 'running') return 'bg-brand-50/50 dark:bg-brand-950/20';
+  if (status === 'completed') return 'bg-emerald-50/30 dark:bg-emerald-950/10';
+  if (status === 'failed') return 'bg-rose-50/50 dark:bg-rose-950/20';
+  return '';
+};
+
+const getStepTextClass = (status) => {
+  if (status === 'running') return 'text-brand-600 dark:text-brand-400 font-semibold';
+  if (status === 'completed') return 'text-slate-800 dark:text-slate-200';
+  if (status === 'failed') return 'text-rose-600 dark:text-rose-400 font-semibold';
+  return 'text-slate-400 dark:text-slate-500';
+};
 
 const loadCurrentStatus = async () => {
   try {
     const res = await axios.get('/spa/settings/updates');
-    updateInfo.value = res.data;
+    if (res.data) {
+      updateInfo.value = res.data;
+    }
   } catch (e) {
-    // Defaults
     updateInfo.value = {
-      current_version: authStore.appVersion,
-      latest_version: authStore.appVersion,
+      installed_version: authStore.appVersion || '1.0.0',
+      latest_version: authStore.appVersion || '1.0.0',
       update_available: false,
     };
   }
@@ -168,11 +382,13 @@ const checkUpdates = async () => {
   try {
     checking.value = true;
     const res = await axios.post('/spa/settings/updates/check');
-    updateInfo.value = res.data;
-    if (res.data.update_available) {
-      toast.info(`A newer release (${res.data.latest_version}) is available!`);
-    } else {
-      toast.success('Your system is up to date.');
+    if (res.data) {
+      updateInfo.value = res.data;
+      if (res.data.update_available) {
+        toast.info(`A newer release (v${res.data.latest_version}) is available!`);
+      } else {
+        toast.success('Your application is up to date.');
+      }
     }
   } catch (e) {
     toast.error('Unable to fetch updates from GitHub repository.');
@@ -181,27 +397,110 @@ const checkUpdates = async () => {
   }
 };
 
-const applyUpdate = async () => {
+const startUpdate = async () => {
+  confirmModal.value = false;
+  progressModal.value = true;
+  isUpdating.value = true;
+  updateDone.value = false;
+  updateFailed.value = false;
+  errorMessage.value = '';
+  rollbackStatus.value = '';
+  progressPercent.value = 5;
+  updateSteps.value = JSON.parse(JSON.stringify(defaultSteps));
+  executionLogs.value = ['[' + new Date().toLocaleTimeString() + '] Initializing update sequence...'];
+
+  // Start polling progress immediately
+  startPollingProgress();
+
   try {
-    applying.value = true;
-    confirmModal.value = false;
     const res = await axios.post('/spa/settings/updates/apply');
-    if (res.data.success) {
-      toast.success('Update applied successfully! Reloading...');
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+    if (res.data && res.data.success) {
+      updateDone.value = true;
+      progressPercent.value = 100;
+      currentStepMessage.value = 'Update completed successfully.';
+      // Mark all steps completed
+      updateSteps.value.forEach(s => s.status = 'completed');
+
+      startCountdown();
     } else {
-      toast.error(res.data.message || 'Update failed.');
+      throw new Error(res.data?.message || 'Update failed.');
     }
   } catch (e) {
-    toast.error(e.response?.data?.message || 'Error occurred while applying update.');
+    updateFailed.value = true;
+    updateDone.value = true;
+    errorMessage.value = e.response?.data?.message || e.message || 'An error occurred during update.';
+    if (e.response?.data?.can_rollback) {
+      rollbackStatus.value = 'Application safely restored to original state.';
+    }
   } finally {
-    applying.value = false;
+    isUpdating.value = false;
+    stopPollingProgress();
   }
+};
+
+const startPollingProgress = () => {
+  stopPollingProgress();
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await axios.get('/spa/settings/updates/progress');
+      if (res.data) {
+        if (res.data.steps && Array.isArray(res.data.steps)) {
+          updateSteps.value = res.data.steps;
+        }
+        if (typeof res.data.percent === 'number') {
+          progressPercent.value = res.data.percent;
+        }
+        if (res.data.current_step_name) {
+          currentStepMessage.value = res.data.current_step_name;
+        }
+        if (res.data.logs && Array.isArray(res.data.logs)) {
+          executionLogs.value = res.data.logs;
+        }
+        if (res.data.error) {
+          updateFailed.value = true;
+          errorMessage.value = res.data.error;
+        }
+      }
+    } catch {
+      // Ignore transient network errors during maintenance reload
+    }
+  }, 1000);
+};
+
+const stopPollingProgress = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+};
+
+const startCountdown = () => {
+  countdown.value = 5;
+  countdownTimer = setInterval(() => {
+    countdown.value--;
+    if (countdown.value <= 0) {
+      clearInterval(countdownTimer);
+      reloadPage();
+    }
+  }, 1000);
+};
+
+const reloadPage = () => {
+  window.location.reload();
+};
+
+const closeProgressModal = () => {
+  progressModal.value = false;
+  if (countdownTimer) clearInterval(countdownTimer);
+  loadCurrentStatus();
 };
 
 onMounted(() => {
   loadCurrentStatus();
+});
+
+onUnmounted(() => {
+  stopPollingProgress();
+  if (countdownTimer) clearInterval(countdownTimer);
 });
 </script>

@@ -18,6 +18,7 @@ return [
     'repository' => 'senthilnasa/zoom-pool-manager',
     'repository_url' => 'https://github.com/senthilnasa/zoom-pool-manager',
     'release_api_url' => 'https://api.github.com/repos/senthilnasa/zoom-pool-manager/releases/latest',
+    'github_token' => env('ZPM_GITHUB_TOKEN'),
 
     /*
     |--------------------------------------------------------------------------

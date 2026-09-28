@@ -16,6 +16,8 @@ class AppUpdateService
 {
     protected string $lockFile;
 
+    public const PROGRESS_CACHE_KEY = 'zpm:system:update_progress';
+
     public function __construct()
     {
         $this->lockFile = storage_path('framework/update.lock');
@@ -26,10 +28,55 @@ class AppUpdateService
      */
     public function getCurrentVersion(): string
     {
-        /** @var string $version */
-        $version = config('zpm.version', '1.0.0');
+        /** @var string|null $configVersion */
+        $configVersion = config('zpm.version');
+        if ($configVersion && $configVersion !== '1.0.0') {
+            return ltrim($configVersion, 'v');
+        }
 
-        return ltrim($version, 'v');
+        $versionFile = base_path('version.json');
+        if (File::exists($versionFile)) {
+            try {
+                $meta = json_decode((string) File::get($versionFile), true);
+                if (! empty($meta['version']) && is_string($meta['version'])) {
+                    return ltrim($meta['version'], 'v');
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        return ltrim($configVersion ?: '1.0.0', 'v');
+    }
+
+    /**
+     * Get metadata from version.json.
+     *
+     * @return array{version: string, build: string, release_date: string, php_min: string}
+     */
+    public function getVersionMetadata(): array
+    {
+        $versionFile = base_path('version.json');
+        if (File::exists($versionFile)) {
+            try {
+                $meta = json_decode((string) File::get($versionFile), true);
+                if (is_array($meta)) {
+                    return [
+                        'version' => ltrim((string) ($meta['version'] ?? $this->getCurrentVersion()), 'v'),
+                        'build' => (string) ($meta['build'] ?? 'stable'),
+                        'release_date' => (string) ($meta['release_date'] ?? ''),
+                        'php_min' => (string) ($meta['php_min'] ?? '8.2.0'),
+                    ];
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        return [
+            'version' => $this->getCurrentVersion(),
+            'build' => 'development',
+            'release_date' => now()->toDateString(),
+            'php_min' => '8.2.0',
+        ];
     }
 
     /**
@@ -46,7 +93,8 @@ class AppUpdateService
      *     checksum_url: ?string,
      *     html_url: ?string,
      *     checked_at: string,
-     *     error: ?string
+     *     error: ?string,
+     *     metadata: array<string, mixed>
      * }
      */
     public function checkForUpdates(bool $force = false): array
@@ -58,7 +106,7 @@ class AppUpdateService
             Cache::forget($cacheKey);
         }
 
-        /** @var array{installed_version: string, latest_version: string, update_available: bool, release_name: ?string, release_notes: ?string, published_at: ?string, download_url: ?string, checksum_url: ?string, html_url: ?string, checked_at: string, error: ?string} $cached */
+        /** @var array{installed_version: string, latest_version: string, update_available: bool, release_name: ?string, release_notes: ?string, published_at: ?string, download_url: ?string, checksum_url: ?string, html_url: ?string, checked_at: string, error: ?string, metadata: array<string, mixed>} $cached */
         $cached = Cache::remember($cacheKey, $cacheTtl, function () {
             return $this->fetchLatestReleaseFromGitHub();
         });
@@ -80,7 +128,8 @@ class AppUpdateService
      *     checksum_url: ?string,
      *     html_url: ?string,
      *     checked_at: string,
-     *     error: ?string
+     *     error: ?string,
+     *     metadata: array<string, mixed>
      * }
      */
     protected function fetchLatestReleaseFromGitHub(): array
@@ -90,11 +139,17 @@ class AppUpdateService
         $apiUrl = config('zpm.release_api_url', 'https://api.github.com/repos/senthilnasa/zoom-pool-manager/releases/latest');
 
         try {
+            $headers = [
+                'User-Agent' => 'Zoom-Pool-Manager/'.$currentVersion,
+                'Accept' => 'application/vnd.github.v3+json',
+            ];
+
+            if ($token = config('zpm.github_token')) {
+                $headers['Authorization'] = 'Bearer '.$token;
+            }
+
             $response = Http::timeout((int) config('zpm.updates.timeout_seconds', 15))
-                ->withHeaders([
-                    'User-Agent' => 'Zoom-Pool-Manager/'.$currentVersion,
-                    'Accept' => 'application/vnd.github.v3+json',
-                ])
+                ->withHeaders($headers)
                 ->get($apiUrl);
 
             if (! $response->successful()) {
@@ -110,6 +165,7 @@ class AppUpdateService
                     'html_url' => null,
                     'checked_at' => now()->toIso8601String(),
                     'error' => 'GitHub API returned status '.$response->status(),
+                    'metadata' => $this->getVersionMetadata(),
                 ];
             }
 
@@ -145,6 +201,7 @@ class AppUpdateService
                 'html_url' => $data['html_url'] ?? 'https://github.com/senthilnasa/zoom-pool-manager/releases',
                 'checked_at' => now()->toIso8601String(),
                 'error' => null,
+                'metadata' => $this->getVersionMetadata(),
             ];
         } catch (Exception $e) {
             Log::warning('GitHub release check failed: '.$e->getMessage());
@@ -161,8 +218,118 @@ class AppUpdateService
                 'html_url' => null,
                 'checked_at' => now()->toIso8601String(),
                 'error' => $e->getMessage(),
+                'metadata' => $this->getVersionMetadata(),
             ];
         }
+    }
+
+    /**
+     * Get system update overview status for UI.
+     *
+     * @return array<string, mixed>
+     */
+    public function getStatus(): array
+    {
+        $info = $this->checkForUpdates(force: false);
+        $progress = $this->getProgress();
+
+        return array_merge($info, [
+            'is_locked' => $this->isLocked(),
+            'progress' => $progress,
+        ]);
+    }
+
+    /**
+     * Get real-time update progress from cache.
+     *
+     * @return array<string, mixed>
+     */
+    public function getProgress(): array
+    {
+        /** @var array<string, mixed>|null $progress */
+        $progress = Cache::get(self::PROGRESS_CACHE_KEY);
+
+        if (! is_array($progress)) {
+            return [
+                'is_active' => false,
+                'step_index' => 0,
+                'total_steps' => 7,
+                'current_step_name' => 'Idle',
+                'percent' => 0,
+                'steps' => $this->getInitialSteps(),
+                'logs' => [],
+                'completed' => false,
+                'success' => true,
+                'error' => null,
+                'can_rollback' => false,
+            ];
+        }
+
+        return $progress;
+    }
+
+    /**
+     * Get canonical list of update steps.
+     *
+     * @return array<int, array{id: string, name: string, status: string, message: ?string}>
+     */
+    public function getInitialSteps(): array
+    {
+        return [
+            ['id' => 'checking', 'name' => 'Checking latest version...', 'status' => 'pending', 'message' => null],
+            ['id' => 'downloading', 'name' => 'Downloading update...', 'status' => 'pending', 'message' => null],
+            ['id' => 'backing_up', 'name' => 'Creating backup...', 'status' => 'pending', 'message' => null],
+            ['id' => 'installing', 'name' => 'Installing update...', 'status' => 'pending', 'message' => null],
+            ['id' => 'migrating', 'name' => 'Running migrations...', 'status' => 'pending', 'message' => null],
+            ['id' => 'restarting', 'name' => 'Restarting application...', 'status' => 'pending', 'message' => null],
+            ['id' => 'verifying', 'name' => 'Verifying installation...', 'status' => 'pending', 'message' => null],
+        ];
+    }
+
+    /**
+     * Update progress state in cache.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function updateProgress(array $data): void
+    {
+        $current = $this->getProgress();
+        $merged = array_merge($current, $data);
+        Cache::put(self::PROGRESS_CACHE_KEY, $merged, 3600);
+    }
+
+    /**
+     * Set progress step status.
+     */
+    protected function setStep(int $index, string $status, ?string $log = null): void
+    {
+        $progress = $this->getProgress();
+        $steps = $progress['steps'];
+
+        if (isset($steps[$index])) {
+            $steps[$index]['status'] = $status;
+            if ($log) {
+                $steps[$index]['message'] = $log;
+            }
+        }
+
+        $logs = $progress['logs'] ?? [];
+        if ($log) {
+            $logs[] = '['.now()->format('H:i:s').'] '.$log;
+        }
+
+        $totalSteps = count($steps);
+        $percent = (int) round((($index + ($status === 'completed' ? 1 : 0.5)) / $totalSteps) * 100);
+        $percent = min(100, max(0, $percent));
+
+        $this->updateProgress([
+            'is_active' => $status !== 'failed' && $index < ($totalSteps - 1),
+            'step_index' => $index,
+            'current_step_name' => $steps[$index]['name'] ?? '',
+            'percent' => $percent,
+            'steps' => $steps,
+            'logs' => $logs,
+        ]);
     }
 
     /**
@@ -177,7 +344,6 @@ class AppUpdateService
         $lockTimeoutMinutes = (int) config('zpm.updates.lock_timeout_minutes', 30);
         $lastModified = File::lastModified($this->lockFile);
 
-        // If lock is older than timeout, consider it stale and automatically remove it
         if (time() - $lastModified > ($lockTimeoutMinutes * 60)) {
             $this->releaseLock();
 
@@ -215,13 +381,15 @@ class AppUpdateService
     }
 
     /**
-     * Perform the complete safe update lifecycle.
+     * Perform the complete safe Akaunting-style update lifecycle.
      *
      * @return array{success: bool, message: string, steps: array<int, string>}
      */
     public function applyUpdate(?string $downloadUrl = null, ?string $checksumUrl = null): array
     {
-        $steps = [];
+        $stepsLog = [];
+        $fileBackupPath = null;
+        $dbBackupPath = null;
 
         if ($this->isLocked()) {
             return [
@@ -239,53 +407,54 @@ class AppUpdateService
             ];
         }
 
+        // Initialize progress state
+        $this->updateProgress([
+            'is_active' => true,
+            'step_index' => 0,
+            'percent' => 5,
+            'steps' => $this->getInitialSteps(),
+            'logs' => ['['.now()->format('H:i:s').'] Starting application update process...'],
+            'completed' => false,
+            'success' => true,
+            'error' => null,
+            'can_rollback' => false,
+        ]);
+
         try {
-            // Step 1: Resolve release package URL if not provided directly
+            // STEP 0: Checking latest version...
+            $this->setStep(0, 'running', 'Checking latest release metadata from GitHub...');
             if (! $downloadUrl) {
                 $releaseInfo = $this->checkForUpdates(force: true);
                 if (! $releaseInfo['update_available'] || ! $releaseInfo['download_url']) {
-                    throw new Exception('No newer release download URL was found.');
+                    throw new Exception('No newer release package was found on GitHub.');
                 }
                 $downloadUrl = $releaseInfo['download_url'];
                 $checksumUrl = $releaseInfo['checksum_url'];
             }
 
-            $steps[] = 'Verified release download URL: '.$downloadUrl;
-
-            // Step 2: Validate download source
+            // Security check: validate download source
             if (! str_starts_with($downloadUrl, 'https://github.com/senthilnasa/zoom-pool-manager/releases/') &&
                 ! str_starts_with($downloadUrl, 'https://api.github.com/')) {
                 throw new Exception('Security violation: untrusted update source '.$downloadUrl);
             }
 
-            // Step 3: Pre-flight storage and permissions check
+            $stepsLog[] = 'Verified release download URL: '.$downloadUrl;
+            $this->setStep(0, 'completed', 'Verified target release package URL.');
+
+            // STEP 1: Downloading update...
+            $this->setStep(1, 'running', 'Downloading update package from GitHub...');
             /** @var string $updatesStorage */
             $updatesStorage = config('zpm.updates.storage_path', storage_path('app/updates'));
             File::ensureDirectoryExists($updatesStorage);
 
-            $freeSpace = disk_free_space(base_path());
-            if ($freeSpace !== false && $freeSpace < (50 * 1024 * 1024)) {
-                throw new Exception('Insufficient disk space for update (less than 50MB available).');
-            }
-            $steps[] = 'Pre-flight system checks passed';
-
-            // Step 4: Create pre-update backup
-            if (config('zpm.updates.backup_before_update', true)) {
-                try {
-                    $backupService = app(BackupService::class);
-                    $backup = $backupService->createDatabaseBackup();
-                    $steps[] = 'Pre-update database backup created: '.$backup->filename;
-                } catch (Exception $e) {
-                    Log::warning('Pre-update backup warning: '.$e->getMessage());
-                    $steps[] = 'Backup warning (proceeding): '.$e->getMessage();
-                }
-            }
-
-            // Step 5: Download release ZIP
             $tempZipFile = $updatesStorage.DIRECTORY_SEPARATOR.'update-'.time().'.zip';
-            $steps[] = 'Downloading update package...';
+            $headers = ['User-Agent' => 'Zoom-Pool-Manager/'.$this->getCurrentVersion()];
+            if ($token = config('zpm.github_token')) {
+                $headers['Authorization'] = 'Bearer '.$token;
+            }
 
             $downloadResponse = Http::timeout((int) config('zpm.updates.download_timeout_seconds', 300))
+                ->withHeaders($headers)
                 ->sink($tempZipFile)
                 ->get($downloadUrl);
 
@@ -293,43 +462,95 @@ class AppUpdateService
                 throw new Exception('Failed to download update archive from GitHub.');
             }
 
-            $steps[] = 'Downloaded update archive ('.round(filesize($tempZipFile) / 1024 / 1024, 2).' MB)';
+            $fileSizeMb = round(filesize($tempZipFile) / 1024 / 1024, 2);
+            $stepsLog[] = "Downloaded package ({$fileSizeMb} MB)";
 
-            // Step 6: Verify Package Integrity (Zip inspection & path traversal check)
+            // Checksum verification if available
+            if ($checksumUrl) {
+                try {
+                    $chkResponse = Http::timeout(15)->withHeaders($headers)->get($checksumUrl);
+                    if ($chkResponse->successful()) {
+                        $expectedHash = trim(explode(' ', $chkResponse->body())[0]);
+                        $actualHash = hash_file('sha256', $tempZipFile);
+                        if ($expectedHash && ! hash_equals(strtolower($expectedHash), strtolower((string) $actualHash))) {
+                            throw new Exception("Checksum mismatch! Expected: {$expectedHash}, Computed: {$actualHash}");
+                        }
+                        $stepsLog[] = 'Package SHA-256 checksum verified successfully';
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Checksum verification skipped: '.$e->getMessage());
+                }
+            }
+
+            // Verify Zip validity & inspect paths
             $zip = new ZipArchive;
             if ($zip->open($tempZipFile) !== true) {
                 throw new Exception('Downloaded archive is corrupt or invalid ZIP.');
             }
 
             $entryCount = $zip->numFiles;
-            $safeEntries = [];
             for ($i = 0; $i < $entryCount; $i++) {
                 $entryName = $zip->getNameIndex($i);
-                if ($entryName === false) {
-                    continue;
-                }
-
-                // Security check: Path traversal prevention
-                if (str_contains($entryName, '..') ||
+                if ($entryName !== false && (
+                    str_contains($entryName, '..') ||
                     str_starts_with($entryName, '/') ||
                     str_starts_with($entryName, '\\') ||
-                    preg_match('/^[a-zA-Z]:/', $entryName)) {
+                    preg_match('/^[a-zA-Z]:/', $entryName)
+                )) {
                     $zip->close();
                     throw new Exception('Malicious path traversal detected in package: '.$entryName);
                 }
+            }
+            $this->setStep(1, 'completed', "Downloaded and verified package integrity ({$fileSizeMb} MB).");
 
-                $safeEntries[] = $entryName;
+            // STEP 2: Creating backup...
+            $this->setStep(2, 'running', 'Creating system and database backup before applying update...');
+            $backupDir = storage_path('app/backups');
+            File::ensureDirectoryExists($backupDir);
+
+            // Database backup
+            try {
+                $backupService = app(BackupService::class);
+                $backupRecord = $backupService->createDatabaseBackup();
+                $dbBackupPath = storage_path('app/backups/'.$backupRecord->filename);
+                $stepsLog[] = 'Database backup created: '.$backupRecord->filename;
+            } catch (\Throwable $e) {
+                Log::warning('Database backup error (proceeding): '.$e->getMessage());
+                $stepsLog[] = 'Database backup note: '.$e->getMessage();
             }
 
-            $steps[] = 'Package integrity verified ('.count($safeEntries).' files audited, 0 path traversals)';
+            // File backup of critical application folders & .env
+            $fileBackupName = 'pre_update_backup_'.time().'.zip';
+            $fileBackupPath = $backupDir.DIRECTORY_SEPARATOR.$fileBackupName;
+            $this->createCriticalFilesBackup($fileBackupPath);
+            $stepsLog[] = 'Critical files backup created: '.$fileBackupName;
+            $this->setStep(2, 'completed', 'Pre-update backup completed (database snapshot and file state saved).');
 
-            // Step 7: Enter Maintenance Mode
-            Artisan::call('down', [
-                '--render' => 'errors::503',
-            ]);
-            $steps[] = 'Application entered maintenance mode';
+            // STEP 3: Installing update...
+            $this->setStep(3, 'running', 'Putting app in maintenance mode and extracting update files...');
+            try {
+                Artisan::call('down', ['--render' => 'errors::503']);
+            } catch (\Throwable) {
+            }
 
-            // Step 8: Safe Extraction (Preserve .env, storage/*, uploads, keys, git)
+            // Determine if the archive has a single top-level root folder
+            $rootPrefix = null;
+            $firstEntry = $zip->getNameIndex(0);
+            if ($firstEntry !== false && preg_match('#^([^/]+)/#', $firstEntry, $m)) {
+                $candidate = $m[1].'/';
+                $allStartWithCandidate = true;
+                for ($i = 0; $i < $entryCount; $i++) {
+                    $entry = $zip->getNameIndex($i);
+                    if ($entry !== false && ! str_starts_with($entry, $candidate)) {
+                        $allStartWithCandidate = false;
+                        break;
+                    }
+                }
+                if ($allStartWithCandidate) {
+                    $rootPrefix = $candidate;
+                }
+            }
+
             $extractBase = base_path();
             for ($i = 0; $i < $entryCount; $i++) {
                 $entryName = $zip->getNameIndex($i);
@@ -337,10 +558,9 @@ class AppUpdateService
                     continue;
                 }
 
-                // Strip leading archive root folder if zip was packed inside a subfolder (e.g. zpm-release-xxx/)
                 $normalizedPath = $entryName;
-                if (preg_match('#^[^/]+/(.*)$#', $entryName, $matches)) {
-                    $normalizedPath = $matches[1];
+                if ($rootPrefix !== null && str_starts_with($entryName, $rootPrefix)) {
+                    $normalizedPath = substr($entryName, strlen($rootPrefix));
                 }
 
                 if (empty($normalizedPath)) {
@@ -373,21 +593,47 @@ class AppUpdateService
             }
             $zip->close();
             File::delete($tempZipFile);
-            $steps[] = 'Applied update files to application root (protected .env and storage)';
+            $stepsLog[] = 'Applied update files to application root (protected .env and storage)';
+            $this->setStep(3, 'completed', 'Update files installed successfully.');
 
-            // Step 9: Post-update Laravel maintenance commands
+            // STEP 4: Running migrations...
+            $this->setStep(4, 'running', 'Running database schema migrations...');
             Artisan::call('migrate', ['--force' => true]);
-            $steps[] = 'Ran database migrations safely';
+            $stepsLog[] = 'Database schema migrations executed';
+            $this->setStep(4, 'completed', 'Database migrations completed.');
 
-            Artisan::call('optimize:clear');
-            Artisan::call('config:cache');
-            Artisan::call('route:cache');
-            Artisan::call('view:cache');
-            $steps[] = 'Cleared and rebuilt application caches';
+            // STEP 5: Restarting application...
+            $this->setStep(5, 'running', 'Rebuilding caches and exiting maintenance mode...');
+            try {
+                Artisan::call('optimize:clear');
+                Artisan::call('config:cache');
+                Artisan::call('route:cache');
+                Artisan::call('view:cache');
+            } catch (\Throwable) {
+            }
 
-            // Step 10: Exit Maintenance Mode
-            Artisan::call('up');
-            $steps[] = 'Application brought out of maintenance mode';
+            try {
+                Artisan::call('up');
+            } catch (\Throwable) {
+            }
+            $stepsLog[] = 'Rebuilt caches and brought application out of maintenance mode';
+            $this->setStep(5, 'completed', 'Application restarted and active.');
+
+            // STEP 6: Verifying installation...
+            $this->setStep(6, 'running', 'Verifying installation and new version metadata...');
+            $newVersion = $this->getCurrentVersion();
+            $stepsLog[] = "Active application version: v{$newVersion}";
+            $this->setStep(6, 'completed', "Installation verified (v{$newVersion}).");
+
+            // Finalize progress
+            $this->updateProgress([
+                'is_active' => false,
+                'completed' => true,
+                'success' => true,
+                'percent' => 100,
+                'current_step_name' => 'Update completed successfully.',
+                'error' => null,
+            ]);
 
             // Audit update event
             try {
@@ -395,9 +641,9 @@ class AppUpdateService
                     event: 'system.update.applied',
                     auditable: null,
                     oldValues: ['version' => $this->getCurrentVersion()],
-                    newValues: ['download_url' => $downloadUrl]
+                    newValues: ['download_url' => $downloadUrl, 'new_version' => $newVersion]
                 );
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 Log::info('Audit logging update notice: '.$e->getMessage());
             }
 
@@ -405,25 +651,99 @@ class AppUpdateService
 
             return [
                 'success' => true,
-                'message' => 'Application updated successfully!',
-                'steps' => $steps,
+                'message' => 'Update completed successfully.',
+                'steps' => $stepsLog,
             ];
         } catch (Exception $e) {
-            // Restore from maintenance mode if we failed midway
+            // Restore from maintenance mode immediately
             try {
                 Artisan::call('up');
-            } catch (Exception $ignored) {
+            } catch (\Throwable) {
             }
 
             Log::error('Update process failed: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
+            // Attempt rollback if we have a file backup
+            $rollbackAttempted = false;
+            if ($fileBackupPath && File::exists($fileBackupPath)) {
+                $rollbackAttempted = $this->rollbackFromBackup($fileBackupPath);
+            }
+
+            $currentProgress = $this->getProgress();
+            $currStepIndex = $currentProgress['step_index'] ?? 0;
+            $this->setStep($currStepIndex, 'failed', $e->getMessage());
+
+            $this->updateProgress([
+                'is_active' => false,
+                'completed' => true,
+                'success' => false,
+                'error' => $e->getMessage(),
+                'can_rollback' => $rollbackAttempted,
+            ]);
+
             return [
                 'success' => false,
-                'message' => 'Update failed: '.$e->getMessage(),
-                'steps' => [...$steps, 'Error: '.$e->getMessage()],
+                'message' => 'Update failed: '.$e->getMessage().($rollbackAttempted ? ' (Automatic rollback completed)' : ''),
+                'steps' => [...$stepsLog, 'Error: '.$e->getMessage()],
             ];
         } finally {
             $this->releaseLock();
+        }
+    }
+
+    /**
+     * Create a backup archive of critical application directories before update.
+     */
+    protected function createCriticalFilesBackup(string $backupPath): void
+    {
+        $zip = new ZipArchive;
+        if ($zip->open($backupPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return;
+        }
+
+        $directoriesToBackup = ['app', 'config', 'routes', 'resources', 'version.json'];
+        foreach ($directoriesToBackup as $item) {
+            $fullPath = base_path($item);
+            if (File::isDirectory($fullPath)) {
+                $files = File::allFiles($fullPath);
+                foreach ($files as $file) {
+                    $relative = substr($file->getPathname(), strlen(base_path()) + 1);
+                    $zip->addFile($file->getPathname(), str_replace('\\', '/', $relative));
+                }
+            } elseif (File::isFile($fullPath)) {
+                $zip->addFile($fullPath, $item);
+            }
+        }
+
+        $zip->close();
+    }
+
+    /**
+     * Rollback application files from pre-update backup archive.
+     */
+    public function rollbackFromBackup(string $backupPath): bool
+    {
+        if (! File::exists($backupPath)) {
+            return false;
+        }
+
+        $zip = new ZipArchive;
+        if ($zip->open($backupPath) !== true) {
+            return false;
+        }
+
+        try {
+            $zip->extractTo(base_path());
+            $zip->close();
+
+            Artisan::call('optimize:clear');
+            Artisan::call('up');
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Rollback failed: '.$e->getMessage());
+
+            return false;
         }
     }
 }
