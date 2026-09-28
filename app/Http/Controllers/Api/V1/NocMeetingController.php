@@ -91,8 +91,7 @@ class NocMeetingController extends Controller
             'owner:id,name,email,department_id',
             'requester:id,name,email,department_id',
             'department:id,name,code',
-            'zoomResource:id,name',
-            'zoomResource.zoomUser:id,resource_id,email,display_name',
+            'zoomResource.zoomUser',
         ]);
 
         // Status filter
