@@ -118,160 +118,164 @@
     </div>
 
     <!-- Create Rule Modal -->
-    <div
-      v-if="showCreateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-      @click.self="showCreateModal = false"
-    >
-      <div class="glass-card max-w-lg w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <h3 class="font-bold text-base text-slate-900 dark:text-white">Create Workflow Rule</h3>
-          <button @click="showCreateModal = false" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X class="w-5 h-5" />
-          </button>
+    <Teleport to="body">
+      <div
+        v-if="showCreateModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+        @click.self="showCreateModal = false"
+      >
+        <div class="glass-card max-w-lg w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="font-bold text-base text-slate-900 dark:text-white">Create Workflow Rule</h3>
+            <button @click="showCreateModal = false" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          <form @submit.prevent="submitRule" class="space-y-4 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Rule Name</label>
+              <input
+                v-model="form.name"
+                required
+                placeholder="e.g., Auto-Approve Short Faculty Lectures"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Priority (1 = Highest)</label>
+              <input
+                v-model.number="form.priority"
+                type="number"
+                min="1"
+                max="1000"
+                required
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <!-- Conditions Builder -->
+            <div class="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
+              <h4 class="font-bold text-slate-800 dark:text-slate-200">Match Conditions</h4>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Meeting Type</label>
+                  <input
+                    v-model="form.conditions.meeting_type"
+                    placeholder="e.g., webinar, exam"
+                    class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Min Duration (min)</label>
+                  <input
+                    v-model.number="form.conditions.duration_min"
+                    type="number"
+                    placeholder="e.g., 120"
+                    class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions Builder -->
+            <div class="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
+              <h4 class="font-bold text-slate-800 dark:text-slate-200">Enforcement Actions</h4>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2">
+                  <input type="checkbox" v-model="form.actions.auto_approve" class="rounded text-brand-600" />
+                  <span class="font-medium text-slate-700 dark:text-slate-300">Auto Approve Instantly</span>
+                </label>
+                <div>
+                  <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Or Reject with Reason</label>
+                  <input
+                    v-model="form.actions.reject"
+                    placeholder="e.g., Exams require Dean approval."
+                    class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                @click="showCreateModal = false"
+                class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                :disabled="saving"
+                class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white transition"
+              >
+                Save Rule
+              </button>
+            </div>
+          </form>
         </div>
-
-        <form @submit.prevent="submitRule" class="space-y-4 text-xs">
-          <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Rule Name</label>
-            <input
-              v-model="form.name"
-              required
-              placeholder="e.g., Auto-Approve Short Faculty Lectures"
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Priority (1 = Highest)</label>
-            <input
-              v-model.number="form.priority"
-              type="number"
-              min="1"
-              max="1000"
-              required
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-            />
-          </div>
-
-          <!-- Conditions Builder -->
-          <div class="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
-            <h4 class="font-bold text-slate-800 dark:text-slate-200">Match Conditions</h4>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Meeting Type</label>
-                <input
-                  v-model="form.conditions.meeting_type"
-                  placeholder="e.g., webinar, exam"
-                  class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                />
-              </div>
-              <div>
-                <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Min Duration (min)</label>
-                <input
-                  v-model.number="form.conditions.duration_min"
-                  type="number"
-                  placeholder="e.g., 120"
-                  class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions Builder -->
-          <div class="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
-            <h4 class="font-bold text-slate-800 dark:text-slate-200">Enforcement Actions</h4>
-            <div class="space-y-2">
-              <label class="flex items-center gap-2">
-                <input type="checkbox" v-model="form.actions.auto_approve" class="rounded text-brand-600" />
-                <span class="font-medium text-slate-700 dark:text-slate-300">Auto Approve Instantly</span>
-              </label>
-              <div>
-                <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Or Reject with Reason</label>
-                <input
-                  v-model="form.actions.reject"
-                  placeholder="e.g., Exams require Dean approval."
-                  class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-3 flex justify-end gap-2">
-            <button
-              type="button"
-              @click="showCreateModal = false"
-              class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              :disabled="saving"
-              class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white transition"
-            >
-              Save Rule
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Rule Simulator Modal -->
-    <div
-      v-if="showSimulateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-      @click.self="showSimulateModal = false"
-    >
-      <div class="glass-card max-w-lg w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div class="flex items-center gap-2">
-            <Play class="w-4 h-4 text-amber-500" />
-            <h3 class="font-bold text-base text-slate-900 dark:text-white">Rule Engine Simulator</h3>
-          </div>
-          <button @click="showSimulateModal = false" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <form @submit.prevent="runSimulation" class="space-y-3 text-xs">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-medium text-slate-500 mb-1">Meeting Type</label>
-              <input v-model="simData.meeting_type" placeholder="e.g., webinar, exam" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+    <Teleport to="body">
+      <div
+        v-if="showSimulateModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+        @click.self="showSimulateModal = false"
+      >
+        <div class="glass-card max-w-lg w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2">
+              <Play class="w-4 h-4 text-amber-500" />
+              <h3 class="font-bold text-base text-slate-900 dark:text-white">Rule Engine Simulator</h3>
             </div>
-            <div>
-              <label class="block font-medium text-slate-500 mb-1">Duration (minutes)</label>
-              <input v-model.number="simData.duration_minutes" type="number" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            <button @click="showSimulateModal = false" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          <form @submit.prevent="runSimulation" class="space-y-3 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-medium text-slate-500 mb-1">Meeting Type</label>
+                <input v-model="simData.meeting_type" placeholder="e.g., webinar, exam" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+              </div>
+              <div>
+                <label class="block font-medium text-slate-500 mb-1">Duration (minutes)</label>
+                <input v-model.number="simData.duration_minutes" type="number" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            :disabled="simulating"
-            class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition flex items-center justify-center gap-2"
-          >
-            <Play class="w-3.5 h-3.5" :class="{ 'animate-spin': simulating }" />
-            <span>Evaluate Rules Against Draft</span>
-          </button>
-        </form>
+            <button
+              type="submit"
+              :disabled="simulating"
+              class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition flex items-center justify-center gap-2"
+            >
+              <Play class="w-3.5 h-3.5" :class="{ 'animate-spin': simulating }" />
+              <span>Evaluate Rules Against Draft</span>
+            </button>
+          </form>
 
-        <div v-if="simResult" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2 text-xs">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-slate-800 dark:text-slate-200">Outcome:</span>
-            <span v-if="simResult.is_rejected" class="px-2 py-0.5 rounded-full font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">REJECTED</span>
-            <span v-else-if="simResult.is_auto_approved" class="px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">AUTO-APPROVED</span>
-            <span v-else class="px-2 py-0.5 rounded-full font-bold bg-brand-500/10 text-brand-500 border border-brand-500/20">MANUAL APPROVAL REQUIRED</span>
-          </div>
-          <div v-if="simResult.reject_reason" class="text-rose-500 font-medium">
-            Reason: {{ simResult.reject_reason }}
-          </div>
-          <div class="text-[11px] text-slate-400">
-            Rules Matched: {{ simResult.matched_count }} ({{ (simResult.matched_rules || []).map(r => r.name).join(', ') || 'None' }})
+          <div v-if="simResult" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800 dark:text-slate-200">Outcome:</span>
+              <span v-if="simResult.is_rejected" class="px-2 py-0.5 rounded-full font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">REJECTED</span>
+              <span v-else-if="simResult.is_auto_approved" class="px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">AUTO-APPROVED</span>
+              <span v-else class="px-2 py-0.5 rounded-full font-bold bg-brand-500/10 text-brand-500 border border-brand-500/20">MANUAL APPROVAL REQUIRED</span>
+            </div>
+            <div v-if="simResult.reject_reason" class="text-rose-500 font-medium">
+              Reason: {{ simResult.reject_reason }}
+            </div>
+            <div class="text-[11px] text-slate-400">
+              Rules Matched: {{ simResult.matched_count }} ({{ (simResult.matched_rules || []).map(r => r.name).join(', ') || 'None' }})
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

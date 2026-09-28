@@ -50,6 +50,12 @@
       <button @click="feedback = ''" class="text-emerald-500 hover:underline">Dismiss</button>
     </div>
 
+    <!-- Error Banner -->
+    <div v-if="fetchError" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-between">
+      <span>{{ fetchError }}</span>
+      <button @click="fetchTemplates" class="underline hover:no-underline font-bold">Retry</button>
+    </div>
+
     <!-- Templates Grid -->
     <div v-if="loading && !templates.length" class="p-12 text-center text-slate-400">
       <RefreshCw class="w-8 h-8 mx-auto mb-3 animate-spin text-brand-500" />
@@ -93,7 +99,7 @@
           <div class="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
             <div class="flex items-center justify-between text-slate-600 dark:text-slate-300">
               <span class="text-slate-400">Security Profile:</span>
-              <span class="font-semibold text-brand-600 dark:text-brand-400">{{ tpl.security_profile?.name || 'Default' }}</span>
+              <span class="font-semibold text-brand-600 dark:text-brand-400">{{ tpl.security_profile?.name || tpl.securityProfile?.name || 'Default' }}</span>
             </div>
             <div class="flex items-center justify-between text-slate-600 dark:text-slate-300">
               <span class="text-slate-400">Max Duration:</span>
@@ -127,17 +133,23 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <div
-      v-if="modalOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
-          <h2 class="text-sm font-bold text-slate-900 dark:text-white">{{ editingItem ? 'Edit Meeting Template' : 'New Meeting Template' }}</h2>
-          <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X class="w-4 h-4" />
-          </button>
-        </div>
+    <Teleport to="body">
+      <div
+        v-if="modalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+        @click.self="modalOpen = false"
+      >
+        <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white">{{ editingItem ? 'Edit Meeting Template' : 'New Meeting Template' }}</h2>
+            <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div v-if="modalError" class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+            {{ modalError }}
+          </div>
 
         <form @submit.prevent="saveTemplate" class="space-y-3">
           <div>
@@ -166,6 +178,7 @@
               v-model="form.security_profile_id"
               class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
             >
+              <option v-if="!profiles.length" :value="null">Default Security Profile</option>
               <option v-for="sp in profiles" :key="sp.id" :value="sp.id">{{ sp.name }} ({{ sp.code }})</option>
             </select>
           </div>
@@ -265,6 +278,7 @@
         </form>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
@@ -286,6 +300,8 @@ const profiles = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const feedback = ref('');
+const fetchError = ref('');
+const modalError = ref('');
 const searchQuery = ref('');
 
 const filteredTemplates = computed(() => {
@@ -307,7 +323,7 @@ const form = ref({
   name: '',
   code: '',
   description: '',
-  security_profile_id: 1,
+  security_profile_id: null,
   default_duration_minutes: 60,
   max_duration_minutes: 180,
   max_participants: 100,
@@ -320,12 +336,14 @@ const form = ref({
 
 const fetchTemplates = async () => {
   loading.value = true;
+  fetchError.value = '';
   try {
     const res = await axios.get('/spa/templates');
     templates.value = res.data?.templates || [];
     profiles.value = res.data?.profiles || [];
   } catch (err) {
     console.error('Failed to load templates', err);
+    fetchError.value = err.response?.data?.message || 'Failed to load templates. Please refresh the page.';
   } finally {
     loading.value = false;
   }
@@ -333,12 +351,13 @@ const fetchTemplates = async () => {
 
 const openCreateModal = () => {
   editingItem.value = null;
+  modalError.value = '';
   form.value = {
     id: null,
     name: '',
     code: '',
     description: '',
-    security_profile_id: profiles.value[0]?.id || 1,
+    security_profile_id: profiles.value[0]?.id || null,
     default_duration_minutes: 60,
     max_duration_minutes: 180,
     max_participants: 100,
@@ -348,17 +367,18 @@ const openCreateModal = () => {
     series_mode: 'SINGLE_RESOURCE',
     is_active: true,
   };
-  modalOpen = true;
+  modalOpen.value = true;
 };
 
 const editTemplate = (tpl) => {
   editingItem.value = tpl;
+  modalError.value = '';
   form.value = {
     id: tpl.id,
     name: tpl.name,
     code: tpl.code,
     description: tpl.description || '',
-    security_profile_id: tpl.security_profile_id,
+    security_profile_id: tpl.security_profile_id || tpl.security_profile?.id || tpl.securityProfile?.id || (profiles.value[0]?.id || null),
     default_duration_minutes: tpl.default_duration_minutes || 60,
     max_duration_minutes: tpl.max_duration_minutes || 180,
     max_participants: tpl.max_participants || 100,
@@ -368,18 +388,20 @@ const editTemplate = (tpl) => {
     series_mode: tpl.series_mode || 'SINGLE_RESOURCE',
     is_active: !!tpl.is_active,
   };
-  modalOpen = true;
+  modalOpen.value = true;
 };
 
 const saveTemplate = async () => {
   saving.value = true;
+  modalError.value = '';
   try {
     await axios.post('/spa/templates', form.value);
     feedback.value = `Template "${form.value.name}" saved successfully.`;
-    modalOpen = false;
+    modalOpen.value = false;
     await fetchTemplates();
   } catch (err) {
     console.error('Failed to save template', err);
+    modalError.value = err.response?.data?.message || err.response?.data?.error || 'Failed to save template. Please check the fields and try again.';
   } finally {
     saving.value = false;
   }

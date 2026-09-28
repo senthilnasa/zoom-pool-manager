@@ -50,6 +50,12 @@
       <button @click="feedback = ''" class="text-emerald-500 hover:underline">Dismiss</button>
     </div>
 
+    <!-- Error Banner -->
+    <div v-if="fetchError" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-between">
+      <span>{{ fetchError }}</span>
+      <button @click="fetchProfiles" class="underline hover:no-underline font-bold">Retry</button>
+    </div>
+
     <!-- Profiles Grid -->
     <div v-if="loading && !profiles.length" class="p-12 text-center text-slate-400">
       <RefreshCw class="w-8 h-8 mx-auto mb-3 animate-spin text-brand-500" />
@@ -134,17 +140,23 @@
     </div>
 
     <!-- Edit Profile Modal -->
-    <div
-      v-if="modalOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
-          <h2 class="text-sm font-bold text-slate-900 dark:text-white">{{ editingItem ? 'Edit Security Profile' : 'New Security Profile' }}</h2>
-          <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X class="w-4 h-4" />
-          </button>
-        </div>
+    <Teleport to="body">
+      <div
+        v-if="modalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+        @click.self="modalOpen = false"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white">{{ editingItem ? 'Edit Security Profile' : 'New Security Profile' }}</h2>
+            <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div v-if="modalError" class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+            {{ modalError }}
+          </div>
 
         <form @submit.prevent="saveProfile" class="space-y-3">
           <div>
@@ -221,6 +233,7 @@
         </form>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
@@ -241,6 +254,8 @@ const profiles = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const feedback = ref('');
+const fetchError = ref('');
+const modalError = ref('');
 const searchQuery = ref('');
 
 const filteredProfiles = computed(() => {
@@ -273,11 +288,13 @@ const form = ref({
 
 const fetchProfiles = async () => {
   loading.value = true;
+  fetchError.value = '';
   try {
     const res = await axios.get('/spa/security-profiles');
     profiles.value = res.data || [];
   } catch (err) {
     console.error('Failed to load security profiles', err);
+    fetchError.value = err.response?.data?.message || 'Failed to load security profiles. Please refresh.';
   } finally {
     loading.value = false;
   }
@@ -285,6 +302,7 @@ const fetchProfiles = async () => {
 
 const openCreateModal = () => {
   editingItem.value = null;
+  modalError.value = '';
   form.value = {
     id: null,
     name: '',
@@ -299,11 +317,12 @@ const openCreateModal = () => {
       ai_companion: 'ALLOWED',
     },
   };
-  modalOpen = true;
+  modalOpen.value = true;
 };
 
 const editProfile = (p) => {
   editingItem.value = p;
+  modalError.value = '';
   form.value = {
     id: p.id,
     name: p.name,
@@ -318,18 +337,20 @@ const editProfile = (p) => {
       ai_companion: p.settings?.ai_companion || 'ALLOWED',
     },
   };
-  modalOpen = true;
+  modalOpen.value = true;
 };
 
 const saveProfile = async () => {
   saving.value = true;
+  modalError.value = '';
   try {
     await axios.post('/spa/security-profiles', form.value);
     feedback.value = `Profile "${form.value.name}" saved successfully.`;
-    modalOpen = false;
+    modalOpen.value = false;
     await fetchProfiles();
   } catch (err) {
     console.error('Failed to save security profile', err);
+    modalError.value = err.response?.data?.message || err.response?.data?.error || 'Failed to save security profile. Please check the fields and try again.';
   } finally {
     saving.value = false;
   }

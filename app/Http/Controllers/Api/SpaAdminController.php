@@ -24,6 +24,7 @@ use App\Domain\Zoom\Models\ResourcePool;
 use App\Domain\Zoom\Models\ZoomResource;
 use App\Domain\Zoom\Services\ZoomUserSyncService;
 use App\Http\Controllers\Controller;
+use Database\Seeders\TemplatesAndSecurityProfilesSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -471,8 +472,15 @@ class SpaAdminController extends Controller
 
     public function templates(): JsonResponse
     {
+        if (SecurityProfile::count() === 0) {
+            try {
+                (new TemplatesAndSecurityProfilesSeeder)->run();
+            } catch (\Throwable) {
+            }
+        }
+
         $templates = MeetingTemplate::with('securityProfile')->orderBy('name')->get();
-        $profiles = SecurityProfile::all();
+        $profiles = SecurityProfile::orderBy('name')->get();
 
         return response()->json([
             'templates' => $templates,
@@ -482,12 +490,19 @@ class SpaAdminController extends Controller
 
     public function storeTemplate(Request $request): JsonResponse
     {
+        if (SecurityProfile::count() === 0) {
+            try {
+                (new TemplatesAndSecurityProfilesSeeder)->run();
+            } catch (\Throwable) {
+            }
+        }
+
         $validated = $request->validate([
             'id' => 'nullable|integer|exists:meeting_templates,id',
             'code' => 'required|string|max:50',
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
-            'security_profile_id' => 'required|integer|exists:security_profiles,id',
+            'security_profile_id' => 'nullable|integer|exists:security_profiles,id',
             'default_duration_minutes' => 'required|integer|min:15|max:480',
             'max_duration_minutes' => 'required|integer|min:15|max:480',
             'max_participants' => 'required|integer|min:2|max:1000',
@@ -497,6 +512,11 @@ class SpaAdminController extends Controller
             'series_mode' => 'required|string|in:SINGLE_RESOURCE,PER_OCCURRENCE',
             'is_active' => 'boolean',
         ]);
+
+        if (empty($validated['security_profile_id'])) {
+            $defaultProfile = SecurityProfile::where('is_default', true)->first() ?: SecurityProfile::first();
+            $validated['security_profile_id'] = $defaultProfile?->id;
+        }
 
         if (! empty($validated['id'])) {
             $tpl = MeetingTemplate::findOrFail($validated['id']);
@@ -510,6 +530,13 @@ class SpaAdminController extends Controller
 
     public function securityProfiles(): JsonResponse
     {
+        if (SecurityProfile::count() === 0) {
+            try {
+                (new TemplatesAndSecurityProfilesSeeder)->run();
+            } catch (\Throwable) {
+            }
+        }
+
         $profiles = SecurityProfile::orderBy('name')->get();
 
         return response()->json($profiles);

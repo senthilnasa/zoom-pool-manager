@@ -344,6 +344,13 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/calendar', [MeetingController::class, 'calendar'])->name('calendar');
+
+    // Browser navigation redirects to modern SPA
+    Route::get('/workflows', fn () => redirect()->to('/app/workflows'));
+    Route::get('/templates', fn () => redirect()->to('/app/templates'));
+    Route::get('/admin/templates', fn () => redirect()->to('/app/templates'));
+    Route::get('/security-profiles', fn () => redirect()->to('/app/security-profiles'));
+    Route::get('/admin/security-profiles', fn () => redirect()->to('/app/security-profiles'));
 });
 
 // Installer Wizard Routes

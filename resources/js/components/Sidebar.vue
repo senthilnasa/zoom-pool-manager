@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="w-64 shrink-0 border-r border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl flex flex-col transition-all duration-300 z-30"
+    class="w-64 shrink-0 border-r border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl flex flex-col transition-all duration-300 z-30 sticky top-0 h-screen"
   >
     <!-- Brand Header -->
     <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200/60 dark:border-slate-800/60">
