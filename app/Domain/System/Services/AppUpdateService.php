@@ -569,6 +569,8 @@ class AppUpdateService
 
                 // Strictly protected files / directories
                 if ($normalizedPath === '.env' ||
+                    $normalizedPath === 'installed.lock' ||
+                    $normalizedPath === 'storage/installed.lock' ||
                     str_starts_with($normalizedPath, 'storage/') ||
                     str_starts_with($normalizedPath, '.git/') ||
                     str_starts_with($normalizedPath, 'dist/')) {
