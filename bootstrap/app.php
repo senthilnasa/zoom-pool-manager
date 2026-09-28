@@ -9,6 +9,41 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+// Support moving .env outside the web root (SPEC Part C2)
+$zpmPaths = file_exists(dirname(__DIR__).'/zpm-paths.php')
+    ? require dirname(__DIR__).'/zpm-paths.php'
+    : [];
+
+$baseDir = dirname(__DIR__);
+$envPath = ! empty($zpmPaths['env_path'])
+    ? rtrim($zpmPaths['env_path'], '/\\').'/'.(! empty($zpmPaths['env_file']) ? $zpmPaths['env_file'] : '.env')
+    : $baseDir.'/.env';
+$examplePath = $baseDir.'/.env.example';
+
+// Zero-CLI shared hosting: auto-initialize .env and APP_KEY if missing
+if (! file_exists($envPath) && file_exists($examplePath)) {
+    @copy($examplePath, $envPath);
+}
+
+if (file_exists($envPath)) {
+    $envContent = (string) @file_get_contents($envPath);
+    if (! preg_match('/^APP_KEY=base64:[A-Za-z0-9+\/]{43}=/m', $envContent)) {
+        try {
+            $generatedKey = 'base64:'.base64_encode(random_bytes(32));
+            if (preg_match('/^APP_KEY=.*/m', $envContent)) {
+                $envContent = preg_replace('/^APP_KEY=.*/m', "APP_KEY={$generatedKey}", $envContent);
+            } else {
+                $envContent = "APP_KEY={$generatedKey}\n".$envContent;
+            }
+            @file_put_contents($envPath, $envContent);
+            putenv("APP_KEY={$generatedKey}");
+            $_ENV['APP_KEY'] = $generatedKey;
+            $_SERVER['APP_KEY'] = $generatedKey;
+        } catch (Throwable) {
+        }
+    }
+}
+
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -39,11 +74,6 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
-
-// Support moving .env outside the web root (SPEC Part C2)
-$zpmPaths = file_exists(dirname(__DIR__).'/zpm-paths.php')
-    ? require dirname(__DIR__).'/zpm-paths.php'
-    : [];
 
 if (! empty($zpmPaths['env_path'])) {
     $app->useEnvironmentPath($zpmPaths['env_path']);
