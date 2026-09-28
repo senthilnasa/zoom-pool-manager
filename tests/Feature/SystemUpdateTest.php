@@ -57,7 +57,7 @@ class SystemUpdateTest extends TestCase
 
         $this->assertTrue($result['update_available']);
         $this->assertEquals('1.1.0', $result['latest_version']);
-        $this->assertEquals('1.0.0', $result['installed_version']);
+        $this->assertEquals($service->getCurrentVersion(), $result['installed_version']);
         $this->assertEquals('Release v1.1.0', $result['release_name']);
         $this->assertNotNull($result['download_url']);
         $this->assertNull($result['error']);
@@ -65,8 +65,6 @@ class SystemUpdateTest extends TestCase
 
     public function test_check_for_updates_handles_api_failure_gracefully(): void
     {
-        config(['zpm.version' => '1.0.0']);
-
         Http::fake([
             'https://api.github.com/repos/senthilnasa/zoom-pool-manager/releases/latest' => Http::response('Server error', 500),
         ]);
@@ -75,7 +73,7 @@ class SystemUpdateTest extends TestCase
         $result = $service->checkForUpdates(force: true);
 
         $this->assertFalse($result['update_available']);
-        $this->assertEquals('1.0.0', $result['installed_version']);
+        $this->assertEquals($service->getCurrentVersion(), $result['installed_version']);
         $this->assertNotNull($result['error']);
     }
 
