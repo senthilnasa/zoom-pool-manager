@@ -24,13 +24,7 @@ return new class extends Migration
             ]
         );
 
-        $departmentAdmin = Role::firstOrCreate(
-            ['name' => 'department_admin', 'guard_name' => 'web'],
-            [
-                'description' => 'Department Administrator with scoped meeting approval and management permissions.',
-                'is_system' => true,
-            ]
-        );
+        $departmentAdmin = Role::where('name', 'department_admin')->where('guard_name', 'web')->first();
 
         $permissions = [
             'meeting.create', 'meeting.view', 'meeting.edit', 'meeting.cancel', 'meeting.reschedule',
@@ -48,7 +42,9 @@ return new class extends Migration
 
         if ($validPermissions->isNotEmpty()) {
             $deptAdmin->syncPermissions($validPermissions);
-            $departmentAdmin->syncPermissions($validPermissions);
+            if ($departmentAdmin) {
+                $departmentAdmin->syncPermissions($validPermissions);
+            }
         }
 
         // Also copy role assignments from department_admin to dept_admin if any users have department_admin

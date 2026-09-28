@@ -34,6 +34,7 @@ class QuotaEnforcementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Carbon::setTestNow(Carbon::parse('2026-06-15 09:00:00'));
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->seed(TemplatesAndSecurityProfilesSeeder::class);
 
@@ -222,5 +223,11 @@ class QuotaEnforcementTest extends TestCase
         ]);
 
         $this->assertEquals('scheduled', $meeting->status);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 }
