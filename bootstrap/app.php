@@ -76,6 +76,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
             'webhooks/zoom*',
             'api/webhooks/zoom*',
             'api/*',
+            'installer/database/test',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

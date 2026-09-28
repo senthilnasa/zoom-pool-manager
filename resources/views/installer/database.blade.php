@@ -5,10 +5,10 @@
 @section('content')
 <div class="max-w-2xl mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden"
      x-data="{
-        host: '{{ old('host', config('database.connections.mariadb.host', '127.0.0.1')) }}',
-        port: '{{ old('port', config('database.connections.mariadb.port', '3306')) }}',
-        database: '{{ old('database', config('database.connections.mariadb.database', 'zpm')) }}',
-        username: '{{ old('username', config('database.connections.mariadb.username', 'zpm')) }}',
+        host: '{{ old('host', env('DB_HOST', '127.0.0.1')) }}',
+        port: '{{ old('port', env('DB_PORT', '3306')) }}',
+        database: '{{ old('database', env('DB_DATABASE', 'zpm')) }}',
+        username: '{{ old('username', env('DB_USERNAME', 'zpm')) }}',
         password: '{{ old('password', '') }}',
         testing: false,
         testResult: null,

@@ -172,21 +172,64 @@ class InstallerService
             }
         }
 
-        $content = file_get_contents($envPath);
+        $content = (string) file_get_contents($envPath);
+
+        // Auto-detect driver (mariadb or mysql)
+        $dbDriver = 'mysql';
+        try {
+            $test = $this->testDatabaseConnection($config);
+            if (($test['type'] ?? '') === 'MariaDB') {
+                $dbDriver = 'mariadb';
+            }
+        } catch (\Throwable) {
+        }
+
+        $password = (string) ($config['password'] ?? '');
 
         $replacements = [
+            'DB_CONNECTION' => $dbDriver,
             'DB_HOST' => $config['host'],
             'DB_PORT' => $config['port'],
             'DB_DATABASE' => $config['database'],
             'DB_USERNAME' => $config['username'],
-            'DB_PASSWORD' => $config['password'],
+            'DB_PASSWORD' => $password,
         ];
 
         foreach ($replacements as $key => $val) {
-            $content = preg_replace("/^{$key}=.*/m", "{$key}=\"{$val}\"", $content);
+            $valEscaped = addcslashes((string) $val, '"');
+            if (preg_match("/^{$key}=.*/m", $content)) {
+                $content = preg_replace("/^{$key}=.*/m", "{$key}=\"{$valEscaped}\"", $content);
+            } else {
+                $content .= "\n{$key}=\"{$valEscaped}\"";
+            }
+            putenv("{$key}={$val}");
+            $_ENV[$key] = $val;
+            $_SERVER[$key] = $val;
         }
 
         file_put_contents($envPath, $content);
+
+        // Update runtime in-memory configuration for all database connections
+        config([
+            'database.default' => $dbDriver,
+            'database.connections.mysql.host' => $config['host'],
+            'database.connections.mysql.port' => (int) $config['port'],
+            'database.connections.mysql.database' => $config['database'],
+            'database.connections.mysql.username' => $config['username'],
+            'database.connections.mysql.password' => $password,
+            'database.connections.mariadb.host' => $config['host'],
+            'database.connections.mariadb.port' => (int) $config['port'],
+            'database.connections.mariadb.database' => $config['database'],
+            'database.connections.mariadb.username' => $config['username'],
+            'database.connections.mariadb.password' => $password,
+        ]);
+
+        // Discard any existing cached PDO connections so new credentials take effect immediately
+        DB::purge('mariadb');
+        DB::purge('mysql');
+        DB::purge($dbDriver);
+        DB::purge();
+        DB::reconnect($dbDriver);
     }
 
     /**
@@ -197,6 +240,10 @@ class InstallerService
     public function runMigrations(): array
     {
         try {
+            $defaultConn = config('database.default', 'mariadb');
+            DB::purge($defaultConn);
+            DB::reconnect($defaultConn);
+
             Artisan::call('migrate', ['--force' => true]);
             $output = Artisan::output();
 
