@@ -208,10 +208,10 @@
           class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-start gap-3"
         >
           <CheckCircle2 class="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-          <div class="text-xs space-y-1">
+          <div class="text-xs space-y-1 flex-1">
             <div class="font-bold text-sm">Update completed successfully!</div>
-            <p>Application files, database schema, and caches are now up to date on version <strong>v{{ updateInfo?.latest_version }}</strong>.</p>
-            <p class="text-emerald-600 dark:text-emerald-400 font-medium">Reloading page in {{ countdown }} seconds...</p>
+            <p>Application files, database schema, and caches are now up to date on version <strong>v{{ updateInfo?.latest_version || updateInfo?.installed_version }}</strong>.</p>
+            <p class="text-slate-600 dark:text-slate-300">You can reload the application now to refresh all assets, or close this dialog to review the log.</p>
           </div>
         </div>
 
@@ -252,14 +252,23 @@
       </div>
 
       <template #footer>
-        <button
-          v-if="updateDone && !updateFailed"
-          type="button"
-          @click="reloadPage"
-          class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
-        >
-          Reload Application Now
-        </button>
+        <div v-if="updateDone && !updateFailed" class="flex items-center gap-2">
+          <button
+            type="button"
+            @click="closeProgressModal"
+            class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all"
+          >
+            Close & Review Logs
+          </button>
+          <button
+            type="button"
+            @click="reloadPage"
+            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5"
+          >
+            <RefreshCw class="w-3.5 h-3.5" />
+            <span>Reload Application Now</span>
+          </button>
+        </div>
         <button
           v-if="updateFailed"
           type="button"
@@ -308,8 +317,6 @@ const updateDone = ref(false);
 const updateFailed = ref(false);
 const errorMessage = ref('');
 const rollbackStatus = ref('');
-const countdown = ref(5);
-let countdownTimer = null;
 let pollInterval = null;
 
 const updateInfo = ref({
@@ -420,8 +427,8 @@ const startUpdate = async () => {
       currentStepMessage.value = 'Update completed successfully.';
       // Mark all steps completed
       updateSteps.value.forEach(s => s.status = 'completed');
-
-      startCountdown();
+      toast.success(res.data.message || 'Application updated successfully.');
+      loadCurrentStatus();
     } else {
       throw new Error(res.data?.message || 'Update failed.');
     }
@@ -474,24 +481,12 @@ const stopPollingProgress = () => {
   }
 };
 
-const startCountdown = () => {
-  countdown.value = 5;
-  countdownTimer = setInterval(() => {
-    countdown.value--;
-    if (countdown.value <= 0) {
-      clearInterval(countdownTimer);
-      reloadPage();
-    }
-  }, 1000);
-};
-
 const reloadPage = () => {
   window.location.reload();
 };
 
 const closeProgressModal = () => {
   progressModal.value = false;
-  if (countdownTimer) clearInterval(countdownTimer);
   loadCurrentStatus();
 };
 
@@ -501,6 +496,5 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopPollingProgress();
-  if (countdownTimer) clearInterval(countdownTimer);
 });
 </script>

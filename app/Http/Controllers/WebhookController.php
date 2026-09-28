@@ -135,8 +135,26 @@ class WebhookController extends Controller
         if ($request->wantsJson()) {
             $events = $query->paginate(20)->withQueryString();
 
+            $connection = ZoomConnection::first();
+            $secretToken = $connection?->webhook_secret_token
+                ?: config('zoom.webhook_secret_token', config('services.zoom.webhook_secret', ''));
+
+            $stats = [
+                'total' => ZoomWebhookEvent::count(),
+                'processed' => ZoomWebhookEvent::where('status', 'processed')->count(),
+                'pending' => ZoomWebhookEvent::where('status', 'pending')->count(),
+                'failed' => ZoomWebhookEvent::where('status', 'failed')->count(),
+                'signature_valid' => ZoomWebhookEvent::where('signature_valid', true)->count(),
+                'signature_invalid' => ZoomWebhookEvent::where('signature_valid', false)->count(),
+            ];
+
             return response()->json([
                 'events' => $events,
+                'stats' => $stats,
+                'webhook_url' => url('/webhooks/zoom'),
+                'alt_webhook_url' => url('/api/webhooks/zoom'),
+                'has_secret_token' => ! empty($secretToken),
+                'connection_name' => $connection ? $connection->name : 'Primary Connection',
                 'status' => $status,
                 'event_type' => $eventType,
             ]);
@@ -166,5 +184,102 @@ class WebhookController extends Controller
         }
 
         return back()->with('success', "Webhook event {$event->event_id} queued for replay.");
+    }
+
+    /**
+     * Send or simulate a test webhook event for debugging.
+     */
+    public function simulate(Request $request): JsonResponse
+    {
+        $request->validate([
+            'event_type' => 'required|string',
+            'payload' => 'nullable|array',
+            'process_immediately' => 'nullable|boolean',
+        ]);
+
+        $eventType = (string) $request->input('event_type');
+        $connection = ZoomConnection::first();
+        $secretToken = $connection?->webhook_secret_token
+            ?: config('zoom.webhook_secret_token', config('services.zoom.webhook_secret', ''));
+
+        // Handle URL Validation challenge simulation
+        if ($eventType === 'endpoint.url_validation') {
+            $plainToken = (string) ($request->input('payload.plainToken') ?? 'test_plain_token_'.bin2hex(random_bytes(6)));
+            $validation = $this->verifier->verifyUrlValidation($plainToken, (string) $secretToken);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Simulated Zoom URL validation CRC challenge successfully.',
+                'validation' => $validation,
+                'has_secret' => ! empty($secretToken),
+            ]);
+        }
+
+        $eventId = 'sim-'.bin2hex(random_bytes(8));
+        $payload = $request->input('payload');
+
+        if (empty($payload)) {
+            $meetingId = '9'.rand(100000000, 999999999);
+            $payload = [
+                'event' => $eventType,
+                'event_ts' => now()->timestamp * 1000,
+                'payload' => [
+                    'account_id' => $connection ? $connection->account_id : 'test_account',
+                    'object' => [
+                        'id' => $meetingId,
+                        'uuid' => base64_encode('uuid_'.$meetingId),
+                        'topic' => 'Simulated Debug Meeting',
+                        'type' => 2,
+                        'start_time' => now()->toIso8601String(),
+                        'duration' => 60,
+                        'timezone' => 'UTC',
+                        'host_id' => 'sim_host_'.rand(1000, 9999),
+                    ],
+                ],
+            ];
+        }
+
+        $event = ZoomWebhookEvent::create([
+            'connection_id' => $connection?->id,
+            'event_id' => $eventId,
+            'event_type' => $eventType,
+            'payload' => $payload,
+            'signature_valid' => true,
+            'status' => 'pending',
+            'ip_address' => $request->ip() ?? '127.0.0.1',
+        ]);
+
+        if ($request->boolean('process_immediately', true)) {
+            try {
+                ProcessZoomWebhookJob::dispatchSync($event->id);
+                $event->refresh();
+            } catch (\Throwable $e) {
+                $event->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                ]);
+            }
+        } else {
+            ProcessZoomWebhookJob::dispatch($event->id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Simulated event '{$eventType}' recorded successfully.",
+            'event' => $event,
+        ]);
+    }
+
+    /**
+     * Clear simulated debug webhook events.
+     */
+    public function clear(Request $request): JsonResponse
+    {
+        $count = ZoomWebhookEvent::where('event_id', 'like', 'sim-%')->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Cleared {$count} simulated debug webhook events.",
+        ]);
     }
 }

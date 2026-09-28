@@ -247,9 +247,24 @@ class AppUpdateService
     public function getProgress(): array
     {
         /** @var array<string, mixed>|null $progress */
-        $progress = Cache::get(self::PROGRESS_CACHE_KEY);
+        $progress = null;
+        try {
+            $progress = Cache::get(self::PROGRESS_CACHE_KEY);
+        } catch (\Throwable) {
+        }
 
         if (! is_array($progress)) {
+            try {
+                $progressFile = storage_path('app/updates/progress.json');
+                if (File::exists($progressFile)) {
+                    $diskProgress = json_decode((string) File::get($progressFile), true);
+                    if (is_array($diskProgress)) {
+                        return $diskProgress;
+                    }
+                }
+            } catch (\Throwable) {
+            }
+
             return [
                 'is_active' => false,
                 'step_index' => 0,
@@ -287,7 +302,7 @@ class AppUpdateService
     }
 
     /**
-     * Update progress state in cache.
+     * Update progress state in cache and file.
      *
      * @param  array<string, mixed>  $data
      */
@@ -295,7 +310,17 @@ class AppUpdateService
     {
         $current = $this->getProgress();
         $merged = array_merge($current, $data);
-        Cache::put(self::PROGRESS_CACHE_KEY, $merged, 3600);
+        try {
+            Cache::put(self::PROGRESS_CACHE_KEY, $merged, 3600);
+        } catch (\Throwable) {
+        }
+
+        try {
+            $progressFile = storage_path('app/updates/progress.json');
+            File::ensureDirectoryExists(dirname($progressFile));
+            File::put($progressFile, json_encode($merged, JSON_PRETTY_PRINT));
+        } catch (\Throwable) {
+        }
     }
 
     /**

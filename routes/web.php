@@ -340,12 +340,17 @@ Route::middleware('auth')->group(function () {
     // Webhooks Log & Replay (SPEC Part F6)
     Route::prefix('admin/webhooks')->name('webhooks.')->group(function () {
         Route::get('/', [WebhookController::class, 'index'])->name('index');
+        Route::post('/simulate', [WebhookController::class, 'simulate'])->name('simulate');
+        Route::post('/clear-simulated', [WebhookController::class, 'clear'])->name('clear');
         Route::post('/{publicId}/replay', [WebhookController::class, 'replay'])->name('replay');
     });
 
     Route::get('/calendar', [MeetingController::class, 'calendar'])->name('calendar');
 
     // Browser navigation redirects to modern SPA
+    Route::get('/webhooks/logs', fn () => redirect()->to('/app/api/inbound-webhooks'));
+    Route::get('/debug/webhooks', fn () => redirect()->to('/app/api/inbound-webhooks'));
+    Route::get('/app/webhooks', fn () => redirect()->to('/app/api/inbound-webhooks'));
     Route::get('/workflows', fn () => redirect()->to('/app/workflows'));
     Route::get('/templates', fn () => redirect()->to('/app/templates'));
     Route::get('/admin/templates', fn () => redirect()->to('/app/templates'));

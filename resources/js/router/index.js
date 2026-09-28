@@ -86,6 +86,8 @@ const routes = [
     { path: '/admin/api-keys', redirect: '/app/api/keys' },
     { path: '/admin/outbound-webhooks', redirect: '/app/api/outbound-webhooks' },
     { path: '/admin/webhooks', redirect: '/app/api/inbound-webhooks' },
+    { path: '/webhooks', redirect: '/app/api/inbound-webhooks' },
+    { path: '/debug/webhooks', redirect: '/app/api/inbound-webhooks' },
     { path: '/admin/mail', redirect: '/app/mail/settings' },
     { path: '/admin/email-templates', redirect: '/app/mail/templates' },
     { path: '/settings/zoom', redirect: '/app/settings/zoom' },
@@ -271,7 +273,15 @@ const routes = [
                 path: 'api/inbound-webhooks',
                 name: 'api.inbound-webhooks',
                 component: InboundWebhooksPage,
-                meta: { title: 'Zoom Webhook Intake' },
+                meta: { title: 'Zoom Webhook Intake & Live Debug' },
+            },
+            {
+                path: 'webhooks',
+                redirect: '/app/api/inbound-webhooks',
+            },
+            {
+                path: 'debug/webhooks',
+                redirect: '/app/api/inbound-webhooks',
             },
 
             // Identity & Resources

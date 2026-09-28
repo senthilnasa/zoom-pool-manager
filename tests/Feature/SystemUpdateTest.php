@@ -155,4 +155,28 @@ class SystemUpdateTest extends TestCase
             ->expectsOutputToContain('Zoom Pool Manager Update Manager')
             ->assertExitCode(0);
     }
+
+    public function test_progress_endpoint_accessible_during_maintenance_mode(): void
+    {
+        $admin = User::create([
+            'name' => 'Super Admin 2',
+            'email' => 'admin2@univ.edu',
+            'password' => bcrypt('password123'),
+            'is_active' => true,
+        ]);
+        $admin->assignRole('Super Administrator');
+
+        $this->artisan('down');
+
+        try {
+            $downResponse = $this->get('/app/dashboard');
+            $downResponse->assertStatus(503);
+
+            $progressResponse = $this->actingAs($admin)->get('/spa/settings/updates/progress');
+            $progressResponse->assertStatus(200);
+            $progressResponse->assertJsonStructure(['step_index', 'percent', 'steps']);
+        } finally {
+            $this->artisan('up');
+        }
+    }
 }

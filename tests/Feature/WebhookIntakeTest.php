@@ -313,4 +313,62 @@ class WebhookIntakeTest extends TestCase
                 'supported_method' => 'POST',
             ]);
     }
+
+    public function test_admin_can_view_webhook_events_with_stats(): void
+    {
+        ZoomWebhookEvent::create([
+            'event_id' => 'evt_stats_1',
+            'event_type' => 'meeting.started',
+            'payload' => ['event' => 'meeting.started'],
+            'signature_valid' => true,
+            'status' => 'processed',
+        ]);
+
+        $response = $this->actingAs($this->adminUser)->getJson('/admin/webhooks');
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'events',
+                'stats' => ['total', 'processed', 'pending', 'failed'],
+                'webhook_url',
+                'has_secret_token',
+            ]);
+    }
+
+    public function test_admin_can_simulate_webhook_event_and_clear(): void
+    {
+        $response = $this->actingAs($this->adminUser)->postJson('/admin/webhooks/simulate', [
+            'event_type' => 'meeting.started',
+            'process_immediately' => false,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+            ]);
+
+        $this->assertDatabaseHas('zoom_webhook_events', [
+            'event_type' => 'meeting.started',
+        ]);
+
+        // Clear simulated events
+        $clearResponse = $this->actingAs($this->adminUser)->postJson('/admin/webhooks/clear-simulated');
+        $clearResponse->assertStatus(200)
+            ->assertJson(['success' => true]);
+    }
+
+    public function test_admin_can_simulate_crc_validation(): void
+    {
+        $response = $this->actingAs($this->adminUser)->postJson('/admin/webhooks/simulate', [
+            'event_type' => 'endpoint.url_validation',
+            'payload' => ['plainToken' => 'plain_123'],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'validation' => [
+                    'plainToken' => 'plain_123',
+                ],
+            ]);
+    }
 }

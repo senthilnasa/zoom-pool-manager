@@ -61,6 +61,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
 
+        $middleware->preventRequestsDuringMaintenance(except: [
+            'spa/settings/updates*',
+            'system/updates*',
+            'api/v1/health*',
+            'up',
+        ]);
+
         $middleware->web(append: [
             SecurityHeaders::class,
             EnsureInstalled::class,

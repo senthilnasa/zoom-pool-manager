@@ -50,7 +50,15 @@ class SystemUpdateController extends Controller
      */
     public function progress(Request $request): JsonResponse
     {
-        $this->authorizeUpdates();
+        try {
+            $this->authorizeUpdates();
+        } catch (\Throwable $e) {
+            if ($this->updateService->isLocked() || ($this->updateService->getProgress()['is_active'] ?? false)) {
+                return response()->json($this->updateService->getProgress());
+            }
+
+            throw $e;
+        }
 
         return response()->json($this->updateService->getProgress());
     }
