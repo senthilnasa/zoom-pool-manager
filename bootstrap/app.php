@@ -44,6 +44,13 @@ if (file_exists($envPath)) {
     }
 }
 
+// Force file sessions when uninstalled so database is never queried before setup wizard runs
+if (! file_exists($baseDir.'/storage/installed.lock')) {
+    putenv('SESSION_DRIVER=file');
+    $_ENV['SESSION_DRIVER'] = 'file';
+    $_SERVER['SESSION_DRIVER'] = 'file';
+}
+
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
