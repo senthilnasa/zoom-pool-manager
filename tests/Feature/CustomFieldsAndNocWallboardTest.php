@@ -208,6 +208,8 @@ class CustomFieldsAndNocWallboardTest extends TestCase
 
     public function test_noc_wallboard_api_endpoint(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-09-28 10:00:00'));
+
         $nocToken = 'noc_test_secret_token_12345';
         Setting::set('noc.api_token', $nocToken);
 
@@ -280,5 +282,7 @@ class CustomFieldsAndNocWallboardTest extends TestCase
         $queryRes = $this->getJson("/api/v1/noc/meetings?api_key={$nocToken}&to_time=23:59:59");
         $queryRes->assertStatus(200);
         $this->assertGreaterThanOrEqual(2, (int) $queryRes->json('total_count'));
+
+        Carbon::setTestNow();
     }
 }
