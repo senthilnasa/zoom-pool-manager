@@ -23,6 +23,11 @@ return [
         [
             'scope' => 'meeting:write:admin',
             'granular' => 'meeting:write:meeting:admin',
+            'aliases' => [
+                'meeting:write:meeting:admin',
+                'meeting:update:meeting:admin',
+                'meeting:write:admin',
+            ],
             'category' => 'Meetings',
             'label' => 'Create & Manage Meetings',
             'description' => 'Allows ZPM to schedule pooled sessions, update meeting topics/times, apply security profiles, and delete/release cancelled bookings.',
@@ -35,6 +40,11 @@ return [
         [
             'scope' => 'meeting:read:admin',
             'granular' => 'meeting:read:meeting:admin',
+            'aliases' => [
+                'meeting:read:meeting:admin',
+                'meeting:read:list_meetings:admin',
+                'meeting:read:admin',
+            ],
             'category' => 'Meetings',
             'label' => 'Read Meeting Details & Start URLs',
             'description' => 'Allows ZPM to query meeting details, retrieve dynamic JIT host start URLs, and verify session status.',
@@ -47,6 +57,11 @@ return [
         [
             'scope' => 'user:read:admin',
             'granular' => 'user:read:user:admin',
+            'aliases' => [
+                'user:read:user:admin',
+                'user:read:list_users:admin',
+                'user:read:admin',
+            ],
             'category' => 'Users',
             'label' => 'Inspect Pooled Host Accounts',
             'description' => 'Discovers host accounts in your Zoom organization, queries license types (Basic vs Licensed), and verifies meeting seat capacity (e.g. 100, 300, 500, or 1000 seats).',
@@ -59,6 +74,11 @@ return [
         [
             'scope' => 'user:write:admin',
             'granular' => 'user:update:user:admin',
+            'aliases' => [
+                'user:update:user:admin',
+                'user:write:user:admin',
+                'user:write:admin',
+            ],
             'category' => 'Users',
             'label' => 'Rotate Host Keys',
             'description' => 'Enables automated rotation of the 6-digit host key on pooled accounts after each meeting ends, preventing unauthorized host takeover.',
@@ -79,7 +99,18 @@ return [
     'recommended_scopes' => [
         [
             'scope' => 'recording:read:admin',
-            'granular' => 'recording:read:recording:admin',
+            'granular' => 'cloud_recording:read:recording:admin',
+            'aliases' => [
+                'recording:read:recording:admin',
+                'cloud_recording:read:recording:admin',
+                'cloud_recording:read:list_user_recordings:admin',
+                'cloud_recording:read:list_recording_files:admin',
+                'cloud_recording:read:list_account_recordings:admin',
+                'cloud_recording:read:meeting_transcript:admin',
+                'cloud_recording:read:admin',
+                'recording:read:list_user_recordings:admin',
+                'recording:read:admin',
+            ],
             'category' => 'Cloud Recordings',
             'label' => 'Cloud Recordings & Transcripts',
             'description' => 'Allows ZPM to index completed cloud recordings, generate secure playback redirects, and download AI audio transcripts.',
@@ -92,6 +123,11 @@ return [
         [
             'scope' => 'report:read:admin',
             'granular' => 'report:read:list_meeting_participants:admin',
+            'aliases' => [
+                'report:read:list_meeting_participants:admin',
+                'report:read:meeting:admin',
+                'report:read:admin',
+            ],
             'category' => 'Reports & Attendance',
             'label' => 'Meeting Attendance & Participant Reports',
             'description' => 'Allows ZPM to pull participant attendance records, join times, leave times, and total session duration for post-meeting auditing.',
@@ -104,6 +140,11 @@ return [
         [
             'scope' => 'dashboard:read:admin',
             'granular' => 'dashboard:read:list_meeting_participants:admin',
+            'aliases' => [
+                'dashboard:read:list_meeting_participants:admin',
+                'dashboard:read:meeting:admin',
+                'dashboard:read:admin',
+            ],
             'category' => 'Telemetry',
             'label' => 'Live Telemetry & Diagnostics',
             'description' => 'Provides live meeting metrics, latency, and real-time active session diagnostics in your institutional Zoom account.',

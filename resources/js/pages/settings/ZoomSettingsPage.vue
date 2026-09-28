@@ -456,7 +456,7 @@
             v-for="sc in displayedScopes"
             :key="sc.scope"
             class="p-4 rounded-xl border transition-all space-y-2.5"
-            :class="isScopeGranted(sc.scope, sc.granular)
+            :class="isScopeGranted(sc)
               ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-800/50'
               : sc.required
                 ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200/70 dark:border-amber-800/50'
@@ -500,13 +500,21 @@
 
               <!-- Live Verification Status Badge -->
               <div class="shrink-0 flex items-center gap-2">
-                <span
-                  v-if="isScopeGranted(sc.scope, sc.granular)"
-                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700"
-                >
-                  <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Granted & Active</span>
-                </span>
+                <div v-if="isScopeGranted(sc)" class="flex items-center gap-1.5 flex-wrap justify-end">
+                  <span
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700"
+                  >
+                    <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Granted & Active</span>
+                  </span>
+                  <span
+                    v-if="getMatchedGrantedScope(sc)"
+                    class="font-mono text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800"
+                    :title="'Active in your Zoom App: ' + getMatchedGrantedScope(sc)"
+                  >
+                    ✓ {{ getMatchedGrantedScope(sc) }}
+                  </span>
+                </div>
                 <span
                   v-else-if="sc.required"
                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
@@ -665,6 +673,11 @@ const defaultRequiredScopes = [
   {
     scope: 'meeting:write:admin',
     granular: 'meeting:write:meeting:admin',
+    aliases: [
+      'meeting:write:meeting:admin',
+      'meeting:update:meeting:admin',
+      'meeting:write:admin',
+    ],
     category: 'Meetings',
     label: 'Create & Manage Meetings',
     description: 'Allows ZPM to schedule pooled sessions, update meeting topics/times, apply security profiles, and delete/release cancelled bookings.',
@@ -677,6 +690,11 @@ const defaultRequiredScopes = [
   {
     scope: 'meeting:read:admin',
     granular: 'meeting:read:meeting:admin',
+    aliases: [
+      'meeting:read:meeting:admin',
+      'meeting:read:list_meetings:admin',
+      'meeting:read:admin',
+    ],
     category: 'Meetings',
     label: 'Read Meeting Details & Start URLs',
     description: 'Allows ZPM to query meeting details, retrieve dynamic JIT host start URLs, and verify session status.',
@@ -689,6 +707,11 @@ const defaultRequiredScopes = [
   {
     scope: 'user:read:admin',
     granular: 'user:read:user:admin',
+    aliases: [
+      'user:read:user:admin',
+      'user:read:list_users:admin',
+      'user:read:admin',
+    ],
     category: 'Users',
     label: 'Inspect Pooled Host Accounts',
     description: 'Discovers host accounts in your Zoom organization, queries license types (Basic vs Licensed), and verifies meeting seat capacity (e.g. 100, 300, 500, or 1000 seats).',
@@ -701,6 +724,11 @@ const defaultRequiredScopes = [
   {
     scope: 'user:write:admin',
     granular: 'user:update:user:admin',
+    aliases: [
+      'user:update:user:admin',
+      'user:write:user:admin',
+      'user:write:admin',
+    ],
     category: 'Users',
     label: 'Rotate Host Keys',
     description: 'Enables automated rotation of the 6-digit host key on pooled accounts after each meeting ends, preventing unauthorized host takeover.',
@@ -715,7 +743,18 @@ const defaultRequiredScopes = [
 const defaultRecommendedScopes = [
   {
     scope: 'recording:read:admin',
-    granular: 'recording:read:recording:admin',
+    granular: 'cloud_recording:read:recording:admin',
+    aliases: [
+      'recording:read:recording:admin',
+      'cloud_recording:read:recording:admin',
+      'cloud_recording:read:list_user_recordings:admin',
+      'cloud_recording:read:list_recording_files:admin',
+      'cloud_recording:read:list_account_recordings:admin',
+      'cloud_recording:read:meeting_transcript:admin',
+      'cloud_recording:read:admin',
+      'recording:read:list_user_recordings:admin',
+      'recording:read:admin',
+    ],
     category: 'Cloud Recordings',
     label: 'Cloud Recordings & Transcripts',
     description: 'Allows ZPM to index completed cloud recordings, generate secure playback redirects, and download AI audio transcripts.',
@@ -728,6 +767,11 @@ const defaultRecommendedScopes = [
   {
     scope: 'report:read:admin',
     granular: 'report:read:list_meeting_participants:admin',
+    aliases: [
+      'report:read:list_meeting_participants:admin',
+      'report:read:meeting:admin',
+      'report:read:admin',
+    ],
     category: 'Reports & Attendance',
     label: 'Meeting Attendance & Participant Reports',
     description: 'Allows ZPM to pull participant attendance records, join times, leave times, and total session duration for post-meeting auditing.',
@@ -740,6 +784,11 @@ const defaultRecommendedScopes = [
   {
     scope: 'dashboard:read:admin',
     granular: 'dashboard:read:list_meeting_participants:admin',
+    aliases: [
+      'dashboard:read:list_meeting_participants:admin',
+      'dashboard:read:meeting:admin',
+      'dashboard:read:admin',
+    ],
     category: 'Telemetry',
     label: 'Live Telemetry & Diagnostics',
     description: 'Provides live meeting metrics, latency, and real-time active session diagnostics in your institutional Zoom account.',
@@ -820,10 +869,79 @@ const displayedScopes = computed(() => {
   return list;
 });
 
-const isScopeGranted = (scopeName, granularName) => {
+const getMatchedGrantedScope = (scOrScope, granularName, aliases = []) => {
   const granted = config.value?.granted_scopes || [];
-  if (!granted.length) return false;
-  return granted.includes(scopeName) || (granularName && granted.includes(granularName));
+  if (!granted.length) return null;
+
+  let scope = '';
+  let granular = '';
+  let scopeAliases = [];
+
+  if (typeof scOrScope === 'object' && scOrScope !== null) {
+    scope = scOrScope.scope || '';
+    granular = scOrScope.granular || '';
+    scopeAliases = Array.isArray(scOrScope.aliases) ? scOrScope.aliases : [];
+  } else {
+    scope = scOrScope || '';
+    granular = granularName || '';
+    scopeAliases = Array.isArray(aliases) ? aliases : [];
+  }
+
+  // 1. Direct exact match on scope
+  if (granted.includes(scope)) return scope;
+
+  // 2. Direct exact match on granular
+  if (granular && granted.includes(granular)) return granular;
+
+  // 3. Explicit aliases match
+  for (const alias of scopeAliases) {
+    if (granted.includes(alias)) return alias;
+  }
+
+  // 4. Intelligent prefix matching for modern Zoom Server-to-Server OAuth
+  // Cloud Recordings (both classic recording:read and modern cloud_recording:read)
+  if (scope.includes('recording') || granular.includes('recording')) {
+    const matched = granted.find(g => g.startsWith('cloud_recording:read') || g.startsWith('recording:read'));
+    if (matched) return matched;
+  }
+
+  // Attendance Reports
+  if (scope.includes('report') || granular.includes('report')) {
+    const matched = granted.find(g => g.startsWith('report:read'));
+    if (matched) return matched;
+  }
+
+  // Telemetry & Diagnostics
+  if (scope.includes('dashboard') || granular.includes('dashboard')) {
+    const matched = granted.find(g => g.startsWith('dashboard:read'));
+    if (matched) return matched;
+  }
+
+  // Meetings
+  if (scope === 'meeting:write:admin' || granular.includes('meeting:write')) {
+    const matched = granted.find(g => g.startsWith('meeting:write') || g.startsWith('meeting:update'));
+    if (matched) return matched;
+  }
+  if (scope === 'meeting:read:admin' || granular.includes('meeting:read')) {
+    const matched = granted.find(g => g.startsWith('meeting:read'));
+    if (matched) return matched;
+  }
+
+  // Users
+  if (scope === 'user:read:admin' || granular.includes('user:read')) {
+    const matched = granted.find(g => g.startsWith('user:read'));
+    if (matched) return matched;
+  }
+  if (scope === 'user:write:admin' || granular.includes('user:update') || granular.includes('user:write')) {
+    const matched = granted.find(g => g.startsWith('user:write') || g.startsWith('user:update'));
+    if (matched) return matched;
+  }
+
+  return null;
+};
+
+const isScopeGranted = (scOrScope, granularName, aliases = []) => {
+  return !!getMatchedGrantedScope(scOrScope, granularName, aliases);
 };
 
 const copyAllScopes = () => {
