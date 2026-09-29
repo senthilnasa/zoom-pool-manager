@@ -237,6 +237,26 @@ Route::middleware('auth')->group(function () {
         Route::post('/privacy/export', [SpaAdminController::class, 'exportUser'])->name('privacy.export');
         Route::post('/privacy/anonymize', [SpaAdminController::class, 'anonymizeUser'])->name('privacy.anonymize');
         Route::post('/privacy/purge', [SpaAdminController::class, 'purgeRetention'])->name('privacy.purge');
+
+        // Workflow Rules Administration (SPA)
+        Route::get('/workflows', [WorkflowRuleController::class, 'index'])->name('spa.workflows.index');
+        Route::post('/workflows', [WorkflowRuleController::class, 'store'])->name('spa.workflows.store');
+        Route::get('/workflows/{publicId}', [WorkflowRuleController::class, 'show'])->name('spa.workflows.show');
+        Route::put('/workflows/{publicId}', [WorkflowRuleController::class, 'update'])->name('spa.workflows.update');
+        Route::delete('/workflows/{publicId}', [WorkflowRuleController::class, 'destroy'])->name('spa.workflows.destroy');
+        Route::post('/workflows/{publicId}/toggle', [WorkflowRuleController::class, 'toggle'])->name('spa.workflows.toggle');
+        Route::post('/workflows/simulate', [WorkflowRuleController::class, 'simulate'])->name('spa.workflows.simulate');
+
+        // Quotas Administration (SPA)
+        Route::get('/quotas', [QuotaController::class, 'index'])->name('spa.quotas.index');
+        Route::post('/quotas', [QuotaController::class, 'store'])->name('spa.quotas.store');
+        Route::post('/quotas/{publicId}/toggle', [QuotaController::class, 'toggle'])->name('spa.quotas.toggle');
+        Route::delete('/quotas/{publicId}', [QuotaController::class, 'destroy'])->name('spa.quotas.destroy');
+
+        // Delegations Administration (SPA)
+        Route::get('/delegations', [DelegationController::class, 'index'])->name('spa.delegations.index');
+        Route::post('/delegations', [DelegationController::class, 'store'])->name('spa.delegations.store');
+        Route::delete('/delegations/{publicId}', [DelegationController::class, 'destroy'])->name('spa.delegations.destroy');
     });
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

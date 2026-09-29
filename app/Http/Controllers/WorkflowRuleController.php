@@ -27,7 +27,7 @@ class WorkflowRuleController extends Controller
      */
     public function index(Request $request): View|JsonResponse
     {
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json([
                 'rules' => WorkflowRule::orderedByPriority()->get(),
                 'departments' => Department::all(),
@@ -84,12 +84,23 @@ class WorkflowRuleController extends Controller
             ]
         );
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json(['success' => true, 'rule' => $rule]);
         }
 
         return redirect()->route('workflows.index')
             ->with('status', 'Workflow rule created successfully.');
+    }
+
+    /**
+     * Show single rule details.
+     */
+    public function show(string $publicId): JsonResponse
+    {
+        /** @var WorkflowRule $rule */
+        $rule = WorkflowRule::where('public_id', $publicId)->firstOrFail();
+
+        return response()->json(['rule' => $rule]);
     }
 
     /**
@@ -136,7 +147,7 @@ class WorkflowRuleController extends Controller
             newValues: $rule->only(['name', 'priority', 'conditions', 'actions', 'is_enabled'])
         );
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json(['success' => true, 'rule' => $rule]);
         }
 
@@ -161,7 +172,7 @@ class WorkflowRuleController extends Controller
 
         $rule->delete();
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json(['success' => true]);
         }
 
@@ -185,7 +196,7 @@ class WorkflowRuleController extends Controller
             newValues: ['is_enabled' => $rule->is_enabled]
         );
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json(['success' => true, 'rule' => $rule->fresh()]);
         }
 
@@ -200,6 +211,20 @@ class WorkflowRuleController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+
+        $duration = (int) $request->input('duration_minutes', 60);
+        if (! $request->filled('starts_at')) {
+            $startsAt = now();
+            $request->merge([
+                'starts_at' => $startsAt->toIso8601String(),
+                'ends_at' => $startsAt->copy()->addMinutes(max(15, $duration))->toIso8601String(),
+            ]);
+        } elseif (! $request->filled('ends_at')) {
+            $startsAt = \Illuminate\Support\Carbon::parse($request->input('starts_at'));
+            $request->merge([
+                'ends_at' => $startsAt->copy()->addMinutes(max(15, $duration))->toIso8601String(),
+            ]);
+        }
 
         $data = $request->validate([
             'starts_at' => ['required', 'date'],

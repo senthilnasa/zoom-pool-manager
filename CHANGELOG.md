@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.10] - 2026-09-29
+
+### Fixed
+- **Workflow Rules Builder (`/app/workflows`):**
+  - Registered dedicated authenticated SPA endpoints (`/spa/workflows`, `/spa/workflows/{publicId}`, `/spa/workflows/{publicId}/toggle`, `/spa/workflows/simulate`) to resolve routing conflicts and ensure consistent JSON payloads.
+  - Resolved 422 simulation validation failures in `WorkflowRuleController::simulate` by introducing flexible fallback defaults for `starts_at` and `ends_at` derived from `duration_minutes`.
+  - Modernized `WorkflowsPage.vue` with condition badges (Meeting Type, Duration Min/Max, Department, Roles, Participants), action pills (Auto-Approve, Require Approval, Reject, Resource Pool, Recording Mode), active/disabled toggle switch, full rule editing modal, interactive execution log accordion in simulator, and status toasts.
+- **Quota Management Zero-Crash & UI Protection (`/app/quotas`):**
+  - Resolved fatal JavaScript `TypeError: Cannot read properties of undefined (reading 'id')` when rendering quota lists.
+  - Implemented defensive safe property extractors (`getQuotaModel`, `getQuotaStats`, `getScopeType`, `getTargetName`, `getMeetingsPct`, `getHoursPct`, `getId`) in `QuotasPage.vue` guaranteeing rock-solid rendering regardless of payload nesting.
+  - Guarded all percentage progress bar calculations against division by zero, preventing `NaN` style bindings.
+  - Added dedicated `/spa/quotas` endpoint and `/spa/quotas/{publicId}/toggle` endpoint allowing administrators to activate/deactivate quota policies directly from the table.
+  - Modernized UI with summary cards (Current Period, Total Quotas, Active Policies, Department Limits), scope badges, and responsive action controls.
+- **Approval Delegations Management (`/app/delegations`):**
+  - Standardized routing to `/spa/delegations` with CSRF protection and clean JSON responses.
+  - Fixed active/expired validity detection to evaluate both `is_active` and time windows (`ends_at >= now()`), correctly tagging expired authority transfers.
+  - Added visual summary cards, colleague selector with remote search, and 1-click navigation to review pending delegated requests in `/app/approvals`.
+- **Test Coverage:**
+  - Added `SpaGovernanceAndLimitsTest` covering full CRUD, toggling, and simulation workflows across all three modules with 100% test pass rate (264/264 tests passing).
+
+---
+
 ## [1.0.9] - 2026-09-29
 
 ### Fixed

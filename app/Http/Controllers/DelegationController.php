@@ -42,7 +42,7 @@ class DelegationController extends Controller
             ->orderBy('name')
             ->get();
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json([
                 'my_delegations' => $myDelegations,
                 'delegated_to_me' => $delegatedToMe,
@@ -80,14 +80,14 @@ class DelegationController extends Controller
                 endsAt: Carbon::parse($validated['ends_at'])
             );
 
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() || $request->is('spa/*')) {
                 return response()->json(['success' => true, 'delegation' => $delegation]);
             }
 
             return redirect()->route('delegations.index')
                 ->with('status', "Approval authority successfully delegated to {$delegate->name}.");
         } catch (\Throwable $e) {
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() || $request->is('spa/*')) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
 
@@ -110,7 +110,7 @@ class DelegationController extends Controller
 
         $delegation->update(['is_active' => false]);
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json(['success' => true]);
         }
 

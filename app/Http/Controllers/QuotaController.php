@@ -26,7 +26,7 @@ class QuotaController extends Controller
      */
     public function index(): View|JsonResponse
     {
-        $quotas = Quota::with(['usages'])->paginate(20);
+        $quotas = Quota::with(['usages'])->paginate(50);
         $year = (int) Carbon::now()->format('Y');
         $month = (int) Carbon::now()->format('n');
 
@@ -36,23 +36,47 @@ class QuotaController extends Controller
 
             if ($quota->scope_type === 'user') {
                 $u = User::find($quota->scope_id);
-                $targetName = $u ? "User: {$u->name}" : "User #{$quota->scope_id}";
+                $targetName = $u ? "{$u->name} ({$u->email})" : "User #{$quota->scope_id}";
             } elseif ($quota->scope_type === 'department') {
                 $d = Department::find($quota->scope_id);
-                $targetName = $d ? "Dept: {$d->name}" : "Dept #{$quota->scope_id}";
+                $targetName = $d ? "{$d->name} ({$d->code})" : "Dept #{$quota->scope_id}";
             }
 
+            $meetingsUsed = (int) ($stats['meetings_used'] ?? 0);
+            $minutesUsed = (int) ($stats['minutes_used'] ?? 0);
+            $maxMeetings = $quota->max_meetings_per_month ? (int) $quota->max_meetings_per_month : null;
+            $maxHours = $quota->max_hours_per_month ? (int) $quota->max_hours_per_month : null;
+
+            $meetingsPct = ($maxMeetings && $maxMeetings > 0)
+                ? min(100, (int) round(($meetingsUsed / $maxMeetings) * 100))
+                : 0;
+            $hoursPct = ($maxHours && $maxHours > 0)
+                ? min(100, (int) round(($minutesUsed / ($maxHours * 60)) * 100))
+                : 0;
+
             return [
-                'model' => $quota,
+                'id' => $quota->id,
+                'public_id' => $quota->public_id,
+                'scope_type' => $quota->scope_type,
+                'scope_id' => $quota->scope_id,
+                'max_meetings_per_month' => $maxMeetings,
+                'max_hours_per_month' => $maxHours,
+                'is_active' => (bool) $quota->is_active,
                 'target_name' => $targetName,
+                'model' => $quota,
                 'stats' => $stats,
+                'meetings_used' => $meetingsUsed,
+                'minutes_used' => $minutesUsed,
+                'hours_used' => round($minutesUsed / 60, 1),
+                'meetings_pct' => $meetingsPct,
+                'hours_pct' => $hoursPct,
             ];
         });
 
-        if (request()->wantsJson()) {
+        if (request()->wantsJson() || request()->is('spa/*')) {
             return response()->json([
                 'quotas' => $quotasWithStats,
-                'departments' => Department::all(),
+                'departments' => Department::orderBy('name')->get(),
                 'users' => User::orderBy('name')->take(50)->get(),
                 'current_period' => Carbon::now()->format('F Y'),
             ]);
@@ -96,12 +120,31 @@ class QuotaController extends Controller
             newValues: $validated
         );
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('spa/*')) {
             return response()->json(['success' => true, 'quota' => $quota]);
         }
 
         return redirect()->route('quotas.index')
             ->with('status', 'Quota configured successfully.');
+    }
+
+    /**
+     * Toggle quota active status.
+     */
+    public function toggle(string $publicId): JsonResponse
+    {
+        /** @var Quota $quota */
+        $quota = Quota::where('public_id', $publicId)->firstOrFail();
+        $quota->update(['is_active' => ! $quota->is_active]);
+
+        $this->auditService->log(
+            event: 'quota.toggled',
+            auditable: $quota,
+            actor: Auth::user(),
+            newValues: ['is_active' => $quota->is_active]
+        );
+
+        return response()->json(['success' => true, 'is_active' => $quota->is_active]);
     }
 
     /**
@@ -121,7 +164,7 @@ class QuotaController extends Controller
 
         $quota->delete();
 
-        if (request()->wantsJson()) {
+        if (request()->wantsJson() || request()->is('spa/*')) {
             return response()->json(['success' => true]);
         }
 
