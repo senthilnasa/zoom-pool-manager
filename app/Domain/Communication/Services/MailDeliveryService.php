@@ -104,35 +104,38 @@ class MailDeliveryService
     protected function getDefaultSubject(string $key): string
     {
         return match ($key) {
-            'meeting_requested' => 'Meeting Approval Requested: {{meeting.title}}',
-            'meeting_approved' => 'Meeting Approved: {{meeting.title}}',
-            'meeting_rejected' => 'Meeting Request Rejected: {{meeting.title}}',
-            'meeting_confirmed' => 'Meeting Confirmed: {{meeting.title}}',
-            'meeting_cancelled' => 'Meeting Cancelled: {{meeting.title}}',
-            'meeting_waitlisted' => 'Placed on Waitlist: {{meeting.title}}',
-            'waitlist_allocated' => 'Resource Allocated from Waitlist: {{meeting.title}}',
-            'start_reminder' => 'Reminder: Your meeting starts in 15 minutes: {{meeting.title}}',
-            default => 'Notification regarding {{meeting.title}}',
+            'meeting_requested' => '[{{org.name}}] Approval Requested: {{meeting.title}}',
+            'meeting_approved' => '[{{org.name}}] Approved: {{meeting.title}}',
+            'meeting_rejected' => '[{{org.name}}] Declined: {{meeting.title}}',
+            'meeting_confirmed' => '[{{org.name}}] Confirmed: {{meeting.title}}',
+            'meeting_cancelled' => '[{{org.name}}] Cancelled: {{meeting.title}}',
+            'meeting_waitlisted' => '[{{org.name}}] Waitlisted: {{meeting.title}}',
+            'waitlist_allocated' => '[{{org.name}}] Allocated from Waitlist: {{meeting.title}}',
+            'start_reminder' => '[{{org.name}}] Reminder (15 min): {{meeting.title}}',
+            default => '[{{org.name}}] Notification regarding {{meeting.title}}',
         };
     }
 
     protected function getDefaultHtmlBody(string $key): string
     {
         return <<<'HTML'
-<div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #2563eb;">{{org.name}}</h2>
-    <p>Hello {{recipient.name}},</p>
-    <p>This is an automated notification regarding your meeting <strong>{{meeting.title}}</strong>.</p>
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin: 20px 0;">
-        <p><strong>Starts At:</strong> {{meeting.starts_at}}</p>
-        <p><strong>Ends At:</strong> {{meeting.ends_at}}</p>
-        <p><strong>Duration:</strong> {{meeting.duration_minutes}} minutes</p>
-        <p><strong>Join URL:</strong> <a href="{{meeting.join_url}}">{{meeting.join_url}}</a></p>
-        <p><strong>Passcode:</strong> {{meeting.passcode}}</p>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+    <div style="border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 20px;">
+        <h2 style="color: #1e40af; margin: 0; font-size: 22px; font-weight: 700;">{{org.name}}</h2>
+        <span style="font-size: 12px; color: #64748b; font-weight: 500;">Zoom Pool Management Portal</span>
     </div>
-    <p>To view host controls or manage this booking, log into the <a href="{{org.website}}">Zoom Pool Manager portal</a>.</p>
-    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-    <p style="font-size: 12px; color: #64748b;">This email was sent automatically by {{org.name}} Zoom Pool Manager.</p>
+    <p style="font-size: 14px; margin-bottom: 12px;">Hello {{recipient.name}},</p>
+    <p style="font-size: 14px; margin-bottom: 16px;">This is an automated notification regarding your meeting <strong>{{meeting.title}}</strong>.</p>
+    <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin: 20px 0;">
+        <p style="margin: 6px 0; font-size: 13px;"><strong>Starts At:</strong> {{meeting.starts_at}}</p>
+        <p style="margin: 6px 0; font-size: 13px;"><strong>Ends At:</strong> {{meeting.ends_at}}</p>
+        <p style="margin: 6px 0; font-size: 13px;"><strong>Duration:</strong> {{meeting.duration_minutes}} minutes</p>
+        <p style="margin: 6px 0; font-size: 13px;"><strong>Join URL:</strong> <a href="{{meeting.join_url}}" style="color: #2563eb; word-break: break-all;">{{meeting.join_url}}</a></p>
+        <p style="margin: 6px 0; font-size: 13px;"><strong>Passcode:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">{{meeting.passcode}}</code></p>
+    </div>
+    <p style="font-size: 13px; color: #475569;">To view host controls or manage this booking, log into the <a href="{{org.website}}" style="color: #2563eb; font-weight: 600;">{{org.name}} Portal</a>.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+    <p style="font-size: 11px; color: #94a3b8; margin: 0;">This email was sent automatically by {{org.name}} Zoom Pool Manager.</p>
 </div>
 HTML;
     }
@@ -152,7 +155,7 @@ Duration: {{meeting.duration_minutes}} minutes
 Join URL: {{meeting.join_url}}
 Passcode: {{meeting.passcode}}
 
-To view host controls or manage this booking, log into Zoom Pool Manager at {{org.website}}.
+To view host controls or manage this booking, log into {{org.name}} at {{org.website}}.
 
 --------------------------------------------------
 This email was sent automatically by {{org.name}} Zoom Pool Manager.

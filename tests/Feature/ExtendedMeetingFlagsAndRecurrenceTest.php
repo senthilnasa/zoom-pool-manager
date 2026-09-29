@@ -46,7 +46,7 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
 
         $this->user = User::create([
             'name' => 'Dr. Alan Turing',
-            'email' => 'alan.turing@krea.edu.in',
+            'email' => 'alan.turing@example.edu',
             'department_id' => $this->department->id,
             'is_active' => true,
         ]);

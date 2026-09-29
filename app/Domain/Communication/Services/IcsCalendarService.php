@@ -21,7 +21,14 @@ class IcsCalendarService
      */
     public function generate(Meeting $meeting, string $method = 'REQUEST', ?int $sequence = null): string
     {
-        $orgName = Setting::get('org.name', config('app.name', 'Zoom Pool Manager'));
+        $orgName = trim((string) (
+            Setting::get('org.name')
+            ?: Setting::get('organization_name')
+            ?: Setting::get('org_name')
+            ?: config('app.organization_name')
+            ?: (config('app.name') !== 'Laravel' ? config('app.name') : null)
+            ?: 'Zoom Pool Manager'
+        ));
         $hostDomain = parse_url(config('app.url', 'http://localhost'), PHP_URL_HOST) ?: 'zoompoolmanager.org';
         $stableUid = "zpm-{$meeting->public_id}@{$hostDomain}";
 
@@ -71,6 +78,16 @@ class IcsCalendarService
         $owner = $meeting->owner ?? $meeting->requester;
         if ($owner) {
             $event->organizer($owner->email, $owner->name);
+        }
+
+        // Add requester as attendee if distinct from owner and not already in invitees
+        $requester = $meeting->requester;
+        $inviteeEmails = $meeting->invitees->pluck('email')->map(fn ($e) => strtolower(trim((string) $e)))->all();
+
+        if ($requester && (! $owner || $requester->id !== $owner->id)) {
+            if (! in_array(strtolower(trim($requester->email)), $inviteeEmails, true)) {
+                $event->attendee($requester->email, $requester->name, ParticipationStatus::accepted());
+            }
         }
 
         // Add invitees as attendees

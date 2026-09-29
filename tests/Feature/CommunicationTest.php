@@ -268,13 +268,13 @@ class CommunicationTest extends TestCase
     {
         $payload = [
             'current_provider' => 'smtp',
-            'from_address' => 'noreply@krea.edu.in',
+            'from_address' => 'noreply@example.edu',
             'from_name' => 'IT Team Noreply',
             'reply_to' => '',
             'smtp_host' => 'smtp.gmail.com',
             'smtp_port' => 465,
             'smtp_encryption' => 'ssl',
-            'smtp_username' => 'firewall.ttk@krea.edu.in',
+            'smtp_username' => 'service.account@example.edu',
             'smtp_password' => 'secret123',
         ];
 
@@ -283,7 +283,7 @@ class CommunicationTest extends TestCase
         $res->assertJson(['success' => true]);
 
         $this->assertSame('smtp', Setting::get('mail.provider'));
-        $this->assertSame('noreply@krea.edu.in', Setting::get('mail.from_address'));
+        $this->assertSame('noreply@example.edu', Setting::get('mail.from_address'));
         $this->assertSame('smtp.gmail.com', Setting::get('mail.smtp_host'));
         $this->assertSame(465, (int) Setting::get('mail.smtp_port'));
         $this->assertSame('ssl', Setting::get('mail.smtp_encryption'));
@@ -294,7 +294,7 @@ class CommunicationTest extends TestCase
         $indexRes->assertJsonFragment([
             'provider' => 'smtp',
             'current_provider' => 'smtp',
-            'from_address' => 'noreply@krea.edu.in',
+            'from_address' => 'noreply@example.edu',
         ]);
     }
 }

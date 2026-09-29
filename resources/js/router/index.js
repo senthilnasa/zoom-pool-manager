@@ -57,8 +57,12 @@ import EmailTemplatesPage from '@/pages/mail/EmailTemplatesPage.vue';
 import UpdatesPage from '@/pages/settings/UpdatesPage.vue';
 import NotificationsPage from '@/pages/notifications/NotificationsPage.vue';
 import LegalViewPage from '@/pages/legal/LegalViewPage.vue';
+import DocumentationPage from '@/pages/docs/DocumentationPage.vue';
 
 const routes = [
+    // Documentation Redirects
+    { path: '/documentation', redirect: '/app/documentation' },
+    { path: '/docs', redirect: '/app/documentation' },
     // Legacy / Top-Level Redirects
     { path: '/dashboard', redirect: '/app/dashboard' },
     { path: '/meetings', redirect: '/app/meetings' },
@@ -395,6 +399,16 @@ const routes = [
                 name: 'legal.terms',
                 component: LegalViewPage,
                 meta: { title: 'Terms of Service' },
+            },
+            {
+                path: 'documentation',
+                name: 'documentation',
+                component: DocumentationPage,
+                meta: { title: 'Documentation & Guides' },
+            },
+            {
+                path: 'docs',
+                redirect: '/app/documentation',
             },
         ],
     },

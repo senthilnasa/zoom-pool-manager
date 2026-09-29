@@ -23,7 +23,7 @@ class SpaMeetingTemplatesAndProfilesTest extends TestCase
 
         $this->adminUser = User::create([
             'name' => 'Admin User',
-            'email' => 'admin@krea.edu.in',
+            'email' => 'admin@example.edu',
             'password' => bcrypt('password123'),
             'is_active' => true,
         ]);

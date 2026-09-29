@@ -42,7 +42,7 @@ class RoleManagementAndAccessControlTest extends TestCase
 
         $this->admin = User::create([
             'name' => 'Super Administrator',
-            'email' => 'admin@krea.edu.in',
+            'email' => 'admin@example.edu',
             'password' => bcrypt('password123'),
             'is_active' => true,
         ]);
@@ -162,7 +162,7 @@ class RoleManagementAndAccessControlTest extends TestCase
         // Assign to a user
         $auditorUser = User::create([
             'name' => 'Auditor Jane',
-            'email' => 'auditor@krea.edu.in',
+            'email' => 'auditor@example.edu',
             'password' => bcrypt('password123'),
             'is_active' => true,
         ]);
@@ -187,7 +187,7 @@ class RoleManagementAndAccessControlTest extends TestCase
     {
         $user = User::create([
             'name' => 'Prof. Ramanujan',
-            'email' => 'ramanujan@krea.edu.in',
+            'email' => 'ramanujan@example.edu',
             'password' => bcrypt('password123'),
             'is_active' => true,
         ]);

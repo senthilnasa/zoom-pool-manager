@@ -43,7 +43,7 @@ class MeetingRescheduleAndExtendTest extends TestCase
 
         $this->user = User::create([
             'name' => 'Prof. Grace Hopper',
-            'email' => 'grace.hopper@krea.edu.in',
+            'email' => 'grace.hopper@example.edu',
             'department_id' => $this->department->id,
             'is_active' => true,
         ]);

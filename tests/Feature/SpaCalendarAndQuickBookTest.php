@@ -43,7 +43,7 @@ class SpaCalendarAndQuickBookTest extends TestCase
 
         $this->adminUser = User::create([
             'name' => 'Admin User',
-            'email' => 'admin@krea.edu.in',
+            'email' => 'admin@example.edu',
             'password' => bcrypt('secret123'),
             'department_id' => $this->department->id,
             'is_active' => true,
@@ -52,7 +52,7 @@ class SpaCalendarAndQuickBookTest extends TestCase
 
         $this->facultyUser = User::create([
             'name' => 'Prof Alan Turing',
-            'email' => 'turing@krea.edu.in',
+            'email' => 'turing@example.edu',
             'password' => bcrypt('secret123'),
             'department_id' => $this->department->id,
             'is_active' => true,
@@ -70,7 +70,7 @@ class SpaCalendarAndQuickBookTest extends TestCase
 
         $zoomUser = ZoomUser::create([
             'connection_id' => $connection->id,
-            'email' => 'host1@krea.edu.in',
+            'email' => 'host1@example.edu',
             'zoom_user_id' => 'zoom_usr_123',
             'user_type' => 2,
             'status' => 'active',

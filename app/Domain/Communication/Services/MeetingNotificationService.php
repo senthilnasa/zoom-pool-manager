@@ -43,6 +43,33 @@ class MeetingNotificationService
             );
         }
 
+        // 1b. Notify Requester (if distinct from owner and not in invitees)
+        $requester = $meeting->requester;
+        $inviteeEmails = $meeting->invitees->pluck('email')->map(fn ($e) => strtolower(trim((string) $e)))->all();
+
+        if ($requester && (! $owner || $requester->id !== $owner->id)) {
+            if (! in_array(strtolower(trim($requester->email)), $inviteeEmails, true)) {
+                $this->mailService->queueEmail(
+                    templateKey: 'meeting_confirmed',
+                    recipientEmail: $requester->email,
+                    recipientName: $requester->name,
+                    context: ['meeting' => $meeting],
+                    meeting: $meeting,
+                    eventId: "confirmed_requester_{$meeting->id}_{$requester->id}",
+                    attachments: [$icsAttachment],
+                    sync: $sync
+                );
+            }
+
+            $this->notificationCenter->notify(
+                user: $requester,
+                type: 'meeting_confirmed',
+                title: 'Meeting Confirmed: '.$meeting->title,
+                message: "Your meeting has been scheduled for {$meeting->starts_at->format('M d, Y H:i')}.",
+                data: ['meeting_id' => $meeting->public_id]
+            );
+        }
+
         // 2. Notify Invitees
         foreach ($meeting->invitees as $invitee) {
             $this->mailService->queueEmail(
@@ -201,6 +228,36 @@ class MeetingNotificationService
             );
         }
 
+        // 1b. Notify Requester (if distinct from owner and not in invitees)
+        $requester = $meeting->requester;
+        $inviteeEmails = $meeting->invitees->pluck('email')->map(fn ($e) => strtolower(trim((string) $e)))->all();
+
+        if ($requester && (! $owner || $requester->id !== $owner->id)) {
+            if (! in_array(strtolower(trim($requester->email)), $inviteeEmails, true)) {
+                $this->mailService->queueEmail(
+                    templateKey: 'meeting_cancelled',
+                    recipientEmail: $requester->email,
+                    recipientName: $requester->name,
+                    context: [
+                        'meeting' => $meeting,
+                        'reason' => $reason,
+                    ],
+                    meeting: $meeting,
+                    eventId: "cancelled_requester_{$meeting->id}_{$requester->id}",
+                    attachments: [$icsAttachment],
+                    sync: $sync
+                );
+            }
+
+            $this->notificationCenter->notify(
+                user: $requester,
+                type: 'meeting_cancelled',
+                title: 'Meeting Cancelled: '.$meeting->title,
+                message: "Meeting was cancelled. Reason: {$reason}",
+                data: ['meeting_id' => $meeting->public_id, 'reason' => $reason]
+            );
+        }
+
         // 2. Notify Invitees
         foreach ($meeting->invitees as $invitee) {
             $this->mailService->queueEmail(
@@ -305,6 +362,32 @@ class MeetingNotificationService
 
             $this->notificationCenter->notify(
                 user: $owner,
+                type: 'start_reminder',
+                title: 'Meeting Starting Soon: '.$meeting->title,
+                message: 'Your meeting starts in 15 minutes. Join links and host controls are now active.',
+                data: ['meeting_id' => $meeting->public_id]
+            );
+        }
+
+        // Notify requester if distinct from owner and not in invitees
+        $requester = $meeting->requester;
+        $inviteeEmails = $meeting->invitees->pluck('email')->map(fn ($e) => strtolower(trim((string) $e)))->all();
+
+        if ($requester && (! $owner || $requester->id !== $owner->id)) {
+            if (! in_array(strtolower(trim($requester->email)), $inviteeEmails, true)) {
+                $this->mailService->queueEmail(
+                    templateKey: 'start_reminder',
+                    recipientEmail: $requester->email,
+                    recipientName: $requester->name,
+                    context: ['meeting' => $meeting],
+                    meeting: $meeting,
+                    eventId: "reminder_requester_{$meeting->id}_{$requester->id}",
+                    sync: $sync
+                );
+            }
+
+            $this->notificationCenter->notify(
+                user: $requester,
                 type: 'start_reminder',
                 title: 'Meeting Starting Soon: '.$meeting->title,
                 message: 'Your meeting starts in 15 minutes. Join links and host controls are now active.',

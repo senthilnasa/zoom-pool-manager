@@ -43,7 +43,14 @@ class SpaAuthController extends Controller
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ],
             'branding' => [
-                'org_name' => (string) Setting::get('org.name', config('app.name', 'Zoom Pool Manager')),
+                'org_name' => (string) (
+                    Setting::get('org.name')
+                    ?: Setting::get('organization_name')
+                    ?: Setting::get('org_name')
+                    ?: config('app.organization_name')
+                    ?: (config('app.name') !== 'Laravel' ? config('app.name') : null)
+                    ?: 'Zoom Pool Manager'
+                ),
                 'org_logo_url' => (string) Setting::get('org.logo_url', ''),
                 'org_footer_text' => (string) Setting::get('org.footer_text', ''),
                 'org_support_email' => (string) Setting::get('org.support_email', 'support@zoompoolmanager.org'),

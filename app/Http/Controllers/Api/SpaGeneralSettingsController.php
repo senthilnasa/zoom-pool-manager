@@ -23,7 +23,14 @@ class SpaGeneralSettingsController extends Controller
         abort_unless($request->user()?->hasRole('Super Administrator') || $request->user()?->can('settings.manage') || $request->user()?->can('system.manage'), 403);
         $settings = [
             // Institutional & Visual Identity Profile
-            'org_name' => (string) Setting::get('org.name', config('app.name', 'Zoom Pool Manager')),
+            'org_name' => (string) (
+                Setting::get('org.name')
+                ?: Setting::get('organization_name')
+                ?: Setting::get('org_name')
+                ?: config('app.organization_name')
+                ?: (config('app.name') !== 'Laravel' ? config('app.name') : null)
+                ?: 'Zoom Pool Manager'
+            ),
             'org_logo_url' => (string) Setting::get('org.logo_url', ''),
             'org_logo_dark_url' => (string) Setting::get('org.logo_dark_url', ''),
             'org_favicon_url' => (string) Setting::get('org.favicon_url', ''),
@@ -351,6 +358,8 @@ class SpaGeneralSettingsController extends Controller
 
         // Persist institutional & branding settings
         Setting::set('org.name', $validated['org_name']);
+        Setting::set('organization_name', $validated['org_name']);
+        Setting::set('org_name', $validated['org_name']);
         if (array_key_exists('org_logo_url', $validated)) {
             Setting::set('org.logo_url', $validated['org_logo_url'] ?? '');
         }

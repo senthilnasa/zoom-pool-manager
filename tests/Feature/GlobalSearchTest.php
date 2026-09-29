@@ -22,7 +22,7 @@ class GlobalSearchTest extends TestCase
 
         $this->admin = User::create([
             'name' => 'Admin User',
-            'email' => 'admin@krea.edu.in',
+            'email' => 'admin@example.edu',
             'password' => bcrypt('password123'),
             'is_active' => true,
         ]);
@@ -57,7 +57,7 @@ class GlobalSearchTest extends TestCase
     {
         User::create([
             'name' => 'Aryabhata Astronomer',
-            'email' => 'aryabhata@krea.edu.in',
+            'email' => 'aryabhata@example.edu',
             'password' => bcrypt('password123'),
             'is_active' => true,
         ]);
@@ -70,7 +70,7 @@ class GlobalSearchTest extends TestCase
 
         $this->assertNotNull($matchedUser);
         $this->assertEquals('Aryabhata Astronomer', $matchedUser['name']);
-        $this->assertEquals('aryabhata@krea.edu.in', $matchedUser['email']);
+        $this->assertEquals('aryabhata@example.edu', $matchedUser['email']);
         $this->assertStringContainsString('/profile', $matchedUser['path']);
         $this->assertStringContainsString('/profile', $matchedUser['profile_path']);
         $this->assertStringContainsString('/app/users?search=', $matchedUser['directory_path']);

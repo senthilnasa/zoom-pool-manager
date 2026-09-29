@@ -52,7 +52,16 @@ class TemplateRenderer
         $recipient = $context['recipient'] ?? null;
 
         // Organization info
-        $vars['org.name'] = Setting::get('org.name', config('app.name', 'Zoom Pool Manager'));
+        $orgName = trim((string) (
+            Setting::get('org.name')
+            ?: Setting::get('organization_name')
+            ?: Setting::get('org_name')
+            ?: config('app.organization_name')
+            ?: (config('app.name') !== 'Laravel' ? config('app.name') : null)
+            ?: 'Zoom Pool Manager'
+        ));
+        $vars['org.name'] = $orgName;
+        $vars['org.tagline'] = (string) Setting::get('org.tagline', '');
         $vars['org.support_email'] = Setting::get('org.support_email', 'support@zoompoolmanager.org');
         $vars['org.website'] = Setting::get('org.website', url('/'));
 

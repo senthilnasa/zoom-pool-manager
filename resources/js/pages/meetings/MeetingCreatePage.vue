@@ -532,18 +532,15 @@
               :required="field.is_required"
             />
 
-            <!-- Dropdown Field -->
-            <select
+            <!-- Dropdown Field (Select2 Searchable) -->
+            <SearchableSelect
               v-else-if="field.field_type === 'dropdown'"
               v-model="form.custom_fields[field.field_key]"
-              class="w-full glass-input text-xs cursor-pointer"
-              :required="field.is_required"
-            >
-              <option value="">{{ field.placeholder || '-- Select ' + field.name + ' --' }}</option>
-              <option v-for="(opt, optIdx) in (field.options || [])" :key="optIdx" :value="opt">
-                {{ opt }}
-              </option>
-            </select>
+              :options="field.options || []"
+              :placeholder="field.placeholder || '-- Select ' + field.name + ' --'"
+              search-placeholder="Search options..."
+              :allow-clear="!field.is_required"
+            />
 
             <p v-if="field.help_text" class="text-[10px] text-slate-400 mt-0.5">
               {{ field.help_text }}

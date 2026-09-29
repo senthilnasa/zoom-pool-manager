@@ -369,7 +369,7 @@
               type="text"
               required
               class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              placeholder="e.g. Krea University"
+              placeholder="e.g. Your Organization Name"
             />
             <p class="text-[10px] text-slate-400 mt-1">Updates globally across the navigation sidebar, header, browser tabs, and emails.</p>
           </div>
@@ -445,7 +445,7 @@
             <input
               v-model="form.org_footer_text"
               type="text"
-              placeholder="e.g. © 2026 Krea University. All rights reserved."
+              placeholder="e.g. © 2026 Your Organization Name. All rights reserved."
               class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
             />
             <p class="text-[10px] text-slate-400 mt-1">
@@ -472,7 +472,7 @@
               <input
                 v-model="form.org_login_heading"
                 type="text"
-                placeholder="e.g. Sign In to Krea University Video Portal"
+                placeholder="e.g. Sign In to Video Portal"
                 class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
               />
               <p class="text-[10px] text-slate-400 mt-1">Overrides the default title on the public login page.</p>
@@ -958,7 +958,7 @@
                       'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400': cf.field_type === 'int',
                     }"
                   >
-                    {{ cf.field_type }}
+                    {{ cf.field_type === 'dropdown' ? 'Dropdown (Select2)' : cf.field_type }}
                   </span>
                 </td>
                 <td class="py-2.5">
@@ -1176,7 +1176,7 @@
               >
                 <option value="text">Text (Single-line)</option>
                 <option value="textarea">Textarea (Multi-line)</option>
-                <option value="dropdown">Dropdown (Select)</option>
+                <option value="dropdown">Dropdown (Select2 Searchable)</option>
                 <option value="int">Integer (Number)</option>
               </select>
             </div>
