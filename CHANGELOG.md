@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardized routing to `/spa/delegations` with CSRF protection and clean JSON responses.
   - Fixed active/expired validity detection to evaluate both `is_active` and time windows (`ends_at >= now()`), correctly tagging expired authority transfers.
   - Added visual summary cards, colleague selector with remote search, and 1-click navigation to review pending delegated requests in `/app/approvals`.
+- **Documentation Direct Launch & Navigation (`Sidebar.vue` & `DocumentationPage.vue`):**
+  - Removed embedded iframe documentation and renamed external GitBook link to **Documentation** in sidebar navigation.
+  - Configured documentation to launch directly in a new tab to avoid iframe security blocks (`X-Frame-Options` / CSP) and provide full-screen reading experience.
+  - Redesigned `DocumentationPage.vue` with direct launch hero banner and 8 topic quick launch cards.
+- **Code Style & CI Build Compliance:**
+  - Standardized Laravel Pint code style across controllers and tests, resolving CI build failure on GitHub Actions.
 - **Test Coverage:**
   - Added `SpaGovernanceAndLimitsTest` covering full CRUD, toggling, and simulation workflows across all three modules with 100% test pass rate (264/264 tests passing).
 

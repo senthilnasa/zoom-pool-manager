@@ -18,7 +18,9 @@ class SpaGovernanceAndLimitsTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $faculty;
+
     protected Department $department;
 
     protected function setUp(): void

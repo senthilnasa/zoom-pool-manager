@@ -13,6 +13,7 @@ use App\Domain\Zoom\Models\ResourcePool;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class WorkflowRuleController extends Controller
@@ -220,7 +221,7 @@ class WorkflowRuleController extends Controller
                 'ends_at' => $startsAt->copy()->addMinutes(max(15, $duration))->toIso8601String(),
             ]);
         } elseif (! $request->filled('ends_at')) {
-            $startsAt = \Illuminate\Support\Carbon::parse($request->input('starts_at'));
+            $startsAt = Carbon::parse($request->input('starts_at'));
             $request->merge([
                 'ends_at' => $startsAt->copy()->addMinutes(max(15, $duration))->toIso8601String(),
             ]);
