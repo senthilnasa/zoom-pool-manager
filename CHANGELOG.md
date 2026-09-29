@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.8] - 2026-09-29
+
+### Added
+- **Embedded GitBook Documentation in Application (`/app/documentation`):**
+  - Integrated interactive documentation viewer directly inside the application shell pointing to `https://senthilnasa.gitbook.io/zoom-pool-manager-zpm`.
+  - Added 1-click chapter shortcut pills (Quick Start, Installation, Zoom OAuth, Webhooks, Resource Pools, REST API, Troubleshooting FAQ).
+  - Added primary navigation item with `GitBook` badge in `Sidebar.vue` and global redirects from `/docs` and `/documentation`.
+- **Select2 Style Searchable Dropdown for Custom Fields:**
+  - Upgraded meeting booking custom field dropdowns in `MeetingCreatePage.vue` to `<SearchableSelect>` featuring floating body teleport, live text search/filtering, and keyboard navigation.
+  - Updated custom field settings modal and table in `GeneralSettingsPage.vue` with `Dropdown (Select2 Searchable)` and `Dropdown (Select2)` badge.
+- **GitBook Git Sync Schema Compliance:**
+  - Standardized `gitbook-docs.yaml` to conform with GitBook's official site schema with non-empty slug paths and `default: true` flag.
+
+### Fixed
+- **Meeting Requester Email & Calendar Synchronization:**
+  - Resolved booking-on-behalf omission where only host accounts and external invitees received confirmation emails. The requesting user (`requester_user_id`) now reliably receives confirmation emails, `.ics` calendar files, cancellation notices, and 15-minute start reminders.
+  - Updated `IcsCalendarService.php` to add the requesting user as an accepted attendee to the `.ics` calendar invite so Google Calendar and Outlook automatically schedule the session on the requester's calendar.
+- **Institutional Branding & Email Header Titles:**
+  - Enhanced `TemplateRenderer.php`, `IcsCalendarService.php`, `MailDeliveryService.php`, `SpaGeneralSettingsController.php`, and `SpaController.php` so `org.name` reliably falls back across all setting aliases (`org.name`, `organization_name`, `org_name`, `config('app.organization_name')`).
+  - Added institutional prefix to email subjects (`[{{org.name}}] Confirmed: {{meeting.title}}`) and styled header in default HTML email notifications.
+  - Replaced hardcoded "Krea" placeholders in `GeneralSettingsPage.vue` and test suites with generic organizational defaults (`Your Organization Name`, `example.edu`).
+
+---
+
 ## [1.0.7] - 2026-09-28
 
 ### Added
