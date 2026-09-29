@@ -1,0 +1,7 @@
+# GitBook Configuration
+# Defines the documentation root and structure for GitBook synchronization
+root: ./docs
+
+structure:
+  readme: README.md
+  summary: SUMMARY.md
