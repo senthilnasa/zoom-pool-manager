@@ -4,7 +4,9 @@ site:
   structure:
     - type: space
       key: documentation
-      title: Zoom Pool Manager
-      path: ""
+      title: Documentation
+      path: docs
+      default: true
       content:
         directory: ./
+
