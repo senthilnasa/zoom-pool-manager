@@ -1009,6 +1009,18 @@ const openQuickBookModal = (prefill = {}) => {
   showQuickModal.value = true;
 };
 
+watch(() => bookingForm.join_before_host, (enabled) => {
+  if (enabled) {
+    bookingForm.waiting_room = false;
+  }
+});
+
+watch(() => bookingForm.waiting_room, (enabled) => {
+  if (enabled && bookingForm.join_before_host) {
+    bookingForm.join_before_host = false;
+  }
+});
+
 const submitQuickBook = async () => {
   try {
     bookingSubmitting.value = true;

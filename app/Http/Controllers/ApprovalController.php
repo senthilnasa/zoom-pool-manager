@@ -64,7 +64,7 @@ class ApprovalController extends Controller
     /**
      * Process an approval or rejection decision.
      */
-    public function decide(Request $request, string $publicId): RedirectResponse
+    public function decide(Request $request, string $publicId): mixed
     {
         /** @var User $user */
         $user = $request->user();
@@ -72,24 +72,42 @@ class ApprovalController extends Controller
         $validated = $request->validate([
             'decision' => ['required', 'string', 'in:approved,rejected'],
             'decision_notes' => ['nullable', 'string', 'max:1000'],
+            'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
         /** @var MeetingApproval $approval */
         $approval = MeetingApproval::where('public_id', $publicId)->firstOrFail();
+
+        $notes = $validated['decision_notes'] ?? $validated['reason'] ?? null;
 
         try {
             $this->approvalService->decide(
                 approval: $approval,
                 actor: $user,
                 decision: $validated['decision'],
-                notes: $validated['decision_notes'] ?? null
+                notes: $notes
             );
 
             $actionWord = $validated['decision'] === 'approved' ? 'approved' : 'rejected';
 
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Meeting request was successfully {$actionWord}.",
+                    'approval' => $approval->fresh(['meeting.owner', 'meeting.requester', 'approver']),
+                ]);
+            }
+
             return redirect()->route('approvals.index')
                 ->with('status', "Meeting request was successfully {$actionWord}.");
         } catch (\Throwable $e) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
             return back()->withErrors(['error' => $e->getMessage()]);
         }
     }

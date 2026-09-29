@@ -123,7 +123,7 @@ class ApprovalWorkflowService
                 ->where('delegate_user_id', $actor->id)
                 ->exists();
 
-            if (! $isDelegate && ! $actor->hasRole(['super_admin', 'it_admin'])) {
+            if (! $isDelegate && ! $actor->hasRole(['super_admin', 'it_admin', 'Super Administrator', 'Administrator', 'IT Administrator', 'Admin']) && ! $actor->can('meeting.approve')) {
                 throw new RuntimeException('Unauthorized: You are not authorized to approve or reject this request.');
             }
         }

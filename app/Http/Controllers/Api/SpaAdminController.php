@@ -274,10 +274,18 @@ class SpaAdminController extends Controller
 
     public function userProfile(string $id, RoleManagementService $roleService): JsonResponse
     {
-        $user = User::where('public_id', $id)
-            ->orWhere('id', $id)
-            ->with(['department', 'roles'])
-            ->firstOrFail();
+        if (ctype_digit((string) $id)) {
+            $user = User::where('id', (int) $id)->with(['department', 'roles'])->first();
+        } else {
+            $user = User::where('public_id', $id)->with(['department', 'roles'])->first();
+        }
+
+        if (! $user) {
+            $user = User::where('public_id', $id)
+                ->orWhere('id', $id)
+                ->with(['department', 'roles'])
+                ->firstOrFail();
+        }
 
         // Query all meetings requested or owned by this user
         $meetingsQuery = Meeting::where(function ($q) use ($user) {

@@ -92,10 +92,17 @@ class TemplateRenderer
                 $vars['meeting.passcode'] = '[Protected / Included in Join Link]';
             }
 
-            // CRITICAL SECURITY RULE: start_url and host_key are NEVER exposed in emails
-            // If anyone requests start_url, redirect them to the authenticated portal
+            // Host Key & Start URL Handling:
+            // start_url is kept behind authenticated portal
             $vars['meeting.start_url'] = route('meetings.show', $meeting->public_id);
-            $vars['meeting.host_key'] = '[Log into ZPM to reveal host key during meeting]';
+
+            // Host key is provided if share_host_key is enabled on the meeting, or if recipient is the requester/owner
+            $isRequesterOrOwner = $recipient && ($recipient->id === ($meeting->requester_user_id ?? null) || $recipient->id === ($meeting->owner_user_id ?? null));
+            if (($meeting->share_host_key || $isRequesterOrOwner) && ! empty($meeting->host_key)) {
+                $vars['meeting.host_key'] = (string) $meeting->host_key;
+            } else {
+                $vars['meeting.host_key'] = '[Log into ZPM to reveal host key during meeting]';
+            }
         }
 
         // Merge any extra explicit scalar variables (e.g. reason, approver_name, notes)

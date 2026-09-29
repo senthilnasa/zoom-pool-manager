@@ -178,6 +178,9 @@
                 <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   Attendees will be placed in the Zoom Waiting Room until admitted by the host or a user with the Host Key.
                 </p>
+                <p v-if="form.join_before_host" class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                  &bull; Automatically disabled because Auto-Start (Join Before Host) is active.
+                </p>
               </div>
             </div>
             <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
@@ -194,7 +197,10 @@
                 <div>
                   <div class="text-xs font-bold text-slate-900 dark:text-white">Auto-Start Without Host (Join Before Host)</div>
                   <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Allow participants to join and start the meeting session before the pooled host account logs in.
+                    Allow participants to join and start the meeting session immediately without waiting for the pooled host account to log in.
+                  </p>
+                  <p v-if="form.join_before_host" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                    &bull; Active: Participants enter directly without being blocked by Zoom Waiting Room.
                   </p>
                 </div>
               </div>
@@ -695,6 +701,18 @@ const onTemplateSelected = () => {
   }
   checkConflicts();
 };
+
+watch(() => form.value.join_before_host, (enabled) => {
+  if (enabled) {
+    form.value.waiting_room = false;
+  }
+});
+
+watch(() => form.value.waiting_room, (enabled) => {
+  if (enabled && form.value.join_before_host) {
+    form.value.join_before_host = false;
+  }
+});
 
 const toggleDay = (code) => {
   const idx = form.value.byday.indexOf(code);

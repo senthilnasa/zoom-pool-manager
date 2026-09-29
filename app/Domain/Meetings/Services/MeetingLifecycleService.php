@@ -206,7 +206,7 @@ class MeetingLifecycleService
                                     'participant_video' => true,
                                     'join_before_host' => (bool) $meeting->join_before_host,
                                     'jbh_time' => (int) ($meeting->jbh_time ?? 0),
-                                    'waiting_room' => (bool) $meeting->waiting_room,
+                                    'waiting_room' => (bool) ($meeting->join_before_host ? false : $meeting->waiting_room),
                                     'auto_recording' => $meeting->recording_mode === 'cloud' ? 'cloud' : ($meeting->recording_mode === 'local' ? 'local' : 'none'),
                                 ],
                             ]);
@@ -272,7 +272,7 @@ class MeetingLifecycleService
                                     'participant_video' => true,
                                     'join_before_host' => (bool) $meeting->join_before_host,
                                     'jbh_time' => (int) ($meeting->jbh_time ?? 0),
-                                    'waiting_room' => (bool) $meeting->waiting_room,
+                                    'waiting_room' => (bool) ($meeting->join_before_host ? false : $meeting->waiting_room),
                                     'auto_recording' => $meeting->recording_mode === 'cloud' ? 'cloud' : ($meeting->recording_mode === 'local' ? 'local' : 'none'),
                                 ],
                             ]);

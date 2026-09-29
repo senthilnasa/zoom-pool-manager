@@ -879,6 +879,18 @@ const openEditModal = (meeting) => {
   showEditModal.value = true;
 };
 
+watch(() => editForm.value.join_before_host, (enabled) => {
+  if (enabled) {
+    editForm.value.waiting_room = false;
+  }
+});
+
+watch(() => editForm.value.waiting_room, (enabled) => {
+  if (enabled && editForm.value.join_before_host) {
+    editForm.value.join_before_host = false;
+  }
+});
+
 const saveMeetingEdit = async () => {
   try {
     savingEdit.value = true;

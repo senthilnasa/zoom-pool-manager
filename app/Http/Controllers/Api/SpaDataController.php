@@ -21,7 +21,9 @@ use App\Domain\Scheduling\Models\SecurityProfile;
 use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
+use App\Domain\Workflow\Models\ApprovalDelegation;
 use App\Domain\Workflow\Models\MeetingApproval;
+use App\Domain\Workflow\Services\ApprovalWorkflowService;
 use App\Domain\Workflow\Services\WaitlistService;
 use App\Domain\Zoom\Models\ResourcePool;
 use App\Domain\Zoom\Models\ZoomConnection;
@@ -532,16 +534,78 @@ class SpaDataController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $query = MeetingApproval::with(['meeting.owner', 'meeting.template', 'approver'])
-            ->orderBy('created_at', 'desc');
+        $query = MeetingApproval::with([
+            'meeting.owner',
+            'meeting.requester',
+            'meeting.template',
+            'meeting.department',
+            'approver',
+            'delegatedFrom',
+        ])->orderBy('created_at', 'desc');
 
-        if (! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator')) {
-            $query->where('approver_user_id', $user->id);
+        $isAdmin = $user->hasRole('Super Administrator')
+            || $user->hasRole('Administrator')
+            || $user->hasRole('super_admin')
+            || $user->hasRole('it_admin')
+            || $user->hasRole('IT Administrator')
+            || $user->can('meeting.approve')
+            || $user->can('workflow.manage');
+
+        if (! $isAdmin) {
+            $delegatorIds = ApprovalDelegation::currentlyValid()
+                ->where('delegate_user_id', $user->id)
+                ->pluck('user_id')
+                ->toArray();
+
+            $allowedApproverIds = array_unique(array_merge([$user->id], $delegatorIds));
+            $query->whereIn('approver_user_id', $allowedApproverIds);
         }
 
-        $approvals = $query->paginate($request->integer('per_page', 15));
+        $approvals = $query->paginate($request->integer('per_page', 25));
 
         return response()->json($approvals);
+    }
+
+    /**
+     * Decide on an approval via SPA AJAX request.
+     */
+    public function decideApproval(Request $request, string $publicId, ApprovalWorkflowService $approvalService): JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'decision' => ['required', 'string', 'in:approved,rejected'],
+            'decision_notes' => ['nullable', 'string', 'max:1000'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        /** @var MeetingApproval $approval */
+        $approval = MeetingApproval::where('public_id', $publicId)->firstOrFail();
+
+        $notes = $validated['decision_notes'] ?? $validated['reason'] ?? null;
+
+        try {
+            $approvalService->decide(
+                approval: $approval,
+                actor: $user,
+                decision: $validated['decision'],
+                notes: $notes
+            );
+
+            $actionWord = $validated['decision'] === 'approved' ? 'approved' : 'rejected';
+
+            return response()->json([
+                'success' => true,
+                'message' => "Meeting request was successfully {$actionWord}.",
+                'approval' => $approval->fresh(['meeting.owner', 'meeting.requester', 'approver']),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     /**

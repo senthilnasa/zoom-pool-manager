@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.9] - 2026-09-29
+
+### Fixed
+- **Zoom Host Key PIN Shared in Booking Emails & Invitations:**
+  - Resolved issue where Host Key PIN was masked with a placeholder even when "Share Host Key" was enabled.
+  - `TemplateRenderer.php`: Updated `$vars['meeting.host_key']` to expose the actual 6-digit Host Key PIN when `share_host_key` is true or when the recipient is the meeting requester/organizer.
+  - `MailDeliveryService.php`: Added the Host Key PIN box in default HTML and text booking confirmation emails with claim instructions (`In Zoom client > Participants > Claim Host`).
+  - Fixed duplicate footer string in default email templates (`This email was sent automatically by {{org.name}}.`).
+- **Auto-Start (Join Before Host) & Waiting Room Compatibility:**
+  - Resolved Zoom API setting conflict where attendees were trapped in "Waiting for host to start the meeting" despite Auto-Start being enabled, caused by Zoom's restriction that Waiting Room overrides Join Before Host.
+  - `MeetingLifecycleService.php`: Ensured Zoom API payload dynamically passes `waiting_room: false` whenever `join_before_host` is enabled in both creation and patch requests.
+  - `MeetingCreatePage.vue`, `CalendarPage.vue`, and `MeetingsListPage.vue`: Implemented reactive mutual exclusion and informative status badges between Waiting Room and Join Before Host.
+- **User Profile Directory Routing & Type Coercion Fix:**
+  - `SpaAdminController.php`: Resolved MySQL/MariaDB type coercion bug in `userProfile` lookup where string ULID public IDs starting with `01...` coerced to integer `1`, causing every user click in the directory (e.g. Balaji Damodaran) to load the Super Administrator profile (ID 1).
+  - `UserProfilePage.vue`: Added dynamic route watcher on `route.params.id` to refetch user data on navigation between profile pages.
+  - Visual Polish: Modernized Profile View UI with responsive action buttons, stat card styling, elevated badges, and clear empty states.
+- **Workflow Approvals Page Actions & Interactive Decision Modal (`/app/approvals`):**
+  - `ApprovalsPage.vue`: Fixed approval status evaluation (`a.decision` vs `a.status`) which prevented Approve/Reject action buttons from rendering on pending requests.
+  - Replaced browser `prompt()` with an interactive native confirmation modal supporting optional decision notes.
+  - Added filter tabs ("Pending Review", "All Requests", "Approved", "Rejected") with live pending counters and search filtering.
+  - `SpaDataController.php` & `routes/web.php`: Added `/spa/approvals/{publicId}/decide` endpoint and expanded admin role authorization to support all administrator role variations (`Super Administrator`, `Administrator`, `super_admin`, `it_admin`, and `meeting.approve` permission).
+
+---
+
 ## [1.0.8] - 2026-09-29
 
 ### Added

@@ -132,10 +132,11 @@ class MailDeliveryService
         <p style="margin: 6px 0; font-size: 13px;"><strong>Duration:</strong> {{meeting.duration_minutes}} minutes</p>
         <p style="margin: 6px 0; font-size: 13px;"><strong>Join URL:</strong> <a href="{{meeting.join_url}}" style="color: #2563eb; word-break: break-all;">{{meeting.join_url}}</a></p>
         <p style="margin: 6px 0; font-size: 13px;"><strong>Passcode:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">{{meeting.passcode}}</code></p>
+        <p style="margin: 6px 0; font-size: 13px;"><strong>Host Key PIN:</strong> <code style="background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold;">{{meeting.host_key}}</code> <span style="font-size: 11px; color: #64748b;">(Claim Host: In Zoom client &gt; Participants &gt; Claim Host)</span></p>
     </div>
     <p style="font-size: 13px; color: #475569;">To view host controls or manage this booking, log into the <a href="{{org.website}}" style="color: #2563eb; font-weight: 600;">{{org.name}} Portal</a>.</p>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-    <p style="font-size: 11px; color: #94a3b8; margin: 0;">This email was sent automatically by {{org.name}} Zoom Pool Manager.</p>
+    <p style="font-size: 11px; color: #94a3b8; margin: 0;">This email was sent automatically by {{org.name}}.</p>
 </div>
 HTML;
     }
@@ -154,11 +155,12 @@ Ends At: {{meeting.ends_at}}
 Duration: {{meeting.duration_minutes}} minutes
 Join URL: {{meeting.join_url}}
 Passcode: {{meeting.passcode}}
+Host Key PIN: {{meeting.host_key}} (Claim Host: In Zoom client > Participants > Claim Host)
 
 To view host controls or manage this booking, log into {{org.name}} at {{org.website}}.
 
 --------------------------------------------------
-This email was sent automatically by {{org.name}} Zoom Pool Manager.
+This email was sent automatically by {{org.name}}.
 TEXT;
     }
 }

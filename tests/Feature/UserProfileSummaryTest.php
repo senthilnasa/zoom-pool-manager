@@ -181,4 +181,49 @@ class UserProfileSummaryTest extends TestCase
         $res->assertJsonPath('user.id', $this->facultyUser->id);
         $res->assertJsonPath('user.name', 'Dr. Radhakrishnan');
     }
+
+    public function test_user_profile_retrieval_by_ulid_does_not_coerce_to_user_one(): void
+    {
+        // Even if admin has id 1, looking up facultyUser by public_id must return facultyUser, not admin!
+        $this->assertEquals(1, $this->admin->id);
+        $this->assertNotEquals(1, $this->facultyUser->id);
+
+        $res = $this->actingAs($this->admin)->getJson("/spa/users/{$this->facultyUser->public_id}/profile");
+        $res->assertOk();
+        $res->assertJsonPath('user.id', $this->facultyUser->id);
+        $res->assertJsonPath('user.email', 'radhakrishnan@university.edu');
+    }
+
+    public function test_admin_can_decide_approval_via_spa_endpoint(): void
+    {
+        $meeting = Meeting::create([
+            'title' => 'VIP Research Symposium',
+            'meeting_type' => 'scheduled',
+            'status' => 'draft',
+            'starts_at' => Carbon::tomorrow()->setHour(10),
+            'ends_at' => Carbon::tomorrow()->setHour(12),
+            'requester_user_id' => $this->facultyUser->id,
+            'owner_user_id' => $this->facultyUser->id,
+            'participant_count' => 100,
+        ]);
+
+        $approval = MeetingApproval::create([
+            'meeting_id' => $meeting->id,
+            'step' => 1,
+            'approver_user_id' => $this->admin->id,
+            'decision' => 'pending',
+        ]);
+
+        $res = $this->actingAs($this->admin)->postJson("/spa/approvals/{$approval->public_id}/decide", [
+            'decision' => 'rejected',
+            'decision_notes' => 'Time conflict with institutional convocation',
+        ]);
+
+        $res->assertOk();
+        $res->assertJson(['success' => true]);
+
+        $this->assertEquals('rejected', $approval->fresh()->decision);
+        $this->assertEquals('Time conflict with institutional convocation', $approval->fresh()->decision_notes);
+        $this->assertEquals('rejected', $meeting->fresh()->status);
+    }
 }

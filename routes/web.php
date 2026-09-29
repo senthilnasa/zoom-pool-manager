@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/attendance/sync', [SpaDataController::class, 'syncAttendance'])->name('attendance.sync');
         Route::get('/attendance/{publicId}/export', [SpaDataController::class, 'exportAttendanceCsv'])->name('attendance.export');
         Route::get('/approvals', [SpaDataController::class, 'approvals'])->name('approvals');
+        Route::post('/approvals/{publicId}/decide', [SpaDataController::class, 'decideApproval'])->name('approvals.decide');
         Route::get('/series', [SpaDataController::class, 'series'])->name('series');
         Route::get('/calendar', [SpaDataController::class, 'calendar'])->name('calendar');
         Route::post('/calendar/quick-book', [SpaDataController::class, 'quickBook'])->name('calendar.quick-book');

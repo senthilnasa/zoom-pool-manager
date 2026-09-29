@@ -884,7 +884,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
@@ -1130,5 +1130,11 @@ const getDecisionBadgeClass = (decision) => {
 
 onMounted(() => {
   fetchProfile();
+});
+
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    fetchProfile();
+  }
 });
 </script>
