@@ -1,0 +1,10 @@
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+site:
+  title: Zoom Pool Manager
+  structure:
+    - type: space
+      key: documentation
+      title: Zoom Pool Manager
+      path: ""
+      content:
+        directory: ./
