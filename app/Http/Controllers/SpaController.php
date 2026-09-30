@@ -35,7 +35,7 @@ class SpaController extends Controller
             'email' => $user->email,
             'avatar_url' => $user->avatar_url ?? null,
             'theme' => $user->theme ?? 'system',
-            'is_admin' => $user->hasRole('Super Administrator') || $user->hasRole('Administrator'),
+            'is_admin' => $user->hasRole(\App\Domain\Auth\Enums\RoleName::adminRoles()),
             'roles' => $user->roles->pluck('name'),
             'permissions' => $user->getAllPermissions()->pluck('name'),
         ] : null;

@@ -235,21 +235,21 @@ class NocMeetingController extends Controller
             return false;
         }
 
-        // 1. Check against configured NOC Token in Settings
+        // 1. Check against environment variable if set
+        $envNocToken = getenv('NOC_API_TOKEN');
+        if (! empty($envNocToken) && hash_equals((string) $envNocToken, (string) $token)) {
+            return true;
+        }
+
+        // 2. Check against configured NOC Token in Settings
         $configuredNocToken = (string) Setting::get('noc.api_token');
         if (empty($configuredNocToken)) {
-            // Seed a consistent default NOC token based on APP_KEY if unconfigured
-            $configuredNocToken = 'noc_live_'.substr(hash('sha256', config('app.key', 'zpm_noc_default_secret')), 0, 32);
+            // Generate a cryptographically secure random NOC token if unconfigured
+            $configuredNocToken = 'noc_live_'.bin2hex(random_bytes(24));
             Setting::set('noc.api_token', $configuredNocToken);
         }
 
         if (hash_equals($configuredNocToken, (string) $token)) {
-            return true;
-        }
-
-        // 2. Check against environment variable if set
-        $envNocToken = getenv('NOC_API_TOKEN');
-        if (! empty($envNocToken) && hash_equals((string) $envNocToken, (string) $token)) {
             return true;
         }
 

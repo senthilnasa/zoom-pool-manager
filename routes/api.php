@@ -63,8 +63,8 @@ Route::prefix('v1')->middleware(['api', 'api.auth', 'idempotent'])->group(functi
         ->name('api.v1.settings.zoom.test');
 });
 
-// NOC Wallboard & Operations Monitoring (Standalone API Key / Token Authentication)
-Route::prefix('v1')->middleware(['api'])->group(function () {
+// NOC Wallboard & Operations Monitoring (Standalone API Key / Token Authentication with Rate Limiting)
+Route::prefix('v1')->middleware(['api', 'throttle:60,1'])->group(function () {
     Route::get('/noc/meetings', [NocMeetingController::class, 'meetings'])
         ->name('api.v1.noc.meetings');
 });

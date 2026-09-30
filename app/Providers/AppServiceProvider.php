@@ -40,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('viewApiDocs', function (?User $user = null) {
             return app()->environment('local', 'testing')
-                || ($user && ($user->hasRole(['Super Administrator', 'IT Administrator']) || $user->can('api.manage')));
+                || ($user && ($user->hasRole([\App\Domain\Auth\Enums\RoleName::SUPER_ADMIN, \App\Domain\Auth\Enums\RoleName::IT_ADMIN]) || $user->can('api.manage')));
         });
 
         if (request()->header('X-Forwarded-Proto') === 'https' || request()->isSecure()) {

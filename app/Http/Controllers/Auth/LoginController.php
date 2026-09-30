@@ -107,31 +107,37 @@ class LoginController extends Controller
             return redirect()->route('login');
         }
 
-        $code = $request->input('code');
-
-        if (empty($code)) {
-            $rawContent = $request->getContent();
-            if (! empty($rawContent)) {
-                preg_match_all('/(?:^|&)(?:code|totp_code|recovery_code)=([^&]*)/', $rawContent, $matches);
-                if (! empty($matches[1])) {
-                    foreach ($matches[1] as $val) {
-                        $val = trim(urldecode($val));
-                        if ($val !== '') {
-                            $code = $val;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        $code = $request->input('code')
+            ?? $request->input('totp_code')
+            ?? $request->input('recovery_code');
 
         if (is_array($code)) {
             $code = collect($code)->map(fn ($v) => is_string($v) ? trim($v) : $v)->filter()->last();
         }
 
-        if (! empty($code)) {
-            $request->merge(['code' => $code]);
+        // If code is empty, handle duplicate parameter in raw payload (e.g. code=123456&code=) or JSON
+        if (empty($code)) {
+            $rawContent = (string) $request->getContent();
+            if ($request->isJson() || str_starts_with($rawContent, '{')) {
+                $jsonData = json_decode($rawContent, true);
+                $code = $jsonData['code'] ?? $jsonData['totp_code'] ?? $jsonData['recovery_code'] ?? null;
+            } else {
+                $pairs = explode('&', $rawContent);
+                foreach ($pairs as $pair) {
+                    $parts = explode('=', $pair, 2);
+                    $key = urldecode($parts[0] ?? '');
+                    $val = urldecode($parts[1] ?? '');
+                    if (in_array($key, ['code', 'totp_code', 'recovery_code'], true) && trim($val) !== '') {
+                        $code = trim($val);
+                        break;
+                    }
+                }
+            }
         }
+
+        $code = is_string($code) || is_numeric($code) ? trim((string) $code) : '';
+
+        $request->merge(['code' => $code]);
 
         $request->validate([
             'code' => ['required', 'string'],

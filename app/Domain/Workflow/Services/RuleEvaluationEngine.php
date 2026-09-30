@@ -103,23 +103,24 @@ class RuleEvaluationEngine
         foreach ($rules as $rule) {
             $conditions = $rule->conditions ?? [];
             $actions = $rule->actions ?? [];
+            $ruleLogs = [];
 
             $isMatch = $this->matchesConditions($conditions, $data, $requester);
 
             if ($isMatch) {
                 $matchedRules->push($rule);
-                $logs[] = "Rule [{$rule->name}] (Priority: {$rule->priority}) matched.";
+                $ruleLogs[] = "Rule [{$rule->name}] (Priority: {$rule->priority}) matched.";
 
                 // Process Actions
                 if (! empty($actions['reject'])) {
                     $isRejected = true;
                     $rejectReason = is_string($actions['reject']) ? $actions['reject'] : 'Rejected by policy rule: '.$rule->name;
-                    $logs[] = "Action: Rejected with reason: {$rejectReason}";
+                    $ruleLogs[] = "Action: Rejected with reason: {$rejectReason}";
                 }
 
                 if (! empty($actions['auto_approve'])) {
                     $isAutoApproved = true;
-                    $logs[] = 'Action: Auto-approved flag set.';
+                    $ruleLogs[] = 'Action: Auto-approved flag set.';
                 }
 
                 if (! empty($actions['require_approval'])) {
@@ -137,35 +138,40 @@ class RuleEvaluationEngine
                     } else {
                         $approvalSteps[] = ['approver_type' => 'manager', 'mode' => 'ANY'];
                     }
-                    $logs[] = 'Action: Approval required.';
+                    $ruleLogs[] = 'Action: Approval required.';
                 }
 
                 if (! empty($actions['assign_pool'])) {
                     $overridePoolId = (int) $actions['assign_pool'];
-                    $logs[] = "Action: Pool override to ID {$overridePoolId}.";
+                    $ruleLogs[] = "Action: Pool override to ID {$overridePoolId}.";
                 }
 
                 if (! empty($actions['assign_profile'])) {
                     $overrideProfileId = (int) $actions['assign_profile'];
-                    $logs[] = "Action: Security profile override to ID {$overrideProfileId}.";
+                    $ruleLogs[] = "Action: Security profile override to ID {$overrideProfileId}.";
                 }
 
                 if (! empty($actions['enable_recording'])) {
                     $overrideRecordingMode = (string) $actions['enable_recording'];
-                    $logs[] = "Action: Recording override to {$overrideRecordingMode}.";
+                    $ruleLogs[] = "Action: Recording override to {$overrideRecordingMode}.";
                 }
             } else {
-                $logs[] = "Rule [{$rule->name}] did not match conditions.";
+                $ruleLogs[] = "Rule [{$rule->name}] did not match conditions.";
             }
 
-            // Record execution history if evaluating a persistent meeting
+            // Append rule-specific log entries to the cumulative evaluation result log
+            foreach ($ruleLogs as $entry) {
+                $logs[] = $entry;
+            }
+
+            // Record execution history if evaluating a persistent meeting (stores isolated per-rule log)
             if ($meeting !== null) {
                 WorkflowExecution::create([
                     'workflow_rule_id' => $rule->id,
                     'meeting_id' => $meeting->id,
                     'matched' => $isMatch,
                     'actions_triggered' => $isMatch ? $actions : null,
-                    'logs' => $logs,
+                    'logs' => $ruleLogs,
                 ]);
             }
 

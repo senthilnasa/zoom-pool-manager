@@ -178,6 +178,32 @@ class WebhookIntakeTest extends TestCase
         $response->assertStatus(401);
     }
 
+    public function test_inbound_webhook_rejects_when_no_secret_configured(): void
+    {
+        $this->connection->update(['webhook_secret_token' => null]);
+        config(['zoom.webhook_secret_token' => null, 'services.zoom.webhook_secret' => null]);
+
+        $payload = ['event' => 'meeting.started', 'event_ts' => time()];
+        $rawBody = json_encode($payload);
+
+        $response = $this->call(
+            'POST',
+            route('webhooks.zoom', $this->connection->public_id),
+            [],
+            [],
+            [],
+            [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_X_ZM_SIGNATURE' => 'v0=fake',
+                'HTTP_X_ZM_REQUEST_TIMESTAMP' => (string) time(),
+            ],
+            $rawBody
+        );
+
+        $response->assertStatus(401);
+        $response->assertJson(['error' => 'Webhook verification secret is not configured on this server.']);
+    }
+
     public function test_replay_attack_prevention_acknowledges_without_duplicate(): void
     {
         Queue::fake();

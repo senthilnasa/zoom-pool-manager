@@ -3,6 +3,7 @@
 namespace App\Domain\Workflow\Services;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Users\Models\User;
 use App\Domain\Workflow\Models\Quota;
@@ -27,7 +28,7 @@ class QuotaService
         int $durationMinutes,
         bool $bypassIfPermitted = true
     ): void {
-        if ($bypassIfPermitted && ($user->can('quota.manage') || $user->can('meeting.override') || $user->hasRole('super_admin') || $user->hasRole('it_admin'))) {
+        if ($bypassIfPermitted && ($user->can('quota.manage') || $user->can('meeting.override') || $user->hasRole(RoleName::adminRoles()))) {
             return;
         }
 
@@ -104,7 +105,8 @@ class QuotaService
 
         DB::transaction(function () use ($meeting, $year, $month, $duration) {
             // User quota
-            $userQuota = Quota::where('scope_type', 'user')
+            $userQuota = Quota::active()
+                ->where('scope_type', 'user')
                 ->where('scope_id', $meeting->requester_user_id)
                 ->first();
 
@@ -114,7 +116,8 @@ class QuotaService
 
             // Department quota
             if ($meeting->department_id) {
-                $deptQuota = Quota::where('scope_type', 'department')
+                $deptQuota = Quota::active()
+                    ->where('scope_type', 'department')
                     ->where('scope_id', $meeting->department_id)
                     ->first();
 

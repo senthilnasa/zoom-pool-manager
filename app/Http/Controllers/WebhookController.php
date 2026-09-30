@@ -75,18 +75,25 @@ class WebhookController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        // 2. If secret token is configured, enforce strict HMAC signature verification
-        if (! empty($secretToken)) {
-            $isValid = $this->verifier->verifySignature($rawBody, $signature, $timestamp, (string) $secretToken);
-            if (! $isValid) {
-                Log::channel('webhook')->warning('Inbound Zoom webhook rejected: invalid or expired signature', [
-                    'event' => $payload['event'] ?? 'unknown',
-                    'timestamp' => $timestamp,
-                    'ip' => $request->ip(),
-                ]);
+        // 2. Enforce strict HMAC signature verification (never accept unverified webhooks without secret token)
+        if (empty($secretToken)) {
+            Log::channel('webhook')->error('Inbound Zoom webhook rejected: no webhook secret configured on server', [
+                'event' => $payload['event'] ?? 'unknown',
+                'ip' => $request->ip(),
+            ]);
 
-                return response()->json(['error' => 'Invalid or expired webhook signature'], 401);
-            }
+            return response()->json(['error' => 'Webhook verification secret is not configured on this server.'], 401);
+        }
+
+        $isValid = $this->verifier->verifySignature($rawBody, $signature, $timestamp, (string) $secretToken);
+        if (! $isValid) {
+            Log::channel('webhook')->warning('Inbound Zoom webhook rejected: invalid or expired signature', [
+                'event' => $payload['event'] ?? 'unknown',
+                'timestamp' => $timestamp,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json(['error' => 'Invalid or expired webhook signature'], 401);
         }
 
         // 3. Extract unique event identifier & deduplicate (Replay Attack Prevention)

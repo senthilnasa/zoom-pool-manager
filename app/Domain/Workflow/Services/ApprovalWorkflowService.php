@@ -3,6 +3,7 @@
 namespace App\Domain\Workflow\Services;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Communication\Services\MeetingNotificationService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Meetings\Services\MeetingLifecycleService;
@@ -342,7 +343,7 @@ class ApprovalWorkflowService
 
         // Fallback to IT admins if department has no dept_admin
         return User::whereHas('roles', function ($q) {
-            $q->whereIn('name', ['it_admin', 'super_admin', 'Super Administrator', 'Super Admin', 'Administrator']);
+            $q->whereIn('name', RoleName::escalationRoles());
         })->get();
     }
 
@@ -355,7 +356,7 @@ class ApprovalWorkflowService
             ->whereNotNull('due_at')
             ->where('due_at', '<', Carbon::now())
             ->whereNull('escalated_at')
-            ->with('meeting')
+            ->with(['meeting', 'approver'])
             ->get();
 
         $escalatedCount = 0;
@@ -363,23 +364,35 @@ class ApprovalWorkflowService
         foreach ($overdueApprovals as $approval) {
             // Find IT Admin to escalate to
             $itAdmin = User::whereHas('roles', function ($q) {
-                $q->whereIn('name', ['it_admin', 'super_admin', 'Super Administrator', 'Super Admin', 'Administrator']);
+                $q->whereIn('name', RoleName::escalationRoles());
             })
                 ->where('id', '!=', $approval->meeting->requester_user_id)
                 ->first();
 
             if ($itAdmin) {
+                $originalApproverId = $approval->approver_user_id;
+                $originalApproverName = $approval->approver?->name ?? "User #{$originalApproverId}";
+
                 $approval->update([
+                    'delegated_from_user_id' => $approval->delegated_from_user_id ?? $originalApproverId,
                     'approver_user_id' => $itAdmin->id,
                     'escalated_at' => Carbon::now(),
+                    'decision_notes' => trim(($approval->decision_notes ? $approval->decision_notes.' | ' : '')."Escalated from {$originalApproverName} to {$itAdmin->name}"),
                 ]);
 
                 $this->auditService->log(
                     event: 'meeting.approval.escalated',
                     auditable: $approval->meeting,
+                    oldValues: [
+                        'approver_user_id' => $originalApproverId,
+                        'approver_name' => $originalApproverName,
+                    ],
                     newValues: [
                         'approval_id' => $approval->public_id,
                         'escalated_to' => $itAdmin->name,
+                        'escalated_to_id' => $itAdmin->id,
+                        'escalated_from' => $originalApproverName,
+                        'escalated_from_id' => $originalApproverId,
                     ]
                 );
 

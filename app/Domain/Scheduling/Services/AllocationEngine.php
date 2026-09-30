@@ -85,33 +85,34 @@ class AllocationEngine
                 ->lockForUpdate()
                 ->get();
 
-            // Filter out resources with active overlapping reservations
+            // Batch filter resources with active overlapping reservations in a single query (N+1 elimination)
             $now = Carbon::now();
-            $availableResources = [];
+            $candidateIds = $lockedCandidates->pluck('id')->all();
 
-            foreach ($lockedCandidates as $resource) {
-                $hasOverlap = ResourceReservation::where('resource_id', $resource->id)
-                    ->where(function ($q) use ($now) {
-                        $q->where('status', 'confirmed')
-                            ->orWhere(function ($q2) use ($now) {
-                                $q2->where('status', 'held')
-                                    ->where('hold_expires_at', '>', $now);
-                            });
-                    })
-                    ->when($meetingId, function ($q, $mId) {
-                        $q->where(function ($sq) use ($mId) {
-                            $sq->whereNull('meeting_id')
-                                ->orWhere('meeting_id', '!=', $mId);
+            $overlappingResourceIds = ResourceReservation::whereIn('resource_id', $candidateIds)
+                ->where(function ($q) use ($now) {
+                    $q->where('status', 'confirmed')
+                        ->orWhere(function ($q2) use ($now) {
+                            $q2->where('status', 'held')
+                                ->where('hold_expires_at', '>', $now);
                         });
-                    })
-                    ->where('occupied_from', '<', $occupiedUntil)
-                    ->where('occupied_until', '>', $occupiedFrom)
-                    ->exists();
+                })
+                ->when($meetingId, function ($q, $mId) {
+                    $q->where(function ($sq) use ($mId) {
+                        $sq->whereNull('meeting_id')
+                            ->orWhere('meeting_id', '!=', $mId);
+                    });
+                })
+                ->where('occupied_from', '<', $occupiedUntil)
+                ->where('occupied_until', '>', $occupiedFrom)
+                ->distinct()
+                ->pluck('resource_id')
+                ->all();
 
-                if (! $hasOverlap) {
-                    $availableResources[] = $resource;
-                }
-            }
+            $availableResources = $lockedCandidates
+                ->reject(fn (ZoomResource $res) => in_array($res->id, $overlappingResourceIds, true))
+                ->values()
+                ->all();
 
             if (empty($availableResources)) {
                 throw new RuntimeException('Concurrency conflict: No resources available for the requested window.');
@@ -205,12 +206,18 @@ class AllocationEngine
         $bestResource = $resources[0];
         $minMinutes = PHP_INT_MAX;
 
+        $resourceIds = array_map(fn (ZoomResource $r) => $r->id, $resources);
+
+        // Batch load all relevant reservations for the candidate resources today (N+1 elimination)
+        $reservationsByResource = ResourceReservation::whereIn('resource_id', $resourceIds)
+            ->whereIn('status', ['confirmed', 'held'])
+            ->where('occupied_from', '<', $endOfDay)
+            ->where('occupied_until', '>', $startOfDay)
+            ->get()
+            ->groupBy('resource_id');
+
         foreach ($resources as $resource) {
-            $reservations = ResourceReservation::where('resource_id', $resource->id)
-                ->whereIn('status', ['confirmed', 'held'])
-                ->where('occupied_from', '<', $endOfDay)
-                ->where('occupied_until', '>', $startOfDay)
-                ->get();
+            $reservations = $reservationsByResource->get($resource->id, collect());
 
             $totalMinutes = 0;
             foreach ($reservations as $res) {
@@ -241,12 +248,21 @@ class AllocationEngine
         $bestResource = $resources[0];
         $minMeetings = PHP_INT_MAX;
 
+        $resourceIds = array_map(fn (ZoomResource $r) => $r->id, $resources);
+
+        // Batch load count of meetings scheduled today for all candidate resources (N+1 elimination)
+        /** @var array<int, int> $meetingCounts */
+        $meetingCounts = ResourceReservation::whereIn('resource_id', $resourceIds)
+            ->whereIn('status', ['confirmed', 'held'])
+            ->where('occupied_from', '<', $endOfDay)
+            ->where('occupied_until', '>', $startOfDay)
+            ->selectRaw('resource_id, count(*) as total_count')
+            ->groupBy('resource_id')
+            ->pluck('total_count', 'resource_id')
+            ->all();
+
         foreach ($resources as $resource) {
-            $count = ResourceReservation::where('resource_id', $resource->id)
-                ->whereIn('status', ['confirmed', 'held'])
-                ->where('occupied_from', '<', $endOfDay)
-                ->where('occupied_until', '>', $startOfDay)
-                ->count();
+            $count = (int) ($meetingCounts[$resource->id] ?? 0);
 
             if ($count < $minMeetings) {
                 $minMeetings = $count;
