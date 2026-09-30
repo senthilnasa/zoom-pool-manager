@@ -222,6 +222,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/blackouts/{id}', [SpaAdminController::class, 'deleteBlackout'])->name('blackouts.delete');
         Route::get('/policies', [SpaAdminController::class, 'policies'])->name('policies');
         Route::post('/policies', [SpaAdminController::class, 'storePolicy'])->name('policies.store');
+        Route::delete('/policies/{id}', [SpaAdminController::class, 'deletePolicy'])->name('policies.delete');
+        Route::post('/policies/{id}/toggle', [SpaAdminController::class, 'togglePolicy'])->name('policies.toggle');
 
         // Waitlist
         Route::get('/waitlist', [SpaAdminController::class, 'waitlist'])->name('waitlist');

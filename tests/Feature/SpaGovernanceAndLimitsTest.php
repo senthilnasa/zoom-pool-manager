@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Scheduling\Models\BookingPolicy;
 use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
 use App\Domain\Workflow\Models\ApprovalDelegation;
@@ -159,5 +160,45 @@ class SpaGovernanceAndLimitsTest extends TestCase
         $delRes = $this->actingAs($this->admin)->deleteJson("/spa/delegations/{$delegation->public_id}");
         $delRes->assertOk()->assertJson(['success' => true]);
         $this->assertFalse($delegation->fresh()->is_active);
+    }
+
+    public function test_spa_policies_endpoints(): void
+    {
+        // 1. Create booking policy via SPA
+        $storeRes = $this->actingAs($this->admin)->postJson('/spa/policies', [
+            'name' => 'Campus Exam Booking Policy',
+            'department_id' => $this->department->id,
+            'min_notice_hours' => 4,
+            'max_advance_days' => 30,
+            'min_buffer_minutes' => 10,
+            'default_buffer_minutes' => 20,
+            'max_duration_minutes' => 180,
+            'is_active' => true,
+        ]);
+
+        $storeRes->assertOk()->assertJson(['success' => true]);
+        $policy = BookingPolicy::where('name', 'Campus Exam Booking Policy')->firstOrFail();
+        $this->assertEquals(4, $policy->min_notice_hours);
+        $this->assertEquals(30, $policy->max_advance_days);
+        $this->assertEquals(10, $policy->min_buffer_minutes);
+        $this->assertEquals(20, $policy->default_buffer_minutes);
+        $this->assertEquals(180, $policy->max_duration_minutes);
+        $this->assertTrue($policy->is_active);
+
+        // 2. Fetch policies index via SPA
+        $indexRes = $this->actingAs($this->admin)->getJson('/spa/policies');
+        $indexRes->assertOk();
+        $this->assertNotEmpty($indexRes->json('policies'));
+        $this->assertNotEmpty($indexRes->json('departments'));
+
+        // 3. Toggle policy via SPA
+        $toggleRes = $this->actingAs($this->admin)->postJson("/spa/policies/{$policy->public_id}/toggle");
+        $toggleRes->assertOk()->assertJson(['success' => true, 'is_active' => false]);
+        $this->assertFalse($policy->fresh()->is_active);
+
+        // 4. Delete policy via SPA
+        $delRes = $this->actingAs($this->admin)->deleteJson("/spa/policies/{$policy->public_id}");
+        $delRes->assertOk()->assertJson(['success' => true]);
+        $this->assertDatabaseMissing('booking_policies', ['id' => $policy->id]);
     }
 }

@@ -750,7 +750,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import axios from 'axios';
 import GlassCard from '@/components/GlassCard.vue';
 import TablePagination from '@/components/TablePagination.vue';
@@ -879,14 +879,14 @@ const openEditModal = (meeting) => {
   showEditModal.value = true;
 };
 
-watch(() => editForm.value.join_before_host, (enabled) => {
-  if (enabled) {
+watch(() => editForm.value?.join_before_host, (enabled) => {
+  if (editForm.value && enabled) {
     editForm.value.waiting_room = false;
   }
 });
 
-watch(() => editForm.value.waiting_room, (enabled) => {
-  if (enabled && editForm.value.join_before_host) {
+watch(() => editForm.value?.waiting_room, (enabled) => {
+  if (editForm.value && enabled && editForm.value.join_before_host) {
     editForm.value.join_before_host = false;
   }
 });

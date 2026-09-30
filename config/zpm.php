@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     | Single source of truth for the Zoom Pool Manager application version.
     */
-    'version' => env('ZPM_VERSION', '1.0.0'),
+    'version' => env('ZPM_VERSION', '1.0.11'),
 
     /*
     |--------------------------------------------------------------------------

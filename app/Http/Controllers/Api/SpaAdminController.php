@@ -644,6 +644,22 @@ class SpaAdminController extends Controller
         return response()->json(['success' => true, 'policy' => $policy->load('department')]);
     }
 
+    public function deletePolicy(string $id): JsonResponse
+    {
+        $policy = BookingPolicy::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
+        $policy->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function togglePolicy(string $id): JsonResponse
+    {
+        $policy = BookingPolicy::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
+        $policy->update(['is_active' => ! $policy->is_active]);
+
+        return response()->json(['success' => true, 'is_active' => (bool) $policy->is_active]);
+    }
+
     // ==========================================
     // 5. WAITLIST QUEUE
     // ==========================================
