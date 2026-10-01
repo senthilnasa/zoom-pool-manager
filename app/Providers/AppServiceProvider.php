@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\HostControl\Contracts\MeetingHostProviderInterface;
 use App\Domain\HostControl\Services\FakeMeetingHostProvider;
 use App\Domain\HostControl\Services\ZoomMeetingHostProvider;
@@ -40,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('viewApiDocs', function (?User $user = null) {
             return app()->environment('local', 'testing')
-                || ($user && ($user->hasRole([\App\Domain\Auth\Enums\RoleName::SUPER_ADMIN, \App\Domain\Auth\Enums\RoleName::IT_ADMIN]) || $user->can('api.manage')));
+                || ($user && ($user->hasRole([RoleName::SUPER_ADMIN, RoleName::IT_ADMIN]) || $user->can('api.manage')));
         });
 
         if (request()->header('X-Forwarded-Proto') === 'https' || request()->isSecure()) {

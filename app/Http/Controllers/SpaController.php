@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\User;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class SpaController extends Controller
             'email' => $user->email,
             'avatar_url' => $user->avatar_url ?? null,
             'theme' => $user->theme ?? 'system',
-            'is_admin' => $user->hasRole(\App\Domain\Auth\Enums\RoleName::adminRoles()),
+            'is_admin' => $user->hasRole(RoleName::adminRoles()),
             'roles' => $user->roles->pluck('name'),
             'permissions' => $user->getAllPermissions()->pluck('name'),
         ] : null;
