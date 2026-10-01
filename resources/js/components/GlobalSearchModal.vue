@@ -1,20 +1,28 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 bg-slate-950/70 backdrop-blur-md transition-all animate-in fade-in duration-150"
-    @click.self="close"
-  >
+  <Teleport to="body">
     <div
-      class="w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-950/50 overflow-hidden flex flex-col max-h-[84vh] transition-all transform animate-in zoom-in-95 duration-150"
-      @keydown.esc="close"
-      @keydown.down.prevent="navigateDown"
-      @keydown.up.prevent="navigateUp"
-      @keydown.enter.prevent="handleEnter"
+      v-if="isOpen"
+      class="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 transition-all animate-in fade-in duration-150"
     >
+      <!-- Dedicated full-screen backdrop overlay -->
+      <div
+        class="fixed inset-0 bg-slate-950/70 backdrop-blur-md transition-opacity cursor-pointer"
+        @click="close"
+        aria-hidden="true"
+      />
+
+      <div
+        class="relative w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-950/50 overflow-hidden flex flex-col max-h-[84vh] transition-all transform animate-in zoom-in-95 duration-150 z-10"
+        @keydown.esc.stop.prevent="close"
+        @keydown.down.prevent="navigateDown"
+        @keydown.up.prevent="navigateUp"
+        @keydown.enter.prevent="handleEnter"
+      >
       <!-- Search Input Header -->
       <form
         autocomplete="off"
         @submit.prevent="handleEnter"
+        @keydown.esc.stop.prevent="close"
         class="p-4 sm:p-4.5 border-b border-slate-200/80 dark:border-slate-800 flex items-center gap-3 bg-slate-50/70 dark:bg-slate-900/80 relative"
       >
         <!-- Search / Loading Icon -->
@@ -45,6 +53,7 @@
           data-form-type="other"
           placeholder="Search modules, users, meetings, pools... (e.g. 'Senthil', 'Settings')"
           class="flex-1 bg-transparent border-0 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-0 focus:outline-none text-sm sm:text-base font-medium"
+          @keydown.esc.stop.prevent="close"
           @input="onInput"
         />
 
@@ -55,7 +64,7 @@
             v-if="query"
             type="button"
             @click="clearSearch"
-            class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+            class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Clear search"
           >
             <X class="w-4 h-4" />
@@ -72,10 +81,17 @@
             <kbd class="text-[10px] font-mono opacity-80">↵</kbd>
           </button>
 
-          <!-- ESC Badge -->
-          <kbd class="hidden sm:inline-flex items-center px-2 py-1 text-[11px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700 rounded-lg">
-            ESC
-          </kbd>
+          <!-- ESC / Dismiss Button -->
+          <button
+            type="button"
+            @click="close"
+            class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-mono font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-200/60 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300/60 dark:border-slate-700 rounded-lg transition-colors cursor-pointer"
+            title="Close search (ESC)"
+            aria-label="Close search"
+          >
+            <span>ESC</span>
+            <X class="w-3 h-3 ml-0.5" />
+          </button>
         </div>
       </form>
 
@@ -324,6 +340,7 @@
       </div>
     </div>
   </div>
+</Teleport>
 </template>
 
 <script setup>
@@ -598,13 +615,23 @@ function getStatusBadgeClass(status) {
 
 watch(isOpen, (newVal) => {
   if (newVal) {
+    document.body.style.overflow = 'hidden';
     nextTick(() => {
       searchInputRef.value?.focus();
     });
+  } else {
+    document.body.style.overflow = '';
   }
 });
 
 function handleGlobalKeydown(e) {
+  if (e.key === 'Escape' && isOpen.value) {
+    e.preventDefault();
+    e.stopPropagation();
+    close();
+    return;
+  }
+
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     isOpen.value = !isOpen.value;
@@ -619,6 +646,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.body.style.overflow = '';
   window.removeEventListener('keydown', handleGlobalKeydown);
   if (abortController) {
     abortController.abort();

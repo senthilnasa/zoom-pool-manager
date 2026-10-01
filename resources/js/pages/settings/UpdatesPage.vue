@@ -94,9 +94,10 @@
 
     <!-- Release Notes / Changelog -->
     <GlassCard v-if="updateInfo?.release_notes" title="Release Notes & Changelog">
-      <div class="text-xs whitespace-pre-line text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl font-mono leading-relaxed border border-slate-200/60 dark:border-slate-800 max-h-96 overflow-y-auto">
-        {{ updateInfo.release_notes }}
-      </div>
+      <div
+        class="text-xs sm:text-sm text-slate-800 dark:text-slate-200 bg-slate-50/80 dark:bg-slate-900/60 p-5 sm:p-6 rounded-2xl border border-slate-200/60 dark:border-slate-800 max-h-[30rem] overflow-y-auto leading-relaxed custom-scrollbar markdown-content"
+        v-html="renderedReleaseNotes"
+      />
     </GlassCard>
 
     <!-- Confirmation Modal -->
@@ -283,7 +284,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { marked } from 'marked';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
@@ -328,6 +330,17 @@ const updateInfo = ref({
   metadata: {
     build: 'stable',
     release_date: '',
+  }
+});
+
+const renderedReleaseNotes = computed(() => {
+  const notes = updateInfo.value?.release_notes;
+  if (!notes) return '';
+  try {
+    return marked.parse(notes, { gfm: true, breaks: true });
+  } catch (e) {
+    console.error('Error parsing release notes markdown:', e);
+    return notes;
   }
 });
 

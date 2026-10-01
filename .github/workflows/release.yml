@@ -82,24 +82,22 @@ jobs:
         with:
           tag_name: ${{ steps.release_tag.outputs.TAG_NAME }}
           name: "Zoom Pool Manager ${{ steps.release_tag.outputs.TAG_NAME }}"
+          generate_release_notes: true
+          append_body: true
           body: |
-            ## Zoom Pool Manager ${{ steps.release_tag.outputs.TAG_NAME }}
-            
-            ### Production Release Package
+            ### 📦 Production Standalone Package
             This standalone release package includes pre-compiled production assets (`public/build`), bundled vendor dependencies, and automated installation scripts.
-            
-            ### Quick Deployment
+
             ```bash
             # Download and extract
             unzip zoom-pool-manager-${{ steps.release_tag.outputs.TAG_NAME }}.zip
             cd zoom-pool-manager-${{ steps.release_tag.outputs.TAG_NAME }}
-            
+
             # Run automated setup
             ./setup.sh
             ```
-            
-            ### SHA256 Checksums
-            Verify archive integrity using the included `.sha256` files.
+
+            *Verify archive integrity using the included `.sha256` files.*
           draft: false
           prerelease: false
           files: |
