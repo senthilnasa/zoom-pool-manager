@@ -371,7 +371,7 @@ class ApprovalWorkflowService
 
             if ($itAdmin) {
                 $originalApproverId = $approval->approver_user_id;
-                $originalApproverName = $approval->approver?->name ?? "User #{$originalApproverId}";
+                $originalApproverName = $approval->approver->name ?? "User #{$originalApproverId}";
 
                 $approval->update([
                     'delegated_from_user_id' => $approval->delegated_from_user_id ?? $originalApproverId,
