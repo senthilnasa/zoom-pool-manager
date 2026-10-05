@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\MeetingController;
 use App\Http\Controllers\Api\V1\NocMeetingController;
 use App\Http\Controllers\Api\V1\RecordingController;
 use App\Http\Controllers\Api\V1\ResourcePoolController;
+use App\Http\Controllers\Api\V1\ZohoDeskIntegrationController;
 use App\Http\Controllers\Api\ZoomSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -67,4 +68,12 @@ Route::prefix('v1')->middleware(['api', 'api.auth', 'idempotent'])->group(functi
 Route::prefix('v1')->middleware(['api', 'throttle:60,1'])->group(function () {
     Route::get('/noc/meetings', [NocMeetingController::class, 'meetings'])
         ->name('api.v1.noc.meetings');
+});
+
+// Zoho Desk Widget & External Integration Endpoints
+Route::prefix('v1/integrations/zoho-desk')->middleware(['api', 'throttle:60,1'])->group(function () {
+    Route::get('/options', [ZohoDeskIntegrationController::class, 'options'])
+        ->name('api.v1.integrations.zoho-desk.options');
+    Route::post('/book-and-reply', [ZohoDeskIntegrationController::class, 'bookAndReply'])
+        ->name('api.v1.integrations.zoho-desk.book-and-reply');
 });

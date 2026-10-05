@@ -324,6 +324,16 @@
             <span>Zoom Intake Logs</span>
           </router-link>
 
+          <router-link
+            v-if="authStore.isAdmin || authStore.can('settings.manage')"
+            to="/app/settings/zoho-desk"
+            class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all"
+            :class="isActive('/app/settings/zoho-desk') ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'"
+          >
+            <Headphones class="w-4 h-4 shrink-0" />
+            <span>Zoho Desk Widget</span>
+          </router-link>
+
           <a
             v-if="authStore.can('api.manage') || authStore.isAdmin"
             href="/docs/api"
@@ -584,6 +594,7 @@ import {
   BookOpen,
   ExternalLink,
   Settings,
+  Headphones,
   LogOut,
 } from 'lucide-vue-next';
 

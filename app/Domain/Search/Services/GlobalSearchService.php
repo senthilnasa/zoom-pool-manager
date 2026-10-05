@@ -212,6 +212,14 @@ class GlobalSearchService
                 'permission' => 'api.manage',
             ],
             [
+                'title' => 'Zoho Desk Integration & Widget',
+                'category' => 'Developer & API',
+                'path' => '/app/settings/zoho-desk',
+                'description' => 'Configure Zoho Desk right-panel extension, API token, ticket reply template, and auto-close status.',
+                'keywords' => ['zoho', 'zoho desk', 'desk', 'helpdesk', 'tickets', 'extension', 'plugin', 'widget', 'reply'],
+                'admin_only' => true,
+            ],
+            [
                 'title' => 'System Updates & Releases',
                 'category' => 'Settings & Integrations',
                 'path' => '/app/settings/updates',

@@ -1,0 +1,18 @@
+{
+  "name": "Zoom Pool Manager",
+  "version": "1.0.0",
+  "author": "Zoom Pool Manager",
+  "description": "Schedule Zoom meetings directly from Zoho Desk tickets on behalf of ticket requesters and post meeting credentials and links into the ticket.",
+  "logo": "app/img/logo.svg",
+  "modules": {
+    "widgets": [
+      {
+        "location": "desk.ticket.detail.rightpanel",
+        "url": "./app/index.html",
+        "name": "Zoom Meeting",
+        "logo": "./app/img/logo.svg"
+      }
+    ]
+  },
+  "storage": true
+}

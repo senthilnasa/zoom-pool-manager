@@ -49,6 +49,7 @@ import ZoomUsageReportPage from '@/pages/analytics/ZoomUsageReportPage.vue';
 // 8. Settings & Communications
 import GeneralSettingsPage from '@/pages/settings/GeneralSettingsPage.vue';
 import ZoomSettingsPage from '@/pages/settings/ZoomSettingsPage.vue';
+import ZohoDeskSettingsPage from '@/pages/settings/ZohoDeskSettingsPage.vue';
 import SsoSettingsPage from '@/pages/settings/SsoSettingsPage.vue';
 import DirectorySyncPage from '@/pages/settings/DirectorySyncPage.vue';
 import ScheduledJobsPage from '@/pages/settings/ScheduledJobsPage.vue';
@@ -118,6 +119,9 @@ const routes = [
     { path: '/admin/directory-sync', redirect: '/app/settings/directory-sync' },
     { path: '/access-denied', redirect: '/app/access-denied' },
     { path: '/notifications', redirect: '/app/notifications' },
+    { path: '/settings/zoho-desk', redirect: '/app/settings/zoho-desk' },
+    { path: '/admin/settings/zoho-desk', redirect: '/app/settings/zoho-desk' },
+    { path: '/admin/zoho-desk', redirect: '/app/settings/zoho-desk' },
     { path: '/reports/zoom-usage', redirect: '/app/reports/zoom-usage' },
     { path: '/pools/usage', redirect: '/app/reports/zoom-usage' },
 
@@ -363,6 +367,12 @@ const routes = [
                 name: 'settings.zoom',
                 component: ZoomSettingsPage,
                 meta: { title: 'Zoom Configuration', permission: 'zoom.manage' },
+            },
+            {
+                path: 'settings/zoho-desk',
+                name: 'settings.zoho-desk',
+                component: ZohoDeskSettingsPage,
+                meta: { title: 'Zoho Desk Integration', adminOnly: true },
             },
             {
                 path: 'settings/sso',
