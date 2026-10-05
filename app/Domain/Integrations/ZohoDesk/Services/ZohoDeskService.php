@@ -489,7 +489,7 @@ TPL;
     {
         $template = $customTemplate ?: (string) Setting::get('zoho_desk.comment_template', $this->getDefaultCommentTemplate());
 
-        $requesterName = $ticketData['ticket_contact_name'] ?? $meeting->owner?->name ?? 'User';
+        $requesterName = $ticketData['ticket_contact_name'] ?? ($meeting->owner ? $meeting->owner->name : 'User');
         $ticketNumber = $ticketData['ticket_number'] ?? '';
         $duration = max(15, (int) $meeting->starts_at->diffInMinutes($meeting->ends_at));
 
