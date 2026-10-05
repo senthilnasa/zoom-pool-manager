@@ -350,4 +350,50 @@ class ApprovalChainsTest extends TestCase
         $this->assertNotNull($freshApproval->escalated_at);
         $this->assertEquals($this->itAdmin->id, $freshApproval->approver_user_id);
     }
+
+    public function test_approver_can_approve_meeting_starting_within_minimum_notice_window(): void
+    {
+        // Require 2 hours advance notice globally
+        Setting::set('org.min_notice_hours', 2);
+
+        WorkflowRule::create([
+            'name' => 'Department Review Gate',
+            'priority' => 10,
+            'conditions' => [],
+            'actions' => [
+                'require_approval' => [
+                    'approver_type' => 'dept_admin',
+                    'mode' => 'ANY',
+                ],
+            ],
+            'is_enabled' => true,
+        ]);
+
+        $meetingService = app(MeetingService::class);
+        $workflowService = app(ApprovalWorkflowService::class);
+
+        // Meeting was booked for 3 hours ahead (valid at booking time)
+        $meeting = $meetingService->createMeeting($this->requester, [
+            'title' => 'Urgent Department Board Meeting',
+            'starts_at' => Carbon::now()->addHours(3)->toDateTimeString(),
+            'ends_at' => Carbon::now()->addHours(4)->toDateTimeString(),
+            'participant_count' => 10,
+        ]);
+
+        $this->assertEquals('pending_approval', $meeting->status);
+        $approval = MeetingApproval::where('meeting_id', $meeting->id)->firstOrFail();
+
+        // Time passes: now the meeting starts in 30 minutes (within the 2-hour minimum notice window)
+        $meeting->update([
+            'starts_at' => Carbon::now()->addMinutes(30),
+            'ends_at' => Carbon::now()->addMinutes(90),
+        ]);
+
+        // Approver logs in to approve. This must NOT fail with "Bookings require at least 2 hours advance notice"
+        $workflowService->decide($approval, $this->deptAdmin, 'approved', 'Approved by department head.');
+
+        $this->assertEquals('approved', $approval->fresh()->decision);
+        $this->assertEquals('scheduled', $meeting->fresh()->status);
+        $this->assertNotNull($meeting->fresh()->zoom_resource_id);
+    }
 }

@@ -163,11 +163,13 @@ const loadSeries = async (page = 1) => {
 const cancelSeries = async (series) => {
   if (!confirm(`Cancel recurring series ${series.public_id}? All future occurrences will be cancelled.`)) return;
   try {
-    await axios.post(`/series/${series.public_id}/cancel`);
-    toast.success('Series cancelled successfully.');
+    const res = await axios.post(`/series/${series.public_id}/cancel`, {
+      reason: 'Cancelled by organizer from Series Management',
+    });
+    toast.success(res.data?.message || 'Series cancelled successfully.');
     loadSeries(1);
   } catch (e) {
-    toast.error('Failed to cancel series.');
+    toast.error(e.response?.data?.message || 'Failed to cancel series.');
   }
 };
 

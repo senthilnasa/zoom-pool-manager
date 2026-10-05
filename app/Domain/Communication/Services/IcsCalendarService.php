@@ -43,12 +43,33 @@ class IcsCalendarService
             ."Join Zoom Meeting: {$joinUrl}\n"
             .'Meeting ID: '.($meeting->zoom_meeting_id ?: 'N/A')."\n";
 
-        if (! empty($meeting->passcode) && ($meeting->securityProfile?->settings['passcode_in_invite'] ?? true)) {
-            $description .= "Passcode: {$meeting->passcode}\n";
+        $maskCredentials = (bool) Setting::get('mail.mask_credentials', true);
+        $passcode = ! empty($meeting->passcode) ? (string) $meeting->passcode : null;
+        if (empty($passcode) && ! empty($meeting->join_url)) {
+            $parsedUrl = parse_url($meeting->join_url);
+            if (! empty($parsedUrl['query'])) {
+                parse_str($parsedUrl['query'], $queryParams);
+                if (! empty($queryParams['pwd'])) {
+                    $passcode = (string) $queryParams['pwd'];
+                }
+            }
         }
+        $hostKey = ! empty($meeting->host_key) ? (string) $meeting->host_key : (string) ($meeting->zoomResource?->zoomUser->host_key ?? '');
 
-        if ($meeting->share_host_key && ! empty($meeting->host_key)) {
-            $description .= "Host Key PIN: {$meeting->host_key} (In Zoom client: Participants > Claim Host > enter Host Key)\n";
+        if (! $maskCredentials) {
+            if (! empty($passcode)) {
+                $description .= "Passcode: {$passcode}\n";
+            }
+            if (! empty($hostKey)) {
+                $description .= "Host Key PIN: {$hostKey} (In Zoom client: Participants > Claim Host > enter Host Key)\n";
+            }
+        } else {
+            if (! empty($passcode) && ($meeting->securityProfile?->settings['passcode_in_invite'] ?? true)) {
+                $description .= "Passcode: {$passcode}\n";
+            }
+            if ($meeting->share_host_key && ! empty($hostKey)) {
+                $description .= "Host Key PIN: {$hostKey} (In Zoom client: Participants > Claim Host > enter Host Key)\n";
+            }
         }
 
         $timezoneStr = $meeting->timezone ?: Setting::get('org.timezone', 'Asia/Kolkata');

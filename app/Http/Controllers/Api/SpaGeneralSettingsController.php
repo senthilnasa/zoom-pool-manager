@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Settings\Models\Setting;
 use App\Http\Controllers\Controller;
 use DateTimeZone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Role;
 
 class SpaGeneralSettingsController extends Controller
 {
@@ -69,6 +71,25 @@ class SpaGeneralSettingsController extends Controller
             // Workflow & Approval Policies
             'require_meeting_approval' => (bool) Setting::get('org.require_meeting_approval', true),
 
+            // Role Lead Time Exemptions
+            'org_lead_time_exempt_roles' => (function () {
+                $val = Setting::get('org.lead_time_exempt_roles');
+                if (is_array($val)) {
+                    return $val;
+                }
+                if (is_string($val) && ! empty($val)) {
+                    $decoded = json_decode($val, true);
+                    if (is_array($decoded)) {
+                        return $decoded;
+                    }
+                }
+
+                return RoleName::adminRoles();
+            })(),
+
+            // Email Credential Delivery
+            'mail_mask_credentials' => (bool) Setting::get('mail.mask_credentials', true),
+
             // NOC Wallboard API Token
             'noc_api_token' => (string) Setting::get('noc.api_token', 'noc_live_'.substr(hash('sha256', config('app.key', 'zpm_noc_default_secret')), 0, 32)),
         ];
@@ -76,9 +97,16 @@ class SpaGeneralSettingsController extends Controller
         // Curated list of timezones
         $timezones = DateTimeZone::listIdentifiers(DateTimeZone::ALL);
 
+        $availableRoles = Role::where('guard_name', 'web')
+            ->orderBy('name')
+            ->pluck('name')
+            ->values()
+            ->all();
+
         return response()->json([
             'settings' => $settings,
             'timezones' => $timezones,
+            'available_roles' => $availableRoles,
             'recording_modes' => [
                 ['value' => 'none', 'label' => 'No Automatic Recording (Host Discretion)'],
                 ['value' => 'cloud', 'label' => 'Automatic Cloud Recording (Standard)'],
@@ -341,7 +369,10 @@ class SpaGeneralSettingsController extends Controller
 
             'org_ai_companion_policy' => 'required|string|in:ALLOWED,RESTRICTED,DISABLED',
             'org_default_recording_mode' => 'required|string|in:none,cloud,local,mandatory_cloud',
+            'org_lead_time_exempt_roles' => 'nullable|array',
+            'org_lead_time_exempt_roles.*' => 'string|max:100',
             'require_meeting_approval' => 'nullable|boolean',
+            'mail_mask_credentials' => 'nullable|boolean',
             'noc_api_token' => 'nullable|string|max:100',
         ]);
 
@@ -418,6 +449,12 @@ class SpaGeneralSettingsController extends Controller
 
         if (array_key_exists('require_meeting_approval', $validated)) {
             Setting::set('org.require_meeting_approval', (bool) $validated['require_meeting_approval']);
+        }
+        if (array_key_exists('org_lead_time_exempt_roles', $validated)) {
+            Setting::set('org.lead_time_exempt_roles', $validated['org_lead_time_exempt_roles'] ?? []);
+        }
+        if (array_key_exists('mail_mask_credentials', $validated)) {
+            Setting::set('mail.mask_credentials', (bool) $validated['mail_mask_credentials']);
         }
         if (! empty($validated['noc_api_token'])) {
             Setting::set('noc.api_token', trim((string) $validated['noc_api_token']));

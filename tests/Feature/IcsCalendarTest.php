@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Communication\Services\IcsCalendarService;
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
 use Carbon\Carbon;
@@ -127,5 +128,34 @@ class IcsCalendarTest extends TestCase
         $response->assertHeader('Content-Type', 'text/calendar; charset=UTF-8');
         $response->assertHeader('Content-Disposition', "attachment; filename=\"meeting-{$meeting->public_id}.ics\"");
         $this->assertStringContainsString('BEGIN:VCALENDAR', $response->getContent());
+    }
+
+    public function test_ics_generation_includes_credentials_when_mask_credentials_disabled(): void
+    {
+        Setting::set('mail.mask_credentials', false);
+
+        $startsAt = Carbon::tomorrow()->setTime(16, 0);
+        $endsAt = Carbon::tomorrow()->setTime(17, 0);
+
+        $meeting = Meeting::create([
+            'title' => 'Open Seminar',
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'participant_count' => 10,
+            'requester_user_id' => $this->user->id,
+            'owner_user_id' => $this->user->id,
+            'department_id' => $this->department->id,
+            'status' => 'scheduled',
+            'passcode' => 'SeminarPass',
+            'host_key' => '123987',
+            'share_host_key' => false,
+        ]);
+
+        $icsService = app(IcsCalendarService::class);
+        $icsContent = $icsService->generate($meeting, 'REQUEST');
+        $unfolded = str_replace(["\r\n ", "\n "], '', $icsContent);
+
+        $this->assertStringContainsString('Passcode: SeminarPass', $unfolded);
+        $this->assertStringContainsString('Host Key PIN: 123987', $unfolded);
     }
 }

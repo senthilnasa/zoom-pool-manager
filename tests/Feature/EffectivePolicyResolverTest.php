@@ -9,6 +9,7 @@ use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -104,6 +105,41 @@ test('privileged administrator roles bypass notice limits', function () {
 
     expect($policy->minNoticeHours)->toBe(0)
         ->and($policy->maxAdvanceDays)->toBe(365);
+});
+
+test('Super Administrator display role title and configured exempt roles bypass notice limits', function () {
+    Setting::set('org.min_notice_hours', 24);
+
+    Role::firstOrCreate(['name' => 'Super Administrator', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'VIP Faculty', 'guard_name' => 'web']);
+
+    $superAdmin = User::create([
+        'name' => 'Display Super Admin',
+        'email' => 'display.admin@example.com',
+        'password' => bcrypt('password123'),
+        'is_active' => true,
+    ]);
+    $superAdmin->assignRole('Super Administrator');
+
+    $vip = User::create([
+        'name' => 'VIP User',
+        'email' => 'vip.user@example.com',
+        'password' => bcrypt('password123'),
+        'is_active' => true,
+    ]);
+    $vip->assignRole('VIP Faculty');
+
+    Setting::set('org.lead_time_exempt_roles', ['VIP Faculty']);
+
+    $resolver = new EffectivePolicyResolver;
+
+    $superPolicy = $resolver->resolve(user: $superAdmin);
+    expect($superPolicy->minNoticeHours)->toBe(0)
+        ->and($superPolicy->maxAdvanceDays)->toBe(365);
+
+    $vipPolicy = $resolver->resolve(user: $vip);
+    expect($vipPolicy->minNoticeHours)->toBe(0)
+        ->and($vipPolicy->maxAdvanceDays)->toBe(365);
 });
 
 test('user request cannot reduce buffer below organization minimum', function () {

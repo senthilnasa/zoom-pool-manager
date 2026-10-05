@@ -2,6 +2,7 @@
 
 namespace App\Domain\Scheduling\Services;
 
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Scheduling\DTOs\ResolvedPolicyDto;
 use App\Domain\Scheduling\Models\BookingPolicy;
 use App\Domain\Scheduling\Models\MeetingTemplate;
@@ -71,9 +72,20 @@ class EffectivePolicyResolver
             }
         }
 
-        // 4. Role Policy Level (Privileged roles may have overrides)
-        if ($user && $user->hasRole(['super_admin', 'it_admin', 'meeting_admin'])) {
-            // Administrators can book on zero notice if needed
+        // 4. Role Policy Level (Privileged roles and configured exempt roles have overrides)
+        $exemptRoles = Setting::get('org.lead_time_exempt_roles');
+        $configuredExempt = [];
+        if ($exemptRoles) {
+            $configuredExempt = is_array($exemptRoles) ? $exemptRoles : (json_decode($exemptRoles, true) ?: []);
+        }
+        $allExemptRoles = array_unique(array_merge(
+            $configuredExempt,
+            RoleName::adminRoles(),
+            ['super_admin', 'it_admin', 'meeting_admin', 'Super Administrator', 'Administrator']
+        ));
+
+        if ($user && ($user->hasRole($allExemptRoles) || $user->can('meeting.override') || $user->can('policy.bypass'))) {
+            // Administrators and exempt roles can book on zero notice if needed
             $effectiveMinNoticeHours = 0;
             $effectiveMaxAdvanceDays = 365;
         }

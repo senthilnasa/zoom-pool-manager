@@ -253,10 +253,10 @@ class MeetingController extends Controller
     /**
      * Cancel a meeting.
      */
-    public function cancel(string $publicId, Request $request): RedirectResponse
+    public function cancel(string $publicId, Request $request): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'reason' => ['required', 'string', 'max:500'],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         /** @var User $user */
@@ -264,7 +264,14 @@ class MeetingController extends Controller
 
         $meeting = Meeting::where('public_id', $publicId)->firstOrFail();
 
-        $this->meetingService->cancelMeeting($meeting, $user, (string) $request->input('reason'));
+        $this->meetingService->cancelMeeting($meeting, $user, (string) $request->input('reason', 'Cancelled by user'));
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Meeting has been cancelled.',
+            ]);
+        }
 
         return redirect()->route('meetings.show', $meeting->public_id)
             ->with('status', 'Meeting has been cancelled.');

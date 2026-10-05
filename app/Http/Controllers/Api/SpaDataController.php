@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Attendance\Models\MeetingAttendance;
 use App\Domain\Attendance\Services\ZoomAttendanceSyncService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Communication\Services\IcsCalendarService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Meetings\Models\MeetingCustomField;
@@ -70,7 +71,8 @@ class SpaDataController extends Controller
             'invitees',
         ]);
 
-        if (! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator')) {
+        $canViewAll = $user && ($user->hasRole(RoleName::adminRoles()) || $user->can('meeting.view_any'));
+        if (! $canViewAll) {
             $query->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('requester_user_id', $user->id);
@@ -122,7 +124,8 @@ class SpaDataController extends Controller
 
         $query = Meeting::with(['owner', 'requester', 'zoomResource', 'template']);
 
-        if (! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator')) {
+        $canViewAll = $user && ($user->hasRole(RoleName::adminRoles()) || $user->can('meeting.view_any'));
+        if (! $canViewAll) {
             $query->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('requester_user_id', $user->id);
@@ -240,9 +243,7 @@ class SpaDataController extends Controller
 
         $canBookOnBehalf = $user && (
             $user->can('meeting.book_on_behalf')
-            || $user->hasRole('Super Administrator')
-            || $user->hasRole('Administrator')
-            || $user->hasRole('super_admin')
+            || $user->hasRole(RoleName::adminRoles())
         );
 
         $users = $canBookOnBehalf
@@ -276,12 +277,10 @@ class SpaDataController extends Controller
             ->orderBy('recording_start', 'desc')
             ->orderBy('created_at', 'desc');
 
-        $canViewAll = $user->can('recording.view_any')
-            || $user->hasRole('Super Administrator')
-            || $user->hasRole('Super Admin')
-            || $user->hasRole('super_admin')
-            || $user->hasRole('Administrator')
-            || $user->hasRole('it_admin');
+        $canViewAll = $user && (
+            $user->can('recording.view_any')
+            || $user->hasRole(RoleName::adminRoles())
+        );
 
         if (! $canViewAll) {
             $query->where(function ($q) use ($user) {
@@ -412,7 +411,8 @@ class SpaDataController extends Controller
             ->whereNotNull('zoom_meeting_id')
             ->orderBy('starts_at', 'desc');
 
-        if (! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator')) {
+        $canViewAll = $user && ($user->hasRole(RoleName::adminRoles()) || $user->can('meeting.view_any'));
+        if (! $canViewAll) {
             $query->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('requester_user_id', $user->id);
@@ -543,13 +543,11 @@ class SpaDataController extends Controller
             'delegatedFrom',
         ])->orderBy('created_at', 'desc');
 
-        $isAdmin = $user->hasRole('Super Administrator')
-            || $user->hasRole('Administrator')
-            || $user->hasRole('super_admin')
-            || $user->hasRole('it_admin')
-            || $user->hasRole('IT Administrator')
+        $isAdmin = $user && (
+            $user->hasRole(RoleName::adminRoles())
             || $user->can('meeting.approve')
-            || $user->can('workflow.manage');
+            || $user->can('workflow.manage')
+        );
 
         if (! $isAdmin) {
             $delegatorIds = ApprovalDelegation::currentlyValid()
@@ -620,7 +618,8 @@ class SpaDataController extends Controller
             ->withCount('meetings')
             ->orderBy('created_at', 'desc');
 
-        if (! $user->hasRole('Super Administrator') && ! $user->hasRole('Administrator')) {
+        $canViewAll = $user && ($user->hasRole(RoleName::adminRoles()) || $user->can('meeting.view_any'));
+        if (! $canViewAll) {
             $query->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('requester_user_id', $user->id);
@@ -856,9 +855,8 @@ class SpaDataController extends Controller
         // Check permission: owner, requester, or admin
         $canEnd = ($meeting->owner_user_id === $user->id)
             || ($meeting->requester_user_id === $user->id)
-            || $user->hasRole('Super Administrator')
-            || $user->hasRole('Administrator')
-            || $user->hasRole('super_admin');
+            || $user->hasRole(RoleName::adminRoles())
+            || $user->can('meeting.override');
 
         if (! $canEnd) {
             return response()->json(['message' => 'Unauthorized to end this meeting early.'], 403);
@@ -991,9 +989,8 @@ class SpaDataController extends Controller
 
         $canAdd = ($meeting->owner_user_id === $user->id)
             || ($meeting->requester_user_id === $user->id)
-            || $user->hasRole('Super Administrator')
-            || $user->hasRole('Administrator')
-            || $user->hasRole('super_admin');
+            || $user->hasRole(RoleName::adminRoles())
+            || $user->can('meeting.edit');
 
         if (! $canAdd) {
             return response()->json(['message' => 'Unauthorized to modify attendees for this meeting.'], 403);
@@ -1029,9 +1026,8 @@ class SpaDataController extends Controller
         $recording = CloudRecording::findOrFail($id);
 
         $canDelete = ($recording->logical_owner_user_id === $user->id)
-            || $user->hasRole('Super Administrator')
-            || $user->hasRole('Administrator')
-            || $user->hasRole('super_admin');
+            || $user->hasRole(RoleName::adminRoles())
+            || $user->can('recording.manage');
 
         if (! $canDelete) {
             return response()->json(['message' => 'Unauthorized to delete this recording.'], 403);

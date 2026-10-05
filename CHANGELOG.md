@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.22] - 2026-10-05
+
+### Fixed & Enhanced
+- **Decoupled Workflow Approvals from Intake Lead Time Notice:**
+  - Resolved an issue where approvers or administrators reviewing pending meeting requests were blocked with `"Bookings require at least 2 hours advance notice"` if approving within the intake lead-time window.
+  - Updated `ConflictDetectionService` and `AllocationEngine` with `bypassNoticeConstraints`, guaranteeing that allocations on existing requested meetings are evaluated solely on resource availability, buffers, and blackout periods.
+- **Configurable Submission Lead Time & Horizon Constraints:**
+  - Added intuitive controls in General Settings and Booking Policies allowing institutions to set minimum required advance notice (in hours) and maximum future booking horizon (in days). Setting minimum notice to `0` enables instant booking submissions with zero lead time.
+- **Role-Based Lead Time & Horizon Exemption:**
+  - Implemented `org.lead_time_exempt_roles` setting with multi-select role selectors in General Settings.
+  - Users with exempt roles (and all Super Administrators and Administrators by system core policy) can submit requests immediately with 0 hours minimum notice and schedule without advance horizon restrictions.
+- **Direct Email & Calendar Credential Delivery:**
+  - Added `mail.mask_credentials` setting in General Settings and Mail Settings, permitting institutions to output raw host key PINs and passcodes in confirmation emails and `.ics` attachments without requiring login.
+- **Series & Meeting Cancellation API Standardization:**
+  - Normalized `MeetingSeriesController::cancel` and `MeetingController::cancel` to return JSON responses for SPA requests and accept nullable cancellation reasons with safe defaults.
+- **CI & Code Quality Hardening:**
+  - Fixed all Laravel Pint formatting rules (`new_with_parentheses`, `fully_qualified_strict_types`, braces) and PHPStan static analysis errors.
+
+---
+
 ## [1.0.21] - 2026-10-05
 
 ### Security & RBAC Enforcement

@@ -295,6 +295,67 @@ class CommunicationTest extends TestCase
             'provider' => 'smtp',
             'current_provider' => 'smtp',
             'from_address' => 'noreply@example.edu',
+            'mask_credentials' => true,
         ]);
+    }
+
+    public function test_template_renderer_respects_mail_mask_credentials_toggle(): void
+    {
+        $renderer = app(TemplateRenderer::class);
+
+        // Third party attendee user
+        $attendee = User::create([
+            'name' => 'Dr. Niels Bohr',
+            'email' => 'bohr@univ.edu',
+            'password' => bcrypt('password123'),
+            'department_id' => $this->department->id,
+            'is_active' => true,
+        ]);
+
+        $meeting = Meeting::create([
+            'title' => 'Copenhagen Interpretation',
+            'starts_at' => Carbon::tomorrow()->setTime(14, 0),
+            'ends_at' => Carbon::tomorrow()->setTime(15, 0),
+            'participant_count' => 10,
+            'requester_user_id' => $this->user->id,
+            'owner_user_id' => $this->user->id,
+            'department_id' => $this->department->id,
+            'status' => 'scheduled',
+            'passcode' => 'Passcode123',
+            'host_key' => '654321',
+            'share_host_key' => false,
+        ]);
+
+        $template = 'Passcode: {{meeting.passcode}} | HostKey: {{meeting.host_key}}';
+
+        // 1. By default (mask_credentials = true), attendee cannot see host key
+        Setting::set('mail.mask_credentials', true);
+        $rendered = $renderer->render('Subject', $template, $template, [
+            'meeting' => $meeting,
+            'recipient' => $attendee,
+        ]);
+        $this->assertStringContainsString('HostKey: [Log into ZPM to reveal host key during meeting]', $rendered['html']);
+
+        // 2. When mask_credentials = false, attendee receives plain host key & passcode
+        Setting::set('mail.mask_credentials', false);
+        $renderedPlain = $renderer->render('Subject', $template, $template, [
+            'meeting' => $meeting,
+            'recipient' => $attendee,
+        ]);
+        $this->assertStringContainsString('Passcode: Passcode123 | HostKey: 654321', $renderedPlain['html']);
+    }
+
+    public function test_mail_settings_update_can_toggle_mask_credentials(): void
+    {
+        $payload = [
+            'provider' => 'smtp',
+            'from_address' => 'noreply@example.edu',
+            'from_name' => 'IT Team',
+            'mask_credentials' => false,
+        ];
+
+        $res = $this->actingAs($this->admin)->postJson(route('admin.mail.update'), $payload);
+        $res->assertOk();
+        $this->assertFalse((bool) Setting::get('mail.mask_credentials'));
     }
 }

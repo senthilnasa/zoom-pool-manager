@@ -2,6 +2,7 @@
 
 namespace App\Domain\Search\Services;
 
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Users\Models\User;
 use App\Domain\Zoom\Models\ResourcePool;
@@ -11,7 +12,7 @@ class GlobalSearchService
     /**
      * Complete index of navigable application modules and features with keywords.
      *
-     * @return array<int, array{title: string, category: string, path: string, description: string, keywords: array<string>}>
+     * @return array<int, array{title: string, category: string, path: string, description: string, keywords: array<string>, permission?: string|array<string>, admin_only?: bool, dept_admin_or_admin?: bool}>
      */
     public function getModulesCatalog(): array
     {
@@ -265,7 +266,7 @@ class GlobalSearchService
         $term = mb_strtolower($q);
 
         $currentUser = $user ?? (auth()->check() ? auth()->user() : null);
-        $isAdmin = $currentUser && $currentUser->hasRole(\App\Domain\Auth\Enums\RoleName::adminRoles());
+        $isAdmin = $currentUser && $currentUser->hasRole(RoleName::adminRoles());
         $isDeptAdmin = $isAdmin || ($currentUser && ($currentUser->hasRole('dept_admin') || $currentUser->hasRole('Department Administrator')));
 
         // 1. Search Modules Catalog

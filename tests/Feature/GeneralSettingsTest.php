@@ -65,6 +65,7 @@ class GeneralSettingsTest extends TestCase
         $data = $response->json('settings');
         $this->assertEquals('Global Polytechnic University', $data['org_name']);
         $this->assertEquals(4, $data['org_min_notice_hours']);
+        $this->assertTrue($data['mail_mask_credentials']);
     }
 
     public function test_admin_can_update_general_settings(): void
@@ -84,6 +85,7 @@ class GeneralSettingsTest extends TestCase
 
             'org_ai_companion_policy' => 'ALLOWED',
             'org_default_recording_mode' => 'cloud',
+            'mail_mask_credentials' => false,
         ];
 
         $response = $this->actingAs($this->admin)->putJson('/spa/settings/general', $payload);
@@ -100,6 +102,7 @@ class GeneralSettingsTest extends TestCase
         $this->assertEquals(20, Setting::get('host.lead_minutes'));
         $this->assertEquals('ALLOWED', Setting::get('org.ai_companion_policy'));
         $this->assertEquals('cloud', Setting::get('org.default_recording_mode'));
+        $this->assertFalse((bool) Setting::get('mail.mask_credentials'));
     }
 
     public function test_validation_fails_on_invalid_settings(): void
@@ -293,5 +296,31 @@ class GeneralSettingsTest extends TestCase
         $this->assertEquals('https://help.apex.edu', Setting::get('org.help_url'));
         $this->assertEquals('Sign In to Campus Video Pool', Setting::get('org.login_heading'));
         $this->assertEquals('Staff and faculty credentials required.', Setting::get('org.login_subtext'));
+    }
+
+    public function test_admin_can_update_lead_time_exempt_roles(): void
+    {
+        $payload = [
+            'org_name' => 'Apex University',
+            'org_support_email' => 'support@apex.edu',
+            'org_timezone' => 'Asia/Kolkata',
+            'org_min_buffer_minutes' => 10,
+            'org_default_buffer_minutes' => 10,
+            'org_min_notice_hours' => 2,
+            'org_max_advance_days' => 90,
+            'org_max_duration_minutes' => 480,
+            'host_lead_minutes' => 15,
+            'org_ai_companion_policy' => 'ALLOWED',
+            'org_default_recording_mode' => 'cloud',
+            'org_lead_time_exempt_roles' => ['Super Administrator', 'Standard User'],
+        ];
+
+        $response = $this->actingAs($this->admin)->putJson('/spa/settings/general', $payload);
+        $response->assertOk();
+
+        $saved = Setting::get('org.lead_time_exempt_roles');
+        $this->assertIsArray($saved);
+        $this->assertContains('Super Administrator', $saved);
+        $this->assertContains('Standard User', $saved);
     }
 }

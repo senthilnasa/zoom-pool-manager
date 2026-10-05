@@ -3,6 +3,7 @@
 namespace App\Domain\Meetings\Services;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Communication\Services\MeetingNotificationService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Meetings\Models\MeetingInvitee;
@@ -392,9 +393,8 @@ class MeetingService
     ): Meeting {
         $canEdit = $actor->id === $meeting->owner_user_id
             || $actor->id === $meeting->requester_user_id
-            || $actor->hasRole('Super Administrator')
-            || $actor->hasRole('Administrator')
-            || $actor->hasRole('super_admin');
+            || $actor->hasRole(RoleName::adminRoles())
+            || $actor->can('meeting.edit');
 
         if (! $canEdit) {
             throw new RuntimeException('You are not authorized to edit this meeting.');

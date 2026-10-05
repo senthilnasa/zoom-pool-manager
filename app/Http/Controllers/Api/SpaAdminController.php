@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Domain\Attendance\Models\MeetingAttendance;
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Auth\Services\RoleManagementService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Operations\Models\DataExportRequest;
@@ -24,7 +25,6 @@ use App\Domain\Zoom\Models\ResourcePool;
 use App\Domain\Zoom\Models\ZoomResource;
 use App\Domain\Zoom\Services\ZoomUserSyncService;
 use App\Http\Controllers\Controller;
-use App\Domain\Auth\Enums\RoleName;
 use Database\Seeders\TemplatesAndSecurityProfilesSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,6 +59,9 @@ class SpaAdminController extends Controller
         }
     }
 
+    /**
+     * @param  string|array<int, string>  $permission
+     */
     protected function authorizePermission(string|array $permission): void
     {
         $user = Auth::user();
@@ -84,7 +87,7 @@ class SpaAdminController extends Controller
             abort(403, 'Unauthorized.');
         }
         $isAdmin = $user->hasRole(RoleName::adminRoles());
-        $isDeptAdmin = $isAdmin || ($user && ($user->hasRole('dept_admin') || $user->hasRole('Department Administrator')));
+        $isDeptAdmin = $isAdmin || $user->hasRole('dept_admin') || $user->hasRole('Department Administrator');
         if (! $isDeptAdmin && ! $user->can('user.view') && ! $user->can('user.manage')) {
             abort(403, 'Unauthorized. Permission required to view user directory.');
         }

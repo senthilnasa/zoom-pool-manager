@@ -8,6 +8,7 @@ use App\Domain\Meetings\Services\OccurrenceDetachmentService;
 use App\Domain\Meetings\Services\SeriesAllocationService;
 use App\Domain\Users\Models\User;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -117,7 +118,7 @@ class MeetingSeriesController extends Controller
     /**
      * Detach an individual occurrence from the recurring series.
      */
-    public function detachOccurrence(string $seriesPublicId, string $meetingPublicId, Request $request): RedirectResponse
+    public function detachOccurrence(string $seriesPublicId, string $meetingPublicId, Request $request): RedirectResponse|JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -128,9 +129,23 @@ class MeetingSeriesController extends Controller
         try {
             $this->detachmentService->detachOccurrence($meeting, $user);
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Occurrence detached from series. It can now be managed and rescheduled independently.',
+                ]);
+            }
+
             return redirect()->route('meetings.show', $meeting->public_id)
                 ->with('status', 'Occurrence detached from series. It can now be managed and rescheduled independently.');
         } catch (Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
             return back()->withErrors(['detach' => $e->getMessage()]);
         }
     }
@@ -138,18 +153,26 @@ class MeetingSeriesController extends Controller
     /**
      * Cancel an entire recurring series.
      */
-    public function cancel(string $publicId, Request $request): RedirectResponse
+    public function cancel(string $publicId, Request $request): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'reason' => ['required', 'string', 'max:500'],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         /** @var User $user */
         $user = $request->user();
 
         $series = MeetingSeries::where('public_id', $publicId)->firstOrFail();
+        $reason = (string) $request->input('reason', 'Cancelled via series management interface');
 
-        $this->detachmentService->cancelSeries($series, $user, (string) $request->input('reason'));
+        $this->detachmentService->cancelSeries($series, $user, $reason);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Entire recurring series and future occurrences have been cancelled.',
+            ]);
+        }
 
         return redirect()->route('series.show', $series->public_id)
             ->with('status', 'Entire recurring series and future occurrences have been cancelled.');

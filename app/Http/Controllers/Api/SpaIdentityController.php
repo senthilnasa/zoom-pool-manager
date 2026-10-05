@@ -8,6 +8,7 @@ use App\Domain\Auth\Models\DirectorySyncConfig;
 use App\Domain\Auth\Models\IdentityProvider;
 use App\Domain\Auth\Providers\SamlIdentityProvider;
 use App\Domain\Auth\Services\DirectorySyncService;
+use App\Domain\Users\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class SpaIdentityController extends Controller
      */
     protected function authorizeAdmin(): void
     {
-        /** @var \App\Domain\Users\Models\User|null $user */
+        /** @var User|null $user */
         $user = auth()->user();
 
         if (! $user || (! $user->hasRole(RoleName::adminRoles()) && ! $user->can('settings.manage'))) {

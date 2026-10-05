@@ -768,7 +768,7 @@
 
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Minimum Advance Notice (Hours) *
+              Minimum Advance Notice / Lead Time (Hours) *
             </label>
             <input
               v-model.number="form.org_min_notice_hours"
@@ -778,7 +778,7 @@
               required
               class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
             />
-            <p class="text-[10px] text-slate-400 mt-1">Hours before start time required to book a pool license.</p>
+            <p class="text-[10px] text-slate-400 mt-1">Hours before start time required to submit a booking. Set to 0 to disable minimum notice (allow instant bookings).</p>
           </div>
 
           <div>
@@ -793,7 +793,46 @@
               required
               class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
             />
-            <p class="text-[10px] text-slate-400 mt-1">How far into the future users can schedule reservations.</p>
+            <p class="text-[10px] text-slate-400 mt-1">How far into the future users can schedule reservations (1 to 365 days).</p>
+          </div>
+
+          <!-- Role Lead Time & Horizon Exemption -->
+          <div class="md:col-span-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <label class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <ShieldCheck class="w-4 h-4 text-brand-500" />
+                  <span>Roles Exempt from Lead Time & Horizon Limits (No Time Limit)</span>
+                </label>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Users with exempt roles can submit meeting requests immediately with 0 hours minimum notice and schedule without advance horizon restrictions. Super Administrators are permanently exempt by system core policy. Approvers evaluating existing requests are also never blocked by notice limits.
+                </p>
+              </div>
+              <span class="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 self-start sm:self-auto shrink-0">
+                Lead Time Exemption
+              </span>
+            </div>
+
+            <!-- Role Selection Checkboxes -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1">
+              <label
+                v-for="role in availableRoles"
+                :key="role"
+                class="flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition select-none"
+                :class="isRoleExempt(role) ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-brand-800 dark:text-brand-200 font-semibold' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'"
+              >
+                <input
+                  type="checkbox"
+                  :value="role"
+                  :checked="isRoleExempt(role)"
+                  :disabled="isSuperAdminRole(role)"
+                  @change="toggleExemptRole(role)"
+                  class="rounded text-brand-600 focus:ring-brand-500 w-3.5 h-3.5"
+                />
+                <span class="truncate">{{ role }}</span>
+                <span v-if="isSuperAdminRole(role)" class="text-[9px] text-slate-400 font-normal ml-auto shrink-0">(Permanent)</span>
+              </label>
+            </div>
           </div>
 
           <div>
@@ -837,6 +876,21 @@
             </div>
             <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
               <input type="checkbox" v-model="form.require_meeting_approval" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-brand-600"></div>
+            </label>
+          </div>
+
+          <div class="md:col-span-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+            <div>
+              <label class="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                Mask Meeting Credentials in Emails (Require Portal Login)
+              </label>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                When enabled, meeting passcodes and host key PINs are masked in notification emails behind portal login prompts. When disabled, the actual 6-digit Host Key PIN and Passcode are included directly in emails without requiring users to log into the ZPM portal.
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+              <input type="checkbox" v-model="form.mail_mask_credentials" class="sr-only peer">
               <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-brand-600"></div>
             </label>
           </div>
@@ -1392,8 +1446,34 @@ const form = ref({
   org_default_recording_mode: 'none',
 
   require_meeting_approval: true,
+  org_lead_time_exempt_roles: ['Super Administrator', 'Super Admin', 'super_admin', 'Administrator', 'IT Administrator', 'it_admin'],
+  mail_mask_credentials: true,
   noc_api_token: '',
 });
+
+const availableRoles = ref([]);
+
+const isSuperAdminRole = (role) => {
+  return ['Super Administrator', 'Super Admin', 'super_admin'].includes(role);
+};
+
+const isRoleExempt = (role) => {
+  if (isSuperAdminRole(role)) return true;
+  return Array.isArray(form.value.org_lead_time_exempt_roles) && form.value.org_lead_time_exempt_roles.includes(role);
+};
+
+const toggleExemptRole = (role) => {
+  if (isSuperAdminRole(role)) return;
+  if (!Array.isArray(form.value.org_lead_time_exempt_roles)) {
+    form.value.org_lead_time_exempt_roles = [];
+  }
+  const idx = form.value.org_lead_time_exempt_roles.indexOf(role);
+  if (idx >= 0) {
+    form.value.org_lead_time_exempt_roles.splice(idx, 1);
+  } else {
+    form.value.org_lead_time_exempt_roles.push(role);
+  }
+};
 
 // Primary Logo Handlers
 const triggerLogoUpload = () => {
@@ -1591,6 +1671,10 @@ const fetchSettings = async () => {
   try {
     const res = await axios.get('/spa/settings/general');
     form.value = { ...res.data.settings };
+    availableRoles.value = res.data.available_roles || [];
+    if (!form.value.org_lead_time_exempt_roles || !Array.isArray(form.value.org_lead_time_exempt_roles)) {
+      form.value.org_lead_time_exempt_roles = ['Super Administrator', 'Super Admin', 'super_admin', 'Administrator', 'IT Administrator', 'it_admin'];
+    }
     timezones.value = res.data.timezones || [];
     recordingModes.value = res.data.recording_modes || [];
     aiPolicies.value = res.data.ai_companion_policies || [];

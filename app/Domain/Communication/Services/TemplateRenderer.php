@@ -84,24 +84,46 @@ class TemplateRenderer
             $vars['meeting.join_url'] = (string) ($meeting->join_url ?? route('meetings.show', $meeting->public_id));
             $vars['meeting.zoom_meeting_id'] = (string) ($meeting->zoom_meeting_id ?? 'N/A');
 
-            // Passcode: ONLY include if security profile permits or setting is enabled
-            $allowPasscodeInInvite = $meeting->securityProfile?->settings['passcode_in_invite'] ?? true;
-            if ($allowPasscodeInInvite && ! empty($meeting->passcode)) {
-                $vars['meeting.passcode'] = (string) $meeting->passcode;
+            $maskCredentials = (bool) Setting::get('mail.mask_credentials', true);
+
+            // Passcode handling
+            $passcode = ! empty($meeting->passcode) ? (string) $meeting->passcode : null;
+            if (empty($passcode) && ! empty($meeting->join_url)) {
+                $parsedUrl = parse_url($meeting->join_url);
+                if (! empty($parsedUrl['query'])) {
+                    parse_str($parsedUrl['query'], $queryParams);
+                    if (! empty($queryParams['pwd'])) {
+                        $passcode = (string) $queryParams['pwd'];
+                    }
+                }
+            }
+
+            if (! $maskCredentials) {
+                $vars['meeting.passcode'] = ! empty($passcode) ? $passcode : '[Included in Join Link]';
             } else {
-                $vars['meeting.passcode'] = '[Protected / Included in Join Link]';
+                $allowPasscodeInInvite = $meeting->securityProfile?->settings['passcode_in_invite'] ?? true;
+                if ($allowPasscodeInInvite && ! empty($passcode)) {
+                    $vars['meeting.passcode'] = $passcode;
+                } else {
+                    $vars['meeting.passcode'] = '[Protected / Included in Join Link]';
+                }
             }
 
             // Host Key & Start URL Handling:
             // start_url is kept behind authenticated portal
             $vars['meeting.start_url'] = route('meetings.show', $meeting->public_id);
 
-            // Host key is provided if share_host_key is enabled on the meeting, or if recipient is the requester/owner
-            $isRequesterOrOwner = $recipient && ($recipient->id === ($meeting->requester_user_id ?? null) || $recipient->id === ($meeting->owner_user_id ?? null));
-            if (($meeting->share_host_key || $isRequesterOrOwner) && ! empty($meeting->host_key)) {
-                $vars['meeting.host_key'] = (string) $meeting->host_key;
+            // Host key is provided from meeting or assigned Zoom user
+            $hostKey = ! empty($meeting->host_key) ? (string) $meeting->host_key : (string) ($meeting->zoomResource?->zoomUser->host_key ?? '');
+            if (! $maskCredentials) {
+                $vars['meeting.host_key'] = ! empty($hostKey) ? $hostKey : 'N/A';
             } else {
-                $vars['meeting.host_key'] = '[Log into ZPM to reveal host key during meeting]';
+                $isRequesterOrOwner = $recipient && ($recipient->id === ($meeting->requester_user_id ?? null) || $recipient->id === ($meeting->owner_user_id ?? null));
+                if (($meeting->share_host_key || $isRequesterOrOwner) && ! empty($hostKey)) {
+                    $vars['meeting.host_key'] = $hostKey;
+                } else {
+                    $vars['meeting.host_key'] = '[Log into ZPM to reveal host key during meeting]';
+                }
             }
         }
 

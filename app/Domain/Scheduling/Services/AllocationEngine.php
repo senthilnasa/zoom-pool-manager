@@ -29,7 +29,8 @@ class AllocationEngine
         ?ResourcePool $pool = null,
         ?ZoomResource $preferredResource = null,
         ?int $meetingId = null,
-        string $strategy = 'least_hours_today'
+        string $strategy = 'least_hours_today',
+        bool $bypassNoticeConstraints = true
     ): ResourceReservation {
         $conflictResult = $this->conflictService->check(
             startsAt: $startsAt,
@@ -38,7 +39,8 @@ class AllocationEngine
             policy: $policy,
             pool: $pool,
             specificResource: $preferredResource,
-            ignoreMeetingId: $meetingId
+            ignoreMeetingId: $meetingId,
+            bypassNoticeConstraints: $bypassNoticeConstraints
         );
 
         if ($conflictResult->hasConflict) {

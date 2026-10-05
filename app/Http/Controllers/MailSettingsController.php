@@ -43,6 +43,7 @@ class MailSettingsController extends Controller
                 'smtp_encryption' => $smtpEncryption,
                 'smtp_username' => $smtpUsername,
                 'send_immediately' => (bool) Setting::get('mail.send_immediately', true),
+                'mask_credentials' => (bool) Setting::get('mail.mask_credentials', true),
             ]);
         }
 
@@ -109,6 +110,10 @@ class MailSettingsController extends Controller
 
         if ($request->has('send_immediately')) {
             Setting::set('mail.send_immediately', $request->boolean('send_immediately'));
+        }
+
+        if ($request->has('mask_credentials')) {
+            Setting::set('mail.mask_credentials', $request->boolean('mask_credentials'));
         }
 
         if ($request->wantsJson()) {

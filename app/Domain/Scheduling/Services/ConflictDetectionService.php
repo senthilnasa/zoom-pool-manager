@@ -2,10 +2,12 @@
 
 namespace App\Domain\Scheduling\Services;
 
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Scheduling\DTOs\ConflictCheckResult;
 use App\Domain\Scheduling\DTOs\ResolvedPolicyDto;
 use App\Domain\Scheduling\Models\BlackoutPeriod;
 use App\Domain\Scheduling\Models\ResourceReservation;
+use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\User;
 use App\Domain\Zoom\Models\ResourcePool;
 use App\Domain\Zoom\Models\ZoomResource;
@@ -25,35 +27,57 @@ class ConflictDetectionService
         ?ResourcePool $pool = null,
         ?ZoomResource $specificResource = null,
         ?User $requester = null,
-        ?int $ignoreMeetingId = null
+        ?int $ignoreMeetingId = null,
+        bool $bypassNoticeConstraints = false
     ): ConflictCheckResult {
         $conflicts = [];
         $now = Carbon::now();
 
+        if ($requester) {
+            $exemptRoles = Setting::get('org.lead_time_exempt_roles');
+            $roles = [];
+            if ($exemptRoles) {
+                $roles = is_array($exemptRoles) ? $exemptRoles : (json_decode($exemptRoles, true) ?: []);
+            }
+            $allExemptRoles = array_unique(array_merge(
+                $roles,
+                RoleName::adminRoles(),
+                ['super_admin', 'it_admin', 'meeting_admin', 'Super Administrator', 'Administrator']
+            ));
+
+            if ($requester->hasRole($allExemptRoles) || $requester->can('meeting.override') || $requester->can('policy.bypass')) {
+                $bypassNoticeConstraints = true;
+            }
+        }
+
         // 1. Minimum Notice Check
-        $minNoticeCutoff = (clone $now)->addHours($policy->minNoticeHours);
-        if ($startsAt->isBefore($minNoticeCutoff)) {
-            $conflicts[] = [
-                'type' => 'notice_violation',
-                'message' => "Bookings require at least {$policy->minNoticeHours} hours advance notice.",
-                'details' => [
-                    'min_notice_hours' => $policy->minNoticeHours,
-                    'earliest_allowed' => $minNoticeCutoff->toIso8601String(),
-                ],
-            ];
+        if (! $bypassNoticeConstraints && $policy->minNoticeHours > 0) {
+            $minNoticeCutoff = (clone $now)->addHours($policy->minNoticeHours);
+            if ($startsAt->isBefore($minNoticeCutoff)) {
+                $conflicts[] = [
+                    'type' => 'notice_violation',
+                    'message' => "Bookings require at least {$policy->minNoticeHours} hours advance notice.",
+                    'details' => [
+                        'min_notice_hours' => $policy->minNoticeHours,
+                        'earliest_allowed' => $minNoticeCutoff->toIso8601String(),
+                    ],
+                ];
+            }
         }
 
         // 2. Maximum Advance Booking Check
-        $maxAdvanceCutoff = (clone $now)->addDays($policy->maxAdvanceDays);
-        if ($startsAt->isAfter($maxAdvanceCutoff)) {
-            $conflicts[] = [
-                'type' => 'advance_booking_violation',
-                'message' => "Bookings cannot be scheduled more than {$policy->maxAdvanceDays} days in advance.",
-                'details' => [
-                    'max_advance_days' => $policy->maxAdvanceDays,
-                    'latest_allowed' => $maxAdvanceCutoff->toIso8601String(),
-                ],
-            ];
+        if (! $bypassNoticeConstraints && $policy->maxAdvanceDays > 0) {
+            $maxAdvanceCutoff = (clone $now)->addDays($policy->maxAdvanceDays);
+            if ($startsAt->isAfter($maxAdvanceCutoff)) {
+                $conflicts[] = [
+                    'type' => 'advance_booking_violation',
+                    'message' => "Bookings cannot be scheduled more than {$policy->maxAdvanceDays} days in advance.",
+                    'details' => [
+                        'max_advance_days' => $policy->maxAdvanceDays,
+                        'latest_allowed' => $maxAdvanceCutoff->toIso8601String(),
+                    ],
+                ];
+            }
         }
 
         // 3. Duration Limit Check

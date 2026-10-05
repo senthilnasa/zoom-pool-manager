@@ -149,6 +149,34 @@
             </div>
           </div>
 
+          <!-- Credential Security in Meeting Emails -->
+          <div class="pt-4 border-t border-slate-200/60 dark:border-slate-800/60">
+            <div class="flex items-start justify-between gap-4 p-4 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60">
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                  Mask Meeting Credentials in Emails (Require Portal Login)
+                </label>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  When enabled, meeting passcodes and 6-digit Host Key PINs are hidden behind portal login prompts (<code>[Log into ZPM to reveal host key]</code>). When disabled, the plain Host Key PIN and Passcode are included directly in notification emails without requiring users to log into the ZPM portal.
+                </p>
+                <div class="flex items-center gap-1.5 text-[10px] font-semibold mt-1" :class="!form.mask_credentials ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'">
+                  <span v-if="!form.mask_credentials" class="inline-flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    Direct Email Mode: Host Key PIN & Passcode sent plain in email
+                  </span>
+                  <span v-else class="inline-flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Protected Portal Mode: Users must log into ZPM to view credentials
+                  </span>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                <input type="checkbox" v-model="form.mask_credentials" class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-brand-600"></div>
+              </label>
+            </div>
+          </div>
+
           <div class="flex items-center justify-end pt-3">
             <button
               type="submit"
@@ -327,6 +355,7 @@ const form = ref({
   smtp_encryption: 'tls',
   smtp_username: '',
   smtp_password: '',
+  mask_credentials: true,
 });
 
 const fetchSettings = async () => {
@@ -345,6 +374,7 @@ const fetchSettings = async () => {
       form.value.smtp_port = res.data.smtp_port || 587;
       form.value.smtp_encryption = res.data.smtp_encryption || 'tls';
       form.value.smtp_username = res.data.smtp_username || '';
+      form.value.mask_credentials = res.data.mask_credentials !== undefined ? Boolean(res.data.mask_credentials) : true;
     }
   } catch (err) {
     console.error('Failed to load mail settings', err);

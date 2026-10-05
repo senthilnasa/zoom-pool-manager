@@ -3,11 +3,14 @@
 use App\Domain\Scheduling\DTOs\ResolvedPolicyDto;
 use App\Domain\Scheduling\Models\BlackoutPeriod;
 use App\Domain\Scheduling\Services\ConflictDetectionService;
+use App\Domain\Settings\Models\Setting;
+use App\Domain\Users\Models\User;
 use App\Domain\Zoom\Models\ZoomConnection;
 use App\Domain\Zoom\Models\ZoomResource;
 use App\Domain\Zoom\Models\ZoomUser;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -156,4 +159,107 @@ test('capacity exceeding available resources triggers capacity mismatch conflict
 
     expect($result->hasConflict)->toBeTrue()
         ->and($result->conflicts[0]['type'])->toBe('capacity_mismatch');
+});
+
+test('bypassNoticeConstraints allows booking within minimum notice window without conflict', function () {
+    $policy = new ResolvedPolicyDto(
+        bufferMinutes: 10,
+        minNoticeHours: 4,
+        maxAdvanceDays: 90,
+        maxDurationMinutes: 180,
+        aiCompanionPolicy: 'ALLOWED',
+        recordingMode: 'none'
+    );
+
+    $service = new ConflictDetectionService;
+
+    // Booking in 30 minutes (violates 4h policy normally)
+    $startsAt = Carbon::now()->addMinutes(30);
+    $endsAt = (clone $startsAt)->addMinutes(60);
+
+    $result = $service->check(
+        startsAt: $startsAt,
+        endsAt: $endsAt,
+        participantCount: 20,
+        policy: $policy,
+        bypassNoticeConstraints: true
+    );
+
+    expect($result->hasConflict)->toBeFalse();
+});
+
+test('requester with Super Administrator role automatically bypasses lead time restrictions', function () {
+    Role::firstOrCreate(['name' => 'Super Administrator', 'guard_name' => 'web']);
+
+    $admin = User::create([
+        'name' => 'Super Admin User',
+        'email' => 'superadmin@univ.edu',
+        'password' => bcrypt('secret'),
+        'is_active' => true,
+    ]);
+    $admin->assignRole('Super Administrator');
+
+    $policy = new ResolvedPolicyDto(
+        bufferMinutes: 10,
+        minNoticeHours: 6,
+        maxAdvanceDays: 90,
+        maxDurationMinutes: 180,
+        aiCompanionPolicy: 'ALLOWED',
+        recordingMode: 'none'
+    );
+
+    $service = new ConflictDetectionService;
+
+    // Admin books 15 minutes before meeting starts
+    $startsAt = Carbon::now()->addMinutes(15);
+    $endsAt = (clone $startsAt)->addMinutes(45);
+
+    $result = $service->check(
+        startsAt: $startsAt,
+        endsAt: $endsAt,
+        participantCount: 10,
+        policy: $policy,
+        requester: $admin
+    );
+
+    expect($result->hasConflict)->toBeFalse();
+});
+
+test('requester with configured exempt role automatically bypasses lead time restrictions', function () {
+    Role::firstOrCreate(['name' => 'VIP Faculty', 'guard_name' => 'web']);
+
+    $vip = User::create([
+        'name' => 'Distinguished Prof',
+        'email' => 'vip@univ.edu',
+        'password' => bcrypt('secret'),
+        'is_active' => true,
+    ]);
+    $vip->assignRole('VIP Faculty');
+
+    Setting::set('org.lead_time_exempt_roles', ['VIP Faculty']);
+
+    $policy = new ResolvedPolicyDto(
+        bufferMinutes: 10,
+        minNoticeHours: 12,
+        maxAdvanceDays: 90,
+        maxDurationMinutes: 180,
+        aiCompanionPolicy: 'ALLOWED',
+        recordingMode: 'none'
+    );
+
+    $service = new ConflictDetectionService;
+
+    // VIP books 30 minutes before meeting starts
+    $startsAt = Carbon::now()->addMinutes(30);
+    $endsAt = (clone $startsAt)->addMinutes(60);
+
+    $result = $service->check(
+        startsAt: $startsAt,
+        endsAt: $endsAt,
+        participantCount: 10,
+        policy: $policy,
+        requester: $vip
+    );
+
+    expect($result->hasConflict)->toBeFalse();
 });

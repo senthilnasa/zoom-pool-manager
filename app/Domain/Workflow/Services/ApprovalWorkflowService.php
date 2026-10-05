@@ -256,7 +256,8 @@ class ApprovalWorkflowService
                 participantCount: $meeting->participant_count,
                 policy: $policy,
                 pool: $pool,
-                meetingId: $meeting->id
+                meetingId: $meeting->id,
+                bypassNoticeConstraints: true
             );
 
             $this->allocationEngine->confirmReservation($reservation, $meeting->id);
