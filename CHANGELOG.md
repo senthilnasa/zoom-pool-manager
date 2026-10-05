@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.15] - 2026-10-05
+
+### Fixed
+- **System Updates & Releases — Rich Markdown Changelog Rendering:**
+  - Resolved changelog notes displaying as raw monospace unformatted text (`###`, `**bold**`, backtick code blocks) on the System Updates overview page.
+  - Rendered release notes with GitHub Flavored Markdown parser (`marked.parse`) and styled headings (`h1`–`h4`), clean bullet lists with outside indentation, inline code badges, code blocks, and horizontal dividers in `resources/css/app.css`.
+- **CI / Build Pipeline & Code Quality:**
+  - Fixed Laravel Pint code style compliance issues in `DirectorySyncService.php` (aligned array arrows and control structure blank-line spacing) that caused GitHub Actions CI and release packaging pipelines to fail.
+
+---
+
 ## [1.0.14] - 2026-10-05
 
 ### Fixed

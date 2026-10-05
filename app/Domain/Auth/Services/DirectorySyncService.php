@@ -67,6 +67,7 @@ class DirectorySyncService
                 if (isset($processedEmails[$email])) {
                     continue;
                 }
+
                 $processedEmails[$email] = true;
 
                 $syncedEmails[] = $email;
@@ -106,12 +107,12 @@ class DirectorySyncService
                 if (! $user) {
                     try {
                         $user = User::create([
-                            'name'          => $account['name'] ?: $email,
-                            'email'         => $email,
-                            'designation'   => $account['designation'] ?? null,
-                            'password'      => bcrypt(Str::random(32)),
+                            'name' => $account['name'] ?: $email,
+                            'email' => $email,
+                            'designation' => $account['designation'] ?? null,
+                            'password' => bcrypt(Str::random(32)),
                             'department_id' => $departmentId,
-                            'is_active'     => $account['is_active'] ?? true,
+                            'is_active' => $account['is_active'] ?? true,
                         ]);
 
                         $targetRole = ! empty($config->default_role) ? $config->default_role : 'Standard User';
@@ -124,6 +125,7 @@ class DirectorySyncService
                         if ($e->errorInfo[1] !== 1062) {
                             throw $e;
                         }
+
                         Log::warning("Directory sync: duplicate user caught for {$email}, falling back to update.");
                         $user = User::where('email', $email)->firstOrFail();
                         $isDuplicate = true;
