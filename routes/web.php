@@ -177,6 +177,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/settings/updates/progress', [SystemUpdateController::class, 'progress'])->name('settings.updates.progress');
         Route::post('/settings/updates/check', [SystemUpdateController::class, 'check'])->name('settings.updates.check');
         Route::post('/settings/updates/apply', [SystemUpdateController::class, 'apply'])->name('settings.updates.apply');
+        Route::post('/settings/updates/reset', [SystemUpdateController::class, 'reset'])->name('settings.updates.reset');
 
         // Pools & Zoom Resources
         Route::get('/pools', [SpaAdminController::class, 'pools'])->name('pools');
@@ -423,4 +424,5 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/system/updates/progress', [SystemUpdateController::class, 'progress'])->name('system.updates.progress');
     Route::post('/system/updates/check', [SystemUpdateController::class, 'check'])->name('system.updates.check');
     Route::post('/system/updates/apply', [SystemUpdateController::class, 'apply'])->name('system.updates.apply');
+    Route::post('/system/updates/reset', [SystemUpdateController::class, 'reset'])->name('system.updates.reset');
 });

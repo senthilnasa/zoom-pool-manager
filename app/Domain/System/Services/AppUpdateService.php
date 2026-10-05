@@ -406,12 +406,38 @@ class AppUpdateService
     }
 
     /**
+     * Clear update lock and reset progress state.
+     */
+    public function resetProgress(): void
+    {
+        $this->releaseLock();
+        Cache::forget(self::PROGRESS_CACHE_KEY);
+        Cache::forget('zpm:system:update_check');
+
+        try {
+            $progressFile = storage_path('app/updates/progress.json');
+            if (File::exists($progressFile)) {
+                File::delete($progressFile);
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
+            Artisan::call('up');
+        } catch (\Throwable) {
+        }
+    }
+
+    /**
      * Perform the complete safe Akaunting-style update lifecycle.
      *
      * @return array{success: bool, message: string, steps: array<int, string>}
      */
     public function applyUpdate(?string $downloadUrl = null, ?string $checksumUrl = null): array
     {
+        @set_time_limit(600);
+        @ignore_user_abort(true);
+        @ini_set('memory_limit', '512M');
         $stepsLog = [];
         $fileBackupPath = null;
         $dbBackupPath = null;
@@ -558,68 +584,49 @@ class AppUpdateService
             } catch (\Throwable) {
             }
 
-            // Determine if the archive has a single top-level root folder
-            $rootPrefix = null;
-            $firstEntry = $zip->getNameIndex(0);
-            if ($firstEntry !== false && preg_match('#^([^/]+)/#', $firstEntry, $m)) {
-                $candidate = $m[1].'/';
-                $allStartWithCandidate = true;
-                for ($i = 0; $i < $entryCount; $i++) {
-                    $entry = $zip->getNameIndex($i);
-                    if ($entry !== false && ! str_starts_with($entry, $candidate)) {
-                        $allStartWithCandidate = false;
-                        break;
-                    }
-                }
-                if ($allStartWithCandidate) {
-                    $rootPrefix = $candidate;
-                }
+            // Extract archive into a clean temporary extraction directory
+            $tempExtractDir = $updatesStorage.DIRECTORY_SEPARATOR.'extract_'.time();
+            File::ensureDirectoryExists($tempExtractDir);
+
+            if ($zip->extractTo($tempExtractDir) !== true) {
+                $zip->close();
+                File::deleteDirectory($tempExtractDir);
+                throw new Exception('Failed to extract update package archive.');
             }
 
-            $extractBase = base_path();
-            for ($i = 0; $i < $entryCount; $i++) {
-                $entryName = $zip->getNameIndex($i);
-                if ($entryName === false) {
-                    continue;
-                }
-
-                $normalizedPath = $entryName;
-                if ($rootPrefix !== null && str_starts_with($entryName, $rootPrefix)) {
-                    $normalizedPath = substr($entryName, strlen($rootPrefix));
-                }
-
-                if (empty($normalizedPath)) {
-                    continue;
-                }
-
-                // Strictly protected files / directories
-                if ($normalizedPath === '.env' ||
-                    $normalizedPath === 'installed.lock' ||
-                    $normalizedPath === 'storage/installed.lock' ||
-                    str_starts_with($normalizedPath, 'storage/') ||
-                    str_starts_with($normalizedPath, '.git/') ||
-                    str_starts_with($normalizedPath, 'dist/')) {
-                    continue;
-                }
-
-                $targetPath = $extractBase.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $normalizedPath);
-
-                if (str_ends_with($entryName, '/')) {
-                    File::ensureDirectoryExists($targetPath);
-                } else {
-                    File::ensureDirectoryExists(dirname($targetPath));
-                    $stream = $zip->getStream($entryName);
-                    if ($stream !== false) {
-                        $contents = stream_get_contents($stream);
-                        if ($contents !== false) {
-                            file_put_contents($targetPath, $contents);
-                        }
-                        fclose($stream);
-                    }
-                }
-            }
             $zip->close();
             File::delete($tempZipFile);
+
+            // Determine if the archive has a single top-level root folder
+            $sourceDir = $tempExtractDir;
+            $items = File::directories($tempExtractDir);
+            $files = File::files($tempExtractDir);
+            if (count($items) === 1 && count($files) === 0) {
+                $sourceDir = $items[0];
+            }
+
+            // Copy extracted files to application root, strictly protecting .env, storage, etc.
+            $extractBase = base_path();
+            $allFiles = File::allFiles($sourceDir, true);
+            foreach ($allFiles as $file) {
+                $relPath = substr($file->getPathname(), strlen($sourceDir) + 1);
+                $relPath = str_replace('\\', '/', $relPath);
+
+                if ($relPath === '.env' ||
+                    $relPath === 'installed.lock' ||
+                    $relPath === 'storage/installed.lock' ||
+                    str_starts_with($relPath, 'storage/') ||
+                    str_starts_with($relPath, '.git/') ||
+                    str_starts_with($relPath, 'dist/')) {
+                    continue;
+                }
+
+                $targetPath = $extractBase.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relPath);
+                File::ensureDirectoryExists(dirname($targetPath));
+                @copy($file->getPathname(), $targetPath);
+            }
+
+            File::deleteDirectory($tempExtractDir);
             $stepsLog[] = 'Applied update files to application root (protected .env and storage)';
             $this->setStep(3, 'completed', 'Update files installed successfully.');
 

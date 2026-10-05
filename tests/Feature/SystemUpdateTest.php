@@ -179,4 +179,27 @@ class SystemUpdateTest extends TestCase
             $this->artisan('up');
         }
     }
+
+    public function test_reset_endpoint_clears_update_lock_and_progress(): void
+    {
+        $admin = User::create([
+            'name' => 'Super Admin 3',
+            'email' => 'admin3@univ.edu',
+            'password' => bcrypt('password123'),
+            'is_active' => true,
+        ]);
+        $admin->assignRole('Super Administrator');
+
+        // Acquire lock
+        $updateService = app(\App\Domain\System\Services\AppUpdateService::class);
+        $updateService->acquireLock();
+        $this->assertTrue($updateService->isLocked());
+
+        // Reset via endpoint
+        $response = $this->actingAs($admin)->postJson('/spa/settings/updates/reset');
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $this->assertFalse($updateService->isLocked());
+    }
 }

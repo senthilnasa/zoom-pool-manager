@@ -115,4 +115,23 @@ class SystemUpdateController extends Controller
 
         return redirect()->route('admin.system.updates.index')->with('error', $result['message']);
     }
+
+    /**
+     * Clear update lock and reset progress state.
+     */
+    public function reset(Request $request): JsonResponse|RedirectResponse
+    {
+        $this->authorizeUpdates();
+
+        $this->updateService->resetProgress();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Update lock and progress state reset successfully.',
+            ]);
+        }
+
+        return back()->with('success', 'Update lock reset.');
+    }
 }

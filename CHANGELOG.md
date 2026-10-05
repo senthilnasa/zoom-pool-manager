@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.16] - 2026-10-05
+
+### Fixed
+- **System Updates Engine — Performance & Stalling Protection:**
+  - Replaced the slow, per-file PHP stream extraction loop (which looped 9,600+ files with `stream_get_contents` and hit PHP's 30s timeout) with native `ZipArchive::extractTo()`, reducing archive extraction time from 60+ seconds to ~5 seconds.
+  - Set execution safety limits (`set_time_limit(600)`, `ignore_user_abort(true)`, `ini_set('memory_limit', '512M')`) at the start of `applyUpdate()` to prevent server timeouts during large dependency extraction.
+  - Added dedicated `/spa/settings/updates/reset` endpoint and `AppUpdateService::resetProgress()` method to instantly clear update locks, reset progress cache, and bring the application out of maintenance mode.
+- **System Updates UI — Stalling Protection & Recovery Controls:**
+  - Added an active update lock warning banner on the System Updates overview page with an **"Unlock & Reset State"** button so administrators are never locked out by stale lock files.
+  - Added a **"Stuck? Force Reset Lock"** escape hatch inside the update progress dialog so updates can be safely cancelled, reset, and retried at any time without waiting 30 minutes for lock expiration.
+  - Added auto-reconnection in `loadCurrentStatus()` so if a user refreshes their browser during an active update, the UI automatically re-attaches to the live progress feed.
+
+---
+
 ## [1.0.15] - 2026-10-05
 
 ### Fixed

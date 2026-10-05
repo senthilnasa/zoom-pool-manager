@@ -64,6 +64,28 @@
       </GlassCard>
     </div>
 
+    <!-- Lock Warning Banner if Stale / Running Lock Detected -->
+    <div
+      v-if="updateInfo?.is_locked"
+      class="p-4 rounded-2xl border border-amber-300 dark:border-amber-700/80 bg-amber-50/80 dark:bg-amber-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+    >
+      <div class="flex items-center gap-3">
+        <AlertTriangle class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+        <div class="text-xs text-amber-800 dark:text-amber-200">
+          <span class="font-bold">Update Lock Active:</span>
+          An update lock is active on the server. If an update was interrupted or got stuck, click Reset to unlock the system.
+        </div>
+      </div>
+      <button
+        type="button"
+        @click="resetUpdateLock"
+        :disabled="resettingLock"
+        class="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs transition"
+      >
+        {{ resettingLock ? 'Resetting...' : 'Unlock & Reset State' }}
+      </button>
+    </div>
+
     <!-- Update Action Banner if Update Available -->
     <div
       v-if="updateInfo?.update_available"
@@ -270,14 +292,25 @@
             <span>Reload Application Now</span>
           </button>
         </div>
-        <button
-          v-if="updateFailed"
-          type="button"
-          @click="closeProgressModal"
-          class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold"
-        >
-          Close
-        </button>
+        <div v-else class="flex items-center justify-between w-full gap-2">
+          <button
+            type="button"
+            @click="resetUpdateLock"
+            :disabled="resettingLock"
+            class="px-3.5 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold transition-all inline-flex items-center gap-1.5"
+            title="Force reset update lock and clear progress state"
+          >
+            <AlertTriangle class="w-3.5 h-3.5" />
+            <span>{{ resettingLock ? 'Resetting...' : 'Stuck? Force Reset Lock' }}</span>
+          </button>
+          <button
+            type="button"
+            @click="closeProgressModal"
+            class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all"
+          >
+            Close
+          </button>
+        </div>
       </template>
     </Modal>
   </div>
@@ -383,11 +416,32 @@ const getStepTextClass = (status) => {
   return 'text-slate-400 dark:text-slate-500';
 };
 
+const resettingLock = ref(false);
+
 const loadCurrentStatus = async () => {
   try {
     const res = await axios.get('/spa/settings/updates');
     if (res.data) {
       updateInfo.value = res.data;
+
+      // If an update process is already running on the server, auto-attach to it
+      if (res.data.progress && res.data.progress.is_active) {
+        progressModal.value = true;
+        isUpdating.value = true;
+        if (Array.isArray(res.data.progress.steps)) {
+          updateSteps.value = res.data.progress.steps;
+        }
+        if (typeof res.data.progress.percent === 'number') {
+          progressPercent.value = res.data.progress.percent;
+        }
+        if (res.data.progress.current_step_name) {
+          currentStepMessage.value = res.data.progress.current_step_name;
+        }
+        if (Array.isArray(res.data.progress.logs)) {
+          executionLogs.value = res.data.progress.logs;
+        }
+        startPollingProgress();
+      }
     }
   } catch (e) {
     updateInfo.value = {
@@ -395,6 +449,24 @@ const loadCurrentStatus = async () => {
       latest_version: authStore.appVersion || '1.0.0',
       update_available: false,
     };
+  }
+};
+
+const resetUpdateLock = async () => {
+  try {
+    resettingLock.value = true;
+    await axios.post('/spa/settings/updates/reset');
+    toast.success('Update lock cleared. System state has been reset.');
+    stopPollingProgress();
+    isUpdating.value = false;
+    progressModal.value = false;
+    updateDone.value = false;
+    updateFailed.value = false;
+    await loadCurrentStatus();
+  } catch (e) {
+    toast.error('Unable to reset update lock.');
+  } finally {
+    resettingLock.value = false;
   }
 };
 
