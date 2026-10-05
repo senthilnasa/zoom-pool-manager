@@ -24,6 +24,7 @@ use App\Domain\Zoom\Models\ResourcePool;
 use App\Domain\Zoom\Models\ZoomResource;
 use App\Domain\Zoom\Services\ZoomUserSyncService;
 use App\Http\Controllers\Controller;
+use App\Domain\Auth\Enums\RoleName;
 use Database\Seeders\TemplatesAndSecurityProfilesSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,12 +41,63 @@ class SpaAdminController extends Controller
         protected ZoomUserSyncService $zoomUserSyncService
     ) {}
 
+    protected function authorizeAdmin(): void
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->hasRole(RoleName::adminRoles())) {
+            abort(403, 'Unauthorized. Administrator privileges required.');
+        }
+    }
+
+    protected function authorizeDeptAdminOrAdmin(): void
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(RoleName::adminRoles());
+        $isDeptAdmin = $isAdmin || ($user && ($user->hasRole('dept_admin') || $user->hasRole('Department Administrator')));
+        if (! $isDeptAdmin) {
+            abort(403, 'Unauthorized. Department Administrator privileges required.');
+        }
+    }
+
+    protected function authorizePermission(string|array $permission): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            abort(403, 'Unauthorized.');
+        }
+        if ($user->hasRole(RoleName::adminRoles())) {
+            return;
+        }
+        $perms = is_array($permission) ? $permission : [$permission];
+        foreach ($perms as $p) {
+            if ($user->can($p)) {
+                return;
+            }
+        }
+        abort(403, 'Unauthorized. Missing required permission.');
+    }
+
+    protected function authorizeUserDirectory(): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            abort(403, 'Unauthorized.');
+        }
+        $isAdmin = $user->hasRole(RoleName::adminRoles());
+        $isDeptAdmin = $isAdmin || ($user && ($user->hasRole('dept_admin') || $user->hasRole('Department Administrator')));
+        if (! $isDeptAdmin && ! $user->can('user.view') && ! $user->can('user.manage')) {
+            abort(403, 'Unauthorized. Permission required to view user directory.');
+        }
+    }
+
     // ==========================================
     // 1. RESOURCE POOLS & ZOOM RESOURCES
     // ==========================================
 
     public function pools(): JsonResponse
     {
+        $this->authorizePermission(['pool.manage', 'resource.view']);
+
         $pools = ResourcePool::with(['resources.zoomUser'])
             ->withCount('resources')
             ->orderBy('name')
@@ -56,6 +108,8 @@ class SpaAdminController extends Controller
 
     public function storePool(Request $request): JsonResponse
     {
+        $this->authorizePermission('pool.manage');
+
         /** @var array{id?: ?int, name: string, code: string, description?: ?string, pool_strategy: string, is_emergency_pool?: bool, is_active?: bool, resource_ids?: array<int, int>} $validated */
         $validated = $request->validate([
             'id' => 'nullable|integer|exists:resource_pools,id',
@@ -91,6 +145,8 @@ class SpaAdminController extends Controller
 
     public function togglePool(string $id): JsonResponse
     {
+        $this->authorizePermission('pool.manage');
+
         $pool = ResourcePool::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $pool->update(['is_active' => ! $pool->is_active]);
 
@@ -99,6 +155,8 @@ class SpaAdminController extends Controller
 
     public function resources(): JsonResponse
     {
+        $this->authorizePermission(['pool.manage', 'resource.view']);
+
         $resources = ZoomResource::with(['zoomUser', 'pools'])->orderBy('id')->get();
 
         return response()->json($resources);
@@ -106,6 +164,8 @@ class SpaAdminController extends Controller
 
     public function toggleResource(string $id): JsonResponse
     {
+        $this->authorizePermission('pool.manage');
+
         $resource = ZoomResource::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $resource->update(['managed' => ! $resource->managed]);
 
@@ -114,6 +174,8 @@ class SpaAdminController extends Controller
 
     public function syncZoomUsers(): JsonResponse
     {
+        $this->authorizePermission('pool.manage');
+
         $result = $this->zoomUserSyncService->syncUsers();
 
         return response()->json($result, $result['success'] ? 200 : 422);
@@ -121,6 +183,8 @@ class SpaAdminController extends Controller
 
     public function assignResourcePools(Request $request, string $id): JsonResponse
     {
+        $this->authorizePermission('pool.manage');
+
         /** @var array{pool_ids?: array<int, int>} $validated */
         $validated = $request->validate([
             'pool_ids' => 'nullable|array',
@@ -186,6 +250,8 @@ class SpaAdminController extends Controller
 
     public function users(Request $request): JsonResponse
     {
+        $this->authorizeUserDirectory();
+
         $query = User::with(['department', 'roles'])->orderBy('name');
 
         if ($request->filled('search')) {
@@ -224,6 +290,8 @@ class SpaAdminController extends Controller
 
     public function storeUser(Request $request): JsonResponse
     {
+        $this->authorizePermission('user.manage');
+
         $validated = $request->validate([
             'id' => 'nullable|integer|exists:users,id',
             'name' => 'required|string|max:100',
@@ -266,6 +334,8 @@ class SpaAdminController extends Controller
 
     public function toggleUser(string $id): JsonResponse
     {
+        $this->authorizePermission('user.manage');
+
         $user = User::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $user->update(['is_active' => ! $user->is_active]);
 
@@ -285,6 +355,12 @@ class SpaAdminController extends Controller
                 ->orWhere('id', $id)
                 ->with(['department', 'roles'])
                 ->firstOrFail();
+        }
+
+        // A user can view their own profile; viewing others requires directory permissions
+        $currentUser = Auth::user();
+        if ($currentUser && $currentUser->id !== $user->id) {
+            $this->authorizeUserDirectory();
         }
 
         // Query all meetings requested or owned by this user
@@ -441,6 +517,8 @@ class SpaAdminController extends Controller
 
     public function departments(): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $departments = Department::withCount('users')->orderBy('name')->get();
 
         return response()->json($departments);
@@ -448,6 +526,8 @@ class SpaAdminController extends Controller
 
     public function storeDepartment(Request $request): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'id' => 'nullable|integer|exists:departments,id',
             'name' => 'required|string|max:100',
@@ -468,6 +548,8 @@ class SpaAdminController extends Controller
 
     public function deleteDepartment(string $id): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $dept = Department::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $dept->delete();
 
@@ -480,6 +562,8 @@ class SpaAdminController extends Controller
 
     public function templates(): JsonResponse
     {
+        $this->authorizePermission('template.manage');
+
         if (SecurityProfile::count() === 0) {
             try {
                 (new TemplatesAndSecurityProfilesSeeder)->run();
@@ -498,6 +582,8 @@ class SpaAdminController extends Controller
 
     public function storeTemplate(Request $request): JsonResponse
     {
+        $this->authorizePermission('template.manage');
+
         if (SecurityProfile::count() === 0) {
             try {
                 (new TemplatesAndSecurityProfilesSeeder)->run();
@@ -538,6 +624,8 @@ class SpaAdminController extends Controller
 
     public function securityProfiles(): JsonResponse
     {
+        $this->authorizePermission('security_profile.manage');
+
         if (SecurityProfile::count() === 0) {
             try {
                 (new TemplatesAndSecurityProfilesSeeder)->run();
@@ -552,6 +640,8 @@ class SpaAdminController extends Controller
 
     public function storeSecurityProfile(Request $request): JsonResponse
     {
+        $this->authorizePermission('security_profile.manage');
+
         $validated = $request->validate([
             'id' => 'nullable|integer|exists:security_profiles,id',
             'code' => 'required|string|max:50',
@@ -576,6 +666,8 @@ class SpaAdminController extends Controller
 
     public function blackouts(): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $blackouts = BlackoutPeriod::with('department')->orderBy('starts_at', 'desc')->get();
         $departments = Department::orderBy('name')->get();
 
@@ -587,6 +679,8 @@ class SpaAdminController extends Controller
 
     public function storeBlackout(Request $request): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'type' => 'required|string|in:holiday,maintenance,exam,institutional',
@@ -603,6 +697,8 @@ class SpaAdminController extends Controller
 
     public function deleteBlackout(string $id): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $blackout = BlackoutPeriod::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $blackout->delete();
 
@@ -611,6 +707,8 @@ class SpaAdminController extends Controller
 
     public function policies(): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $policies = BookingPolicy::with('department')->orderBy('name')->get();
         $departments = Department::orderBy('name')->get();
 
@@ -622,6 +720,8 @@ class SpaAdminController extends Controller
 
     public function storePolicy(Request $request): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'id' => 'nullable|integer|exists:booking_policies,id',
             'name' => 'required|string|max:100',
@@ -646,6 +746,8 @@ class SpaAdminController extends Controller
 
     public function deletePolicy(string $id): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $policy = BookingPolicy::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $policy->delete();
 
@@ -654,6 +756,8 @@ class SpaAdminController extends Controller
 
     public function togglePolicy(string $id): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $policy = BookingPolicy::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $policy->update(['is_active' => ! $policy->is_active]);
 
@@ -666,6 +770,8 @@ class SpaAdminController extends Controller
 
     public function waitlist(): JsonResponse
     {
+        $this->authorizeDeptAdminOrAdmin();
+
         $entries = WaitlistEntry::with(['meeting.owner', 'meeting.requester'])
             ->orderBy('priority')
             ->orderBy('created_at')
@@ -676,6 +782,8 @@ class SpaAdminController extends Controller
 
     public function promoteWaitlist(string $id): JsonResponse
     {
+        $this->authorizeDeptAdminOrAdmin();
+
         $entry = WaitlistEntry::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $meeting = $this->waitlistService->allocateNextEligible();
 
@@ -688,6 +796,8 @@ class SpaAdminController extends Controller
 
     public function cancelWaitlist(string $id): JsonResponse
     {
+        $this->authorizeDeptAdminOrAdmin();
+
         $entry = WaitlistEntry::where('public_id', $id)->orWhere('id', $id)->firstOrFail();
         $entry->update(['status' => 'cancelled']);
 
@@ -700,6 +810,8 @@ class SpaAdminController extends Controller
 
     public function auditLogs(Request $request): JsonResponse
     {
+        $this->authorizePermission('audit.view');
+
         $query = AuditLog::with('actor')->orderBy('id', 'desc');
 
         if ($request->filled('event')) {
@@ -717,6 +829,8 @@ class SpaAdminController extends Controller
 
     public function verifyAuditChain(): JsonResponse
     {
+        $this->authorizePermission('audit.view');
+
         $result = $this->auditService->verifyChainIntegrity();
 
         return response()->json($result);
@@ -728,6 +842,8 @@ class SpaAdminController extends Controller
 
     public function privacyStats(): JsonResponse
     {
+        $this->authorizePermission('privacy.manage');
+
         $userCount = User::count();
         $activeExports = DataExportRequest::where('status', 'completed')
             ->where('expires_at', '>', now())
@@ -751,6 +867,8 @@ class SpaAdminController extends Controller
 
     public function exportUser(Request $request): JsonResponse
     {
+        $this->authorizePermission('privacy.manage');
+
         $validated = $request->validate([
             'user_id' => 'required|integer|exists:users,id',
         ]);
@@ -766,6 +884,8 @@ class SpaAdminController extends Controller
 
     public function anonymizeUser(Request $request): JsonResponse
     {
+        $this->authorizePermission('privacy.manage');
+
         $validated = $request->validate([
             'user_id' => 'required|integer|exists:users,id',
             'reason' => 'required|string|min:5|max:255',
@@ -786,6 +906,8 @@ class SpaAdminController extends Controller
 
     public function purgeRetention(Request $request): JsonResponse
     {
+        $this->authorizePermission('privacy.manage');
+
         $validated = $request->validate([
             'retention_days' => 'required|integer|min:30|max:1825',
         ]);

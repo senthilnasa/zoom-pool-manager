@@ -95,4 +95,29 @@ class GlobalSearchTest extends TestCase
         $this->assertNotNull($matchedPool);
         $this->assertEquals('Executive Boardroom VIP Pool', $matchedPool['name']);
     }
+
+    public function test_global_search_filters_restricted_modules_for_non_admin_users(): void
+    {
+        Role::firstOrCreate(['name' => 'Standard User', 'guard_name' => 'web']);
+
+        $regularUser = User::create([
+            'name' => 'Standard Employee',
+            'email' => 'employee@example.edu',
+            'password' => bcrypt('password123'),
+            'is_active' => true,
+        ]);
+        $regularUser->assignRole('Standard User');
+
+        // Admin searching for "SSO" finds the module
+        $adminRes = $this->actingAs($this->admin)->getJson('/spa/search?q=sso');
+        $adminRes->assertStatus(200);
+        $adminModules = collect($adminRes->json('results.modules'));
+        $this->assertTrue($adminModules->contains('title', 'SSO & SAML Login Configuration'));
+
+        // Regular user searching for "SSO" MUST NOT see the module
+        $userRes = $this->actingAs($regularUser)->getJson('/spa/search?q=sso');
+        $userRes->assertStatus(200);
+        $userModules = collect($userRes->json('results.modules'));
+        $this->assertFalse($userModules->contains('title', 'SSO & SAML Login Configuration'));
+    }
 }

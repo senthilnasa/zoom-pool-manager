@@ -19,7 +19,7 @@ class SpaSearchController extends Controller
     public function search(Request $request): JsonResponse
     {
         $q = (string) $request->query('q', '');
-        $results = $this->searchService->search($q);
+        $results = $this->searchService->search($q, $request->user());
 
         return response()->json([
             'query' => $q,

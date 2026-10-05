@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Auth\Models\DirectorySyncConfig;
 use App\Domain\Auth\Models\IdentityProvider;
 use App\Domain\Auth\Providers\SamlIdentityProvider;
@@ -20,6 +21,19 @@ class SpaIdentityController extends Controller
         protected SamlIdentityProvider $samlProvider
     ) {}
 
+    /**
+     * Authorize that the current user has administrator or settings management privileges.
+     */
+    protected function authorizeAdmin(): void
+    {
+        /** @var \App\Domain\Users\Models\User|null $user */
+        $user = auth()->user();
+
+        if (! $user || (! $user->hasRole(RoleName::adminRoles()) && ! $user->can('settings.manage'))) {
+            abort(403, 'Unauthorized. Administrator privileges required to manage SSO and Directory Sync settings.');
+        }
+    }
+
     // ==========================================
     // 1. SSO & SAML IDENTITY PROVIDERS
     // ==========================================
@@ -29,6 +43,8 @@ class SpaIdentityController extends Controller
      */
     public function identityProviders(): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $providers = IdentityProvider::withCount('userIdentities')
             ->orderBy('id', 'asc')
             ->get()
@@ -66,6 +82,8 @@ class SpaIdentityController extends Controller
      */
     public function storeIdentityProvider(Request $request): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'driver' => 'required|string|in:google,microsoft,azure,saml',
@@ -120,6 +138,8 @@ class SpaIdentityController extends Controller
      */
     public function showIdentityProvider(string $publicId): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $idp = IdentityProvider::where('public_id', $publicId)->firstOrFail();
 
         return response()->json([
@@ -149,6 +169,8 @@ class SpaIdentityController extends Controller
      */
     public function updateIdentityProvider(Request $request, string $publicId): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $idp = IdentityProvider::where('public_id', $publicId)->firstOrFail();
 
         $validated = $request->validate([
@@ -201,6 +223,8 @@ class SpaIdentityController extends Controller
      */
     public function deleteIdentityProvider(string $publicId): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $idp = IdentityProvider::where('public_id', $publicId)->firstOrFail();
         $name = $idp->name;
         $id = $idp->id;
@@ -225,6 +249,8 @@ class SpaIdentityController extends Controller
      */
     public function spMetadata(string $publicId): Response
     {
+        $this->authorizeAdmin();
+
         $idp = IdentityProvider::where('public_id', $publicId)->firstOrFail();
         $xml = $this->samlProvider->generateSpMetadata($idp);
 
@@ -239,6 +265,8 @@ class SpaIdentityController extends Controller
      */
     public function testIdentityProvider(string $publicId): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $idp = IdentityProvider::where('public_id', $publicId)->firstOrFail();
 
         $diagnostics = [];
@@ -289,6 +317,8 @@ class SpaIdentityController extends Controller
      */
     public function directorySyncConfigs(): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $configs = DirectorySyncConfig::with('defaultDepartment')
             ->orderBy('id', 'asc')
             ->get()
@@ -341,6 +371,8 @@ class SpaIdentityController extends Controller
      */
     public function storeDirectorySyncConfig(Request $request): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'name' => 'required|string|max:150',
             'provider_type' => 'required|string|in:microsoft_entra,google_workspace,ldap_active_directory',
@@ -412,6 +444,8 @@ class SpaIdentityController extends Controller
      */
     public function showDirectorySyncConfig(string $publicId): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $cfg = DirectorySyncConfig::where('public_id', $publicId)->firstOrFail();
 
         return response()->json([
@@ -452,6 +486,8 @@ class SpaIdentityController extends Controller
      */
     public function updateDirectorySyncConfig(Request $request, string $publicId): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $cfg = DirectorySyncConfig::where('public_id', $publicId)->firstOrFail();
 
         $validated = $request->validate([
@@ -523,6 +559,8 @@ class SpaIdentityController extends Controller
      */
     public function deleteDirectorySyncConfig(string $publicId): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $cfg = DirectorySyncConfig::where('public_id', $publicId)->firstOrFail();
         $name = $cfg->name;
         $id = $cfg->id;
@@ -547,6 +585,8 @@ class SpaIdentityController extends Controller
      */
     public function syncDirectoryNow(string $publicId, DirectorySyncService $syncService): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $cfg = DirectorySyncConfig::where('public_id', $publicId)->firstOrFail();
 
         $result = $syncService->sync($cfg, dryRun: false);
@@ -559,6 +599,8 @@ class SpaIdentityController extends Controller
      */
     public function testDirectoryConnection(string $publicId, DirectorySyncService $syncService): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $cfg = DirectorySyncConfig::where('public_id', $publicId)->firstOrFail();
 
         $result = $syncService->testConnection($cfg);

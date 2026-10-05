@@ -60,6 +60,8 @@ class GlobalSearchService
                 'path' => '/app/users',
                 'description' => 'Manage institutional accounts, assign system roles, and check user permissions.',
                 'keywords' => ['users', 'user management', 'directory', 'accounts', 'faculty', 'staff', 'members', 'people'],
+                'permission' => 'user.view',
+                'dept_admin_or_admin' => true,
             ],
             [
                 'title' => 'Role Management & Permissions',
@@ -67,6 +69,7 @@ class GlobalSearchService
                 'path' => '/app/users?tab=roles',
                 'description' => 'Configure core roles (Super Admin, Approval, User), create custom roles, and set permissions.',
                 'keywords' => ['roles', 'role management', 'permissions', 'access control', 'custom roles', 'rbac', 'privileges'],
+                'admin_only' => true,
             ],
             [
                 'title' => 'Department Directory',
@@ -74,6 +77,7 @@ class GlobalSearchService
                 'path' => '/app/departments',
                 'description' => 'Manage academic and administrative divisions and department member counts.',
                 'keywords' => ['departments', 'divisions', 'faculties', 'schools', 'units'],
+                'admin_only' => true,
             ],
             [
                 'title' => 'Approvals Queue',
@@ -81,6 +85,8 @@ class GlobalSearchService
                 'path' => '/app/approvals',
                 'description' => 'Review and decide on booking requests requiring institutional clearance.',
                 'keywords' => ['approvals', 'approval queue', 'requests', 'pending', 'decide', 'signoff'],
+                'permission' => 'meeting.approve',
+                'dept_admin_or_admin' => true,
             ],
             [
                 'title' => 'Workflow Rules Builder',
@@ -88,6 +94,7 @@ class GlobalSearchService
                 'path' => '/app/workflows',
                 'description' => 'Configure conditional rules for automatic approval, escalation, or rejection.',
                 'keywords' => ['workflows', 'rules', 'automation', 'conditions', 'escalation'],
+                'permission' => 'workflow.manage',
             ],
             [
                 'title' => 'Department Quotas',
@@ -95,6 +102,7 @@ class GlobalSearchService
                 'path' => '/app/quotas',
                 'description' => 'Monitor and limit monthly pooled hours and meeting limits per department.',
                 'keywords' => ['quotas', 'limits', 'allocation limits', 'monthly hours'],
+                'permission' => 'quota.manage',
             ],
             [
                 'title' => 'Delegations',
@@ -102,6 +110,8 @@ class GlobalSearchService
                 'path' => '/app/delegations',
                 'description' => 'Configure approval delegation windows for out-of-office approvers.',
                 'keywords' => ['delegations', 'out of office', 'substitute approver'],
+                'permission' => 'delegation.manage',
+                'dept_admin_or_admin' => true,
             ],
             [
                 'title' => 'Waiting Queue',
@@ -118,6 +128,7 @@ class GlobalSearchService
                 'path' => '/app/pools',
                 'description' => 'Manage pooled Zoom host accounts, capacity levels, and prioritization strategies.',
                 'keywords' => ['pools', 'zoom pools', 'licenses', 'resource pools', 'host accounts'],
+                'permission' => ['pool.manage', 'resource.view'],
             ],
             [
                 'title' => 'Cloud Recordings',
@@ -139,6 +150,7 @@ class GlobalSearchService
                 'path' => '/app/drift',
                 'description' => 'Detect out-of-band external changes in Zoom and reconcile with local pool state.',
                 'keywords' => ['drift', 'reconcile', 'conflicts', 'sync drift'],
+                'admin_only' => true,
             ],
 
             // System & Integrations
@@ -148,6 +160,7 @@ class GlobalSearchService
                 'path' => '/app/settings/zoom',
                 'description' => 'Configure Zoom Marketplace Server-to-Server OAuth credentials and test connection.',
                 'keywords' => ['zoom config', 'zoom oauth', 'credentials', 'account id', 'client id', 'client secret'],
+                'permission' => 'zoom.manage',
             ],
             [
                 'title' => 'SSO & SAML Login Configuration',
@@ -155,6 +168,7 @@ class GlobalSearchService
                 'path' => '/app/settings/sso',
                 'description' => 'Configure Google Workspace OAuth, Microsoft Entra ID, and SAML 2.0 Identity Providers.',
                 'keywords' => ['sso', 'saml', 'login', 'google login', 'microsoft login', 'entra id', 'single sign on', 'sp metadata'],
+                'admin_only' => true,
             ],
             [
                 'title' => 'Directory & Active Directory (AD) Sync',
@@ -162,6 +176,7 @@ class GlobalSearchService
                 'path' => '/app/settings/directory-sync',
                 'description' => 'Automate user and department provisioning from Microsoft Entra, Google Workspace, or LDAP.',
                 'keywords' => ['directory sync', 'ad sync', 'active directory', 'ldap', 'google directory', 'entra sync', 'user sync'],
+                'admin_only' => true,
             ],
             [
                 'title' => 'Scheduled Jobs & Automation Cadence',
@@ -169,6 +184,7 @@ class GlobalSearchService
                 'path' => '/app/settings/jobs',
                 'description' => 'Configure background cron intervals, monitor scheduler heartbeats, and run jobs on demand.',
                 'keywords' => ['scheduled jobs', 'cron', 'cron jobs', 'background jobs', 'heartbeat', 'daemon', 'cadence'],
+                'permission' => 'settings.manage',
             ],
             [
                 'title' => 'Mail Server Configuration',
@@ -176,6 +192,7 @@ class GlobalSearchService
                 'path' => '/app/mail/settings',
                 'description' => 'Configure SMTP, Microsoft Graph, or Gmail API mail drivers and test delivery.',
                 'keywords' => ['mail', 'smtp', 'email', 'mailer', 'gmail', 'graph mail'],
+                'admin_only' => true,
             ],
             [
                 'title' => 'Email Templates',
@@ -183,6 +200,7 @@ class GlobalSearchService
                 'path' => '/app/mail/templates',
                 'description' => 'Customize notification templates for meeting confirmations, host keys, and reminders.',
                 'keywords' => ['email templates', 'templates', 'notifications email', 'custom emails'],
+                'admin_only' => true,
             ],
             [
                 'title' => 'API Keys & Outbound Webhooks',
@@ -190,6 +208,7 @@ class GlobalSearchService
                 'path' => '/app/api/keys',
                 'description' => 'Generate bearer tokens with granular scopes for institutional SIS/ERP integrations.',
                 'keywords' => ['api', 'api keys', 'tokens', 'bearer', 'rest api', 'integration'],
+                'permission' => 'api.manage',
             ],
             [
                 'title' => 'System Updates & Releases',
@@ -197,6 +216,7 @@ class GlobalSearchService
                 'path' => '/app/settings/updates',
                 'description' => 'Check for official upstream updates, review release changelogs, and safely upgrade.',
                 'keywords' => ['updates', 'system updates', 'version', 'release', 'upgrade'],
+                'admin_only' => true,
             ],
             [
                 'title' => 'Cryptographic Audit Trail',
@@ -204,6 +224,7 @@ class GlobalSearchService
                 'path' => '/app/audit',
                 'description' => 'Tamper-evident SHA-256 chained audit logs tracking all administrator and system actions.',
                 'keywords' => ['audit', 'audit logs', 'trail', 'security log', 'compliance', 'tamper evident'],
+                'permission' => 'audit.view',
             ],
             [
                 'title' => 'System Backups',
@@ -211,6 +232,7 @@ class GlobalSearchService
                 'path' => '/app/operations/backups',
                 'description' => 'Create encrypted database dumps, download snapshots, and inspect backup integrity.',
                 'keywords' => ['backups', 'database dump', 'snapshot', 'restore'],
+                'permission' => 'backup.manage',
             ],
             [
                 'title' => 'Operations Health Telemetry',
@@ -218,6 +240,7 @@ class GlobalSearchService
                 'path' => '/app/operations/health',
                 'description' => 'Inspect database latency, queue backlogs, disk storage, and run automated diagnostics.',
                 'keywords' => ['health', 'telemetry', 'diagnostics', 'system health', 'status'],
+                'permission' => 'health.view',
             ],
         ];
     }
@@ -227,7 +250,7 @@ class GlobalSearchService
      *
      * @return array{modules: array<int, mixed>, users: array<int, mixed>, meetings: array<int, mixed>, pools: array<int, mixed>}
      */
-    public function search(string $query): array
+    public function search(string $query, ?User $user = null): array
     {
         $q = trim($query);
         if (mb_strlen($q) < 2) {
@@ -241,10 +264,37 @@ class GlobalSearchService
 
         $term = mb_strtolower($q);
 
+        $currentUser = $user ?? (auth()->check() ? auth()->user() : null);
+        $isAdmin = $currentUser && $currentUser->hasRole(\App\Domain\Auth\Enums\RoleName::adminRoles());
+        $isDeptAdmin = $isAdmin || ($currentUser && ($currentUser->hasRole('dept_admin') || $currentUser->hasRole('Department Administrator')));
+
         // 1. Search Modules Catalog
         $matchedModules = [];
         $catalog = $this->getModulesCatalog();
         foreach ($catalog as $item) {
+            // Enforce RBAC on searchable modules
+            if (! empty($item['admin_only']) && ! $isAdmin) {
+                continue;
+            }
+            if (! empty($item['dept_admin_or_admin']) && ! $isDeptAdmin) {
+                continue;
+            }
+            if (! empty($item['permission']) && ! $isAdmin) {
+                $perms = is_array($item['permission']) ? $item['permission'] : [$item['permission']];
+                $hasPerm = false;
+                if ($currentUser) {
+                    foreach ($perms as $p) {
+                        if ($currentUser->can($p)) {
+                            $hasPerm = true;
+                            break;
+                        }
+                    }
+                }
+                if (! $hasPerm) {
+                    continue;
+                }
+            }
+
             $titleMatch = str_contains(mb_strtolower($item['title']), $term);
             $descMatch = str_contains(mb_strtolower($item['description']), $term);
             $keywordMatch = false;

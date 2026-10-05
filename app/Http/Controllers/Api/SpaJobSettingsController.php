@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Settings\Models\Setting;
 use App\Domain\Settings\Services\ScheduledJobService;
 use App\Http\Controllers\Controller;
@@ -18,10 +19,24 @@ class SpaJobSettingsController extends Controller
     ) {}
 
     /**
+     * Authorize that the current user has settings management privileges.
+     */
+    protected function authorizeSettings(): void
+    {
+        $user = auth()->user();
+
+        if (! $user || (! $user->hasRole(RoleName::adminRoles()) && ! $user->can('settings.manage'))) {
+            abort(403, 'Unauthorized. Administrator privileges required to manage scheduled jobs.');
+        }
+    }
+
+    /**
      * List all scheduled platform background jobs with execution telemetry.
      */
     public function index(): JsonResponse
     {
+        $this->authorizeSettings();
+
         $jobs = $this->jobService->getAllJobs();
         $lastHeartbeat = Setting::get('scheduler.last_heartbeat_at');
 
@@ -66,6 +81,8 @@ class SpaJobSettingsController extends Controller
      */
     public function update(Request $request, string $key): JsonResponse
     {
+        $this->authorizeSettings();
+
         $validated = $request->validate([
             'enabled' => 'nullable|boolean',
             'cadence' => 'nullable|string|in:1m,5m,10m,15m,30m,hourly,daily',
@@ -99,6 +116,8 @@ class SpaJobSettingsController extends Controller
      */
     public function run(string $key): JsonResponse
     {
+        $this->authorizeSettings();
+
         try {
             $result = $this->jobService->runJob($key);
 

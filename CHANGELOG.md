@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.21] - 2026-10-05
+
+### Security & RBAC Enforcement
+- **Frontend SPA Route Navigation Guards (`router.beforeEach`):**
+  - Implemented client-side route authorization in `resources/js/router/index.js` to prevent unauthorized users from navigating directly to restricted URLs (e.g. `/app/settings/sso`, `/app/settings/general`, `/app/settings/directory-sync`, `/app/drift`, `/app/operations/*`, etc.).
+  - Added route metadata tags (`adminOnly`, `deptAdminOrAdmin`, `permission`) to all sensitive modules.
+  - Non-admin or unauthorized visits are immediately intercepted before route components mount, aborting module loading and cleanly redirecting to `/app/access-denied` with the attempted path preserved in query parameters (`?from=...`).
+- **Dedicated 403 Forbidden Component (`AccessDeniedPage.vue`):**
+  - Created a modern glassmorphic HTTP 403 Access Denied screen displaying the attempted URL, current signed-in user email, assigned roles, and a prominent "Return to Dashboard" recovery action.
+- **Backend API Authorization Hardening:**
+  - Added server-side role and permission checks (`RoleName::adminRoles()`, `can()`) to all API endpoints in `SpaIdentityController`, `SpaJobSettingsController`, `SpaRoleController`, `SpaAdminController`, and `SpaReportController`.
+  - Non-admin requests to `/spa/settings/identity-providers`, `/spa/settings/directory-sync`, `/spa/settings/jobs`, `/spa/roles`, etc. now strictly return HTTP 403 Forbidden, protecting sensitive IdP secrets, AD credentials, and scheduled automation controls from direct API tampering.
+- **Global Search RBAC Filtering:**
+  - Enhanced `GlobalSearchService` and `SpaSearchController` to filter searchable application modules against the authenticated user's active permissions and roles, ensuring restricted settings modules are not suggested or accessible in search to unauthorized users.
+
+---
+
 ## [1.0.20] - 2026-10-05
 
 ### Added & Fixed

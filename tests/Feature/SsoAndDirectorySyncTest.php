@@ -236,4 +236,25 @@ class SsoAndDirectorySyncTest extends TestCase
             'name' => 'Informatics',
         ]);
     }
+
+    public function test_non_admin_cannot_access_sso_and_directory_sync_settings(): void
+    {
+        $regularUser = User::create([
+            'name' => 'Regular User',
+            'email' => 'regular@univ.edu',
+            'password' => bcrypt('password123'),
+            'is_active' => true,
+        ]);
+        $regularUser->assignRole('Standard User');
+
+        // Attempting to list SSO Identity Providers must return 403 Forbidden
+        $this->actingAs($regularUser)
+            ->getJson('/spa/settings/identity-providers')
+            ->assertStatus(403);
+
+        // Attempting to list Directory Sync configs must return 403 Forbidden
+        $this->actingAs($regularUser)
+            ->getJson('/spa/settings/directory-sync')
+            ->assertStatus(403);
+    }
 }

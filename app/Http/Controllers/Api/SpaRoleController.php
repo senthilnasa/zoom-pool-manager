@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Auth\Services\RoleManagementService;
 use App\Domain\Users\Models\User;
 use App\Http\Controllers\Controller;
@@ -16,10 +17,25 @@ class SpaRoleController extends Controller
     ) {}
 
     /**
+     * Authorize that the current user has user/role management privileges.
+     */
+    protected function authorizeRoleManage(): void
+    {
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        if (! $user || (! $user->hasRole(RoleName::adminRoles()) && ! $user->can('user.manage'))) {
+            abort(403, 'Unauthorized. Administrator privileges required to manage roles and permissions.');
+        }
+    }
+
+    /**
      * List all system and custom roles with user counts and permissions.
      */
     public function index(): JsonResponse
     {
+        $this->authorizeRoleManage();
+
         $roles = $this->roleService->getAllRoles();
 
         return response()->json([
@@ -33,6 +49,8 @@ class SpaRoleController extends Controller
      */
     public function permissionsMatrix(): JsonResponse
     {
+        $this->authorizeRoleManage();
+
         $matrix = $this->roleService->getPermissionsMatrix();
 
         return response()->json([
@@ -45,6 +63,8 @@ class SpaRoleController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorizeRoleManage();
+
         $validated = $request->validate([
             'name' => 'required|string|max:50',
             'description' => 'nullable|string|max:255',
@@ -77,6 +97,8 @@ class SpaRoleController extends Controller
      */
     public function update(Request $request, int|string $id): JsonResponse
     {
+        $this->authorizeRoleManage();
+
         $validated = $request->validate([
             'name' => 'nullable|string|max:50',
             'description' => 'nullable|string|max:255',
@@ -105,6 +127,8 @@ class SpaRoleController extends Controller
      */
     public function destroy(int|string $id): JsonResponse
     {
+        $this->authorizeRoleManage();
+
         try {
             $this->roleService->deleteRole($id);
 
@@ -125,7 +149,20 @@ class SpaRoleController extends Controller
      */
     public function userPermissions(int|string $id): JsonResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = auth()->user();
+
         $user = User::where('public_id', $id)->orWhere('id', $id)->with('department')->firstOrFail();
+
+        // A user can view their own permissions; otherwise requires admin/dept_admin/user.view
+        if ($currentUser && $currentUser->id !== $user->id) {
+            $isAdmin = $currentUser->hasRole(RoleName::adminRoles());
+            $isDeptAdmin = $isAdmin || $currentUser->hasRole('dept_admin') || $currentUser->hasRole('Department Administrator');
+            if (! $isAdmin && ! $isDeptAdmin && ! $currentUser->can('user.view')) {
+                abort(403, 'Unauthorized to view user permissions.');
+            }
+        }
+
         $details = $this->roleService->getUserPermissions($user);
 
         return response()->json([

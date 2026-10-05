@@ -58,6 +58,8 @@ import UpdatesPage from '@/pages/settings/UpdatesPage.vue';
 import NotificationsPage from '@/pages/notifications/NotificationsPage.vue';
 import LegalViewPage from '@/pages/legal/LegalViewPage.vue';
 import DocumentationPage from '@/pages/docs/DocumentationPage.vue';
+import AccessDeniedPage from '@/pages/errors/AccessDeniedPage.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const routes = [
     // Documentation Redirects
@@ -106,6 +108,15 @@ const routes = [
     { path: '/settings/jobs', redirect: '/app/settings/jobs' },
     { path: '/system/updates', redirect: '/app/settings/updates' },
     { path: '/admin/system/updates', redirect: '/app/settings/updates' },
+    { path: '/settings/sso', redirect: '/app/settings/sso' },
+    { path: '/admin/settings/sso', redirect: '/app/settings/sso' },
+    { path: '/admin/sso', redirect: '/app/settings/sso' },
+    { path: '/admin/settings', redirect: '/app/settings/general' },
+    { path: '/settings', redirect: '/app/settings/general' },
+    { path: '/settings/general', redirect: '/app/settings/general' },
+    { path: '/settings/directory-sync', redirect: '/app/settings/directory-sync' },
+    { path: '/admin/directory-sync', redirect: '/app/settings/directory-sync' },
+    { path: '/access-denied', redirect: '/app/access-denied' },
     { path: '/notifications', redirect: '/app/notifications' },
     { path: '/reports/zoom-usage', redirect: '/app/reports/zoom-usage' },
     { path: '/pools/usage', redirect: '/app/reports/zoom-usage' },
@@ -156,31 +167,31 @@ const routes = [
                 path: 'approvals',
                 name: 'approvals.index',
                 component: ApprovalsPage,
-                meta: { title: 'Workflow Approvals' },
+                meta: { title: 'Workflow Approvals', deptAdminOrAdmin: true, permission: 'meeting.approve' },
             },
             {
                 path: 'workflows',
                 name: 'workflows.index',
                 component: WorkflowsPage,
-                meta: { title: 'Workflow Rules Builder' },
+                meta: { title: 'Workflow Rules Builder', permission: 'workflow.manage' },
             },
             {
                 path: 'quotas',
                 name: 'quotas.index',
                 component: QuotasPage,
-                meta: { title: 'Quota Management' },
+                meta: { title: 'Quota Management', deptAdminOrAdmin: true, permission: 'quota.manage' },
             },
             {
                 path: 'delegations',
                 name: 'delegations.index',
                 component: DelegationsPage,
-                meta: { title: 'Approval Delegations' },
+                meta: { title: 'Approval Delegations', deptAdminOrAdmin: true, permission: 'meeting.approve' },
             },
             {
                 path: 'waitlist',
                 name: 'waitlist.index',
                 component: WaitlistPage,
-                meta: { title: 'Meeting Waitlist Queue' },
+                meta: { title: 'Meeting Waitlist Queue', deptAdminOrAdmin: true },
             },
 
             // Institutional Scheduling Config
@@ -188,25 +199,25 @@ const routes = [
                 path: 'templates',
                 name: 'templates.index',
                 component: TemplatesPage,
-                meta: { title: 'Meeting Templates' },
+                meta: { title: 'Meeting Templates', permission: 'template.manage' },
             },
             {
                 path: 'security-profiles',
                 name: 'security-profiles.index',
                 component: SecurityProfilesPage,
-                meta: { title: 'Security Profiles' },
+                meta: { title: 'Security Profiles', permission: 'security_profile.manage' },
             },
             {
                 path: 'blackouts',
                 name: 'blackouts.index',
                 component: BlackoutPeriodsPage,
-                meta: { title: 'Blackout Windows' },
+                meta: { title: 'Blackout Windows', adminOnly: true, permission: 'blackout.manage' },
             },
             {
                 path: 'policies',
                 name: 'policies.index',
                 component: BookingPoliciesPage,
-                meta: { title: 'Booking Policies' },
+                meta: { title: 'Booking Policies', adminOnly: true, permission: 'policy.manage' },
             },
 
             // Operations & Diagnostics
@@ -214,37 +225,37 @@ const routes = [
                 path: 'operations/health',
                 name: 'operations.health',
                 component: HealthPage,
-                meta: { title: 'System Health & Diagnostics' },
+                meta: { title: 'System Health & Diagnostics', permission: 'health.view' },
             },
             {
                 path: 'operations/alerts',
                 name: 'operations.alerts',
                 component: AlertsPage,
-                meta: { title: 'Operational Alerts' },
+                meta: { title: 'Operational Alerts', permission: 'health.view' },
             },
             {
                 path: 'operations/backups',
                 name: 'operations.backups',
                 component: BackupsPage,
-                meta: { title: 'System Backups' },
+                meta: { title: 'System Backups', permission: 'backup.manage' },
             },
             {
                 path: 'operations/emergency',
                 name: 'operations.emergency',
                 component: EmergencyPage,
-                meta: { title: 'Emergency IT Override' },
+                meta: { title: 'Emergency IT Override', permission: 'emergency.use' },
             },
             {
                 path: 'audit',
                 name: 'audit.index',
                 component: AuditLogPage,
-                meta: { title: 'Cryptographic Audit Trail' },
+                meta: { title: 'Cryptographic Audit Trail', permission: 'audit.view' },
             },
             {
                 path: 'privacy',
                 name: 'privacy.index',
                 component: PrivacyCompliancePage,
-                meta: { title: 'Privacy & Data Retention' },
+                meta: { title: 'Privacy & Data Retention', permission: 'privacy.manage' },
             },
 
             // Media & Sync
@@ -264,7 +275,7 @@ const routes = [
                 path: 'drift',
                 name: 'drift.index',
                 component: DriftPage,
-                meta: { title: 'State Drift Reconciliation' },
+                meta: { title: 'State Drift Reconciliation', adminOnly: true },
             },
 
             // Developer & Integrations
@@ -272,19 +283,19 @@ const routes = [
                 path: 'api/keys',
                 name: 'api.keys',
                 component: ApiKeysPage,
-                meta: { title: 'API Keys & Tokens' },
+                meta: { title: 'API Keys & Tokens', permission: 'api.manage' },
             },
             {
                 path: 'api/outbound-webhooks',
                 name: 'api.outbound-webhooks',
                 component: OutboundWebhooksPage,
-                meta: { title: 'Outbound Webhooks' },
+                meta: { title: 'Outbound Webhooks', permission: 'api.manage' },
             },
             {
                 path: 'api/inbound-webhooks',
                 name: 'api.inbound-webhooks',
                 component: InboundWebhooksPage,
-                meta: { title: 'Zoom Webhook Intake & Live Debug' },
+                meta: { title: 'Zoom Webhook Intake & Live Debug', permission: 'api.manage' },
             },
             {
                 path: 'webhooks',
@@ -300,13 +311,13 @@ const routes = [
                 path: 'pools',
                 name: 'pools.index',
                 component: PoolsPage,
-                meta: { title: 'Zoom Resource Pools' },
+                meta: { title: 'Zoom Resource Pools', permission: ['pool.manage', 'resource.view'] },
             },
             {
                 path: 'reports/zoom-usage',
                 name: 'reports.zoom-usage',
                 component: ZoomUsageReportPage,
-                meta: { title: 'Zoom Account Usage & Concurrency' },
+                meta: { title: 'Zoom Account Usage & Concurrency', permission: ['pool.manage', 'resource.view'] },
             },
             {
                 path: 'pools/usage',
@@ -316,7 +327,7 @@ const routes = [
                 path: 'users',
                 name: 'users.index',
                 component: UsersPage,
-                meta: { title: 'User Directory & Access Control' },
+                meta: { title: 'User Directory & Access Control', deptAdminOrAdmin: true, permission: 'user.view' },
             },
             {
                 path: 'users/:id/profile',
@@ -337,7 +348,7 @@ const routes = [
                 path: 'departments',
                 name: 'departments.index',
                 component: DepartmentsPage,
-                meta: { title: 'Department Directory' },
+                meta: { title: 'Department Directory', adminOnly: true },
             },
 
             // Settings & Communications
@@ -345,49 +356,49 @@ const routes = [
                 path: 'settings/general',
                 name: 'settings.general',
                 component: GeneralSettingsPage,
-                meta: { title: 'Institutional Settings' },
+                meta: { title: 'Institutional Settings', adminOnly: true },
             },
             {
                 path: 'settings/zoom',
                 name: 'settings.zoom',
                 component: ZoomSettingsPage,
-                meta: { title: 'Zoom Configuration' },
+                meta: { title: 'Zoom Configuration', permission: 'zoom.manage' },
             },
             {
                 path: 'settings/sso',
                 name: 'settings.sso',
                 component: SsoSettingsPage,
-                meta: { title: 'SSO & SAML Login Configuration' },
+                meta: { title: 'SSO & SAML Login Configuration', adminOnly: true },
             },
             {
                 path: 'settings/directory-sync',
                 name: 'settings.directory-sync',
                 component: DirectorySyncPage,
-                meta: { title: 'Directory & AD Sync' },
+                meta: { title: 'Directory & AD Sync', adminOnly: true },
             },
             {
                 path: 'settings/jobs',
                 name: 'settings.jobs',
                 component: ScheduledJobsPage,
-                meta: { title: 'Scheduled Jobs & Automation Cadence' },
+                meta: { title: 'Scheduled Jobs & Automation Cadence', permission: 'settings.manage' },
             },
             {
                 path: 'mail/settings',
                 name: 'mail.settings',
                 component: MailSettingsPage,
-                meta: { title: 'Mail Server Configuration' },
+                meta: { title: 'Mail Server Configuration', adminOnly: true, permission: 'settings.manage' },
             },
             {
                 path: 'mail/templates',
                 name: 'mail.templates',
                 component: EmailTemplatesPage,
-                meta: { title: 'Email Templates' },
+                meta: { title: 'Email Templates', adminOnly: true, permission: 'settings.manage' },
             },
             {
                 path: 'settings/updates',
                 name: 'settings.updates',
                 component: UpdatesPage,
-                meta: { title: 'System Updates & Releases' },
+                meta: { title: 'System Updates & Releases', adminOnly: true, permission: 'settings.manage' },
             },
             {
                 path: 'notifications',
@@ -417,6 +428,12 @@ const routes = [
                 path: 'docs',
                 redirect: '/app/documentation',
             },
+            {
+                path: 'access-denied',
+                name: 'access-denied',
+                component: AccessDeniedPage,
+                meta: { title: 'Access Denied' },
+            },
         ],
     },
     // Fallback for any unknown /app/* route
@@ -432,6 +449,74 @@ const router = createRouter({
     scrollBehavior() {
         return { top: 0 };
     },
+});
+
+function hasRoutePermission(authStore, permission) {
+    if (!permission) return true;
+    if (authStore.isAdmin) return true;
+    if (Array.isArray(permission)) {
+        return permission.some((perm) => authStore.can(perm));
+    }
+    return authStore.can(permission);
+}
+
+router.beforeEach((to, from, next) => {
+    // Whitelisted routes that never require authorization checks
+    if (
+        to.name === 'access-denied' ||
+        to.path === '/app/access-denied' ||
+        to.name === 'legal.privacy' ||
+        to.name === 'legal.terms' ||
+        to.name === 'documentation' ||
+        to.path.startsWith('/app/documentation')
+    ) {
+        return next();
+    }
+
+    const authStore = useAuthStore();
+
+    // If not authenticated, redirect to login
+    if (!authStore.isAuthenticated) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Admins bypass all module restrictions
+    if (authStore.isAdmin) {
+        return next();
+    }
+
+    // 1. Admin-only route guard
+    if (to.meta?.adminOnly) {
+        return next({
+            name: 'access-denied',
+            query: { from: to.fullPath },
+        });
+    }
+
+    // 2. Department Admin or Admin check
+    if (to.meta?.deptAdminOrAdmin) {
+        const isDeptAdmin = authStore.isDeptAdmin;
+        const hasPerm = to.meta.permission ? hasRoutePermission(authStore, to.meta.permission) : false;
+        if (!isDeptAdmin && !hasPerm) {
+            return next({
+                name: 'access-denied',
+                query: { from: to.fullPath },
+            });
+        }
+    }
+
+    // 3. Granular permission check
+    if (to.meta?.permission) {
+        if (!hasRoutePermission(authStore, to.meta.permission)) {
+            return next({
+                name: 'access-denied',
+                query: { from: to.fullPath },
+            });
+        }
+    }
+
+    return next();
 });
 
 router.afterEach((to) => {
