@@ -128,7 +128,7 @@
                     <div>
                         <div class="font-bold text-sm tracking-tight text-slate-900 dark:text-white flex items-center space-x-2">
                             <span class="truncate max-w-[130px]" title="{{ $orgName }}">{{ $orgName }}</span>
-                            <span class="px-1.5 py-0.5 text-[10px] font-semibold bg-sky-500/10 dark:bg-sky-500/20 border border-sky-500/30 text-sky-600 dark:text-sky-400 rounded-md">v{{ config('zpm.version', '1.0.0') }}</span>
+                            <span class="px-1.5 py-0.5 text-[10px] font-semibold bg-sky-500/10 dark:bg-sky-500/20 border border-sky-500/30 text-sky-600 dark:text-sky-400 rounded-md">v{{ app(\App\Domain\System\Services\AppUpdateService::class)->getCurrentVersion() }}</span>
                         </div>
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[140px]" title="{{ $orgTagline }}">{{ $orgTagline }}</p>
                     </div>
@@ -350,7 +350,7 @@
                     <span>•</span>
                     <a href="{{ route('legal.terms') }}" class="hover:text-slate-700 dark:hover:text-slate-200 transition">Terms</a>
                     <span>•</span>
-                    <span>v{{ config('zpm.version', '1.0.0') }}</span>
+                    <span>v{{ app(\App\Domain\System\Services\AppUpdateService::class)->getCurrentVersion() }}</span>
                 </div>
             </div>
         </footer>

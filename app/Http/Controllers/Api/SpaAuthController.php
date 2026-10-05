@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Settings\Models\Setting;
+use App\Domain\System\Services\AppUpdateService;
 use App\Domain\Users\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -65,7 +66,7 @@ class SpaAuthController extends Controller
                 ],
             ],
             'demo_mode' => (bool) config('app.demo', false),
-            'app_version' => (string) config('zpm.version', '1.0.0'),
+            'app_version' => app(AppUpdateService::class)->getCurrentVersion(),
         ]);
     }
 

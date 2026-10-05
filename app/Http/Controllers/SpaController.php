@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Domain\Auth\Enums\RoleName;
 use App\Domain\Settings\Models\Setting;
+use App\Domain\System\Services\AppUpdateService;
 use App\Domain\Users\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -74,7 +75,7 @@ class SpaController extends Controller
             'userData' => $userData,
             'branding' => $branding,
             'demoMode' => (bool) config('app.demo', false),
-            'appVersion' => (string) config('zpm.version', '1.0.0'),
+            'appVersion' => app(AppUpdateService::class)->getCurrentVersion(),
             'fallbackHtml' => $options['fallbackHtml'] ?? '',
             'initialRoute' => $options['initialRoute'] ?? $request->path(),
         ]);

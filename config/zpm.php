@@ -8,7 +8,17 @@ return [
     |--------------------------------------------------------------------------
     | Single source of truth for the Zoom Pool Manager application version.
     */
-    'version' => env('ZPM_VERSION', '1.0.12'),
+    'version' => env('ZPM_VERSION', (function () {
+        $versionFile = dirname(__DIR__).'/version.json';
+        if (file_exists($versionFile)) {
+            $data = json_decode((string) file_get_contents($versionFile), true);
+            if (! empty($data['version']) && is_string($data['version'])) {
+                return (string) $data['version'];
+            }
+        }
+
+        return '1.0.17';
+    })()),
 
     /*
     |--------------------------------------------------------------------------

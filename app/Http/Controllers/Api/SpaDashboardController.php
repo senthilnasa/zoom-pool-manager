@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\System\Services\AppUpdateService;
 use App\Domain\Users\Models\User;
 use App\Domain\Workflow\Models\MeetingApproval;
 use App\Domain\Zoom\Models\ResourcePool;
@@ -195,7 +196,7 @@ class SpaDashboardController extends Controller
             'active_meetings_list' => $activeMeetingsList,
             'pools' => $pools,
             'demo_mode' => (bool) config('app.demo', false),
-            'app_version' => (string) config('zpm.version', '1.0.0'),
+            'app_version' => app(AppUpdateService::class)->getCurrentVersion(),
         ]);
     }
 }

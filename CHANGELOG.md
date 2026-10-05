@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.17] - 2026-10-05
+
+### Fixed
+- **Version Detection & Status Discrepancy Fix:**
+  - Resolved an issue where the System Updates page persistently reported `v1.0.12` and "New update available" even after successfully updating and deploying newer builds.
+  - **Root Cause:** `AppUpdateService::getCurrentVersion()` previously checked `config('zpm.version')` before `version.json`. Because `config/zpm.php` had a hardcoded default `'1.0.12'`, cached configuration always returned `1.0.12`, preventing `version.json` from ever being evaluated.
+  - Re-ordered `getCurrentVersion()` to prioritize `version.json` as the single authoritative source of truth.
+  - Updated `config/zpm.php` to dynamically read from `version.json` when building the configuration cache.
+  - Updated `SpaController`, `SpaAuthController`, `SpaDashboardController`, and `base.blade.php` to resolve the live application version directly from `AppUpdateService::getCurrentVersion()`.
+  - Fixed `setStep()` condition so `is_active` remains true across all steps including verification.
+
+---
+
 ## [1.0.16] - 2026-10-05
 
 ### Fixed

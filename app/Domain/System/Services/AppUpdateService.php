@@ -30,8 +30,8 @@ class AppUpdateService
     {
         /** @var string|null $configVersion */
         $configVersion = config('zpm.version');
-        if ($configVersion && $configVersion !== '1.0.0') {
-            return ltrim($configVersion, 'v');
+        if (! empty($configVersion)) {
+            return ltrim((string) $configVersion, 'v');
         }
 
         $versionFile = base_path('version.json');
@@ -45,7 +45,7 @@ class AppUpdateService
             }
         }
 
-        return ltrim($configVersion ?: '1.0.0', 'v');
+        return '1.0.0';
     }
 
     /**
@@ -348,7 +348,7 @@ class AppUpdateService
         $percent = min(100, max(0, $percent));
 
         $this->updateProgress([
-            'is_active' => $status !== 'failed' && $index < ($totalSteps - 1),
+            'is_active' => $status !== 'failed' && ! ($index === ($totalSteps - 1) && $status === 'completed'),
             'step_index' => $index,
             'current_step_name' => $steps[$index]['name'] ?? '',
             'percent' => $percent,
