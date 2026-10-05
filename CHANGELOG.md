@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.13] - 2026-10-05
+
+### Fixed
+- **Google Directory Sync — Duplicate Entry Crash (`SQLSTATE[23000]` / error 1062):**
+  - Resolved `Synchronization failed: Integrity constraint violation: 1062 Duplicate entry '...' for key 'users_email_unique'` errors that occurred during Google Workspace directory sync.
+  - **Root cause 1 — Duplicate rows in directory feed:** Google Directory API can return the same account more than once (e.g. shared mailboxes, aliased accounts). The sync loop had no guard against processing the same email twice in a single run, causing a second `INSERT` on an already-created row.
+  - **Root cause 2 — Race condition:** The classic check-then-act pattern (`SELECT` → `INSERT`) is not atomic; a concurrent sync job could insert the row between the two operations.
+  - `DirectorySyncService.php`: Added `$processedEmails` hash map — any email already processed in the current run is skipped immediately, preventing double-inserts from duplicate directory entries.
+  - `DirectorySyncService.php`: Wrapped `User::create()` in a `try/catch (QueryException)` that specifically handles MySQL/MariaDB error code `1062`. On a duplicate-key catch the service re-fetches the existing user and continues with the normal field-update logic instead of throwing.
+  - Added `use Illuminate\Database\QueryException` import.
+
+---
+
 ## [1.0.10] - 2026-09-29
 
 ### Fixed

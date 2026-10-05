@@ -7,6 +7,7 @@ use App\Domain\Auth\Models\DirectorySyncConfig;
 use App\Domain\Users\Models\Department;
 use App\Domain\Users\Models\User;
 use Exception;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -46,6 +47,7 @@ class DirectorySyncService
             $updatedCount = 0;
             $deactivatedCount = 0;
             $syncedEmails = [];
+            $processedEmails = []; // Guard against duplicate emails in the directory feed
 
             foreach ($directoryUsers as $account) {
                 $email = strtolower(trim($account['email']));
@@ -60,6 +62,12 @@ class DirectorySyncService
                         continue;
                     }
                 }
+
+                // Skip emails we have already processed in this sync run (duplicate entries in directory feed)
+                if (isset($processedEmails[$email])) {
+                    continue;
+                }
+                $processedEmails[$email] = true;
 
                 $syncedEmails[] = $email;
 
@@ -93,22 +101,39 @@ class DirectorySyncService
 
                 // Find or create User
                 $user = User::where('email', $email)->first();
+                $isDuplicate = false;
 
                 if (! $user) {
-                    $user = User::create([
-                        'name' => $account['name'] ?: $email,
-                        'email' => $email,
-                        'designation' => $account['designation'] ?? null,
-                        'password' => bcrypt(Str::random(32)),
-                        'department_id' => $departmentId,
-                        'is_active' => $account['is_active'] ?? true,
-                    ]);
+                    try {
+                        $user = User::create([
+                            'name'          => $account['name'] ?: $email,
+                            'email'         => $email,
+                            'designation'   => $account['designation'] ?? null,
+                            'password'      => bcrypt(Str::random(32)),
+                            'department_id' => $departmentId,
+                            'is_active'     => $account['is_active'] ?? true,
+                        ]);
 
-                    $targetRole = ! empty($config->default_role) ? $config->default_role : 'Standard User';
-                    Role::firstOrCreate(['name' => $targetRole, 'guard_name' => 'web']);
-                    $user->assignRole($targetRole);
-                    $createdCount++;
+                        $targetRole = ! empty($config->default_role) ? $config->default_role : 'Standard User';
+                        Role::firstOrCreate(['name' => $targetRole, 'guard_name' => 'web']);
+                        $user->assignRole($targetRole);
+                        $createdCount++;
+                    } catch (QueryException $e) {
+                        // Duplicate entry (error code 1062) — another process/request already created this user.
+                        // Re-fetch and fall through to the update logic below.
+                        if ($e->errorInfo[1] !== 1062) {
+                            throw $e;
+                        }
+                        Log::warning("Directory sync: duplicate user caught for {$email}, falling back to update.");
+                        $user = User::where('email', $email)->firstOrFail();
+                        $isDuplicate = true;
+                    }
                 } else {
+                    $isDuplicate = true;
+                }
+
+                // Update pre-existing users (initial lookup hit, or duplicate caught on insert)
+                if ($isDuplicate) {
                     $updates = [];
                     if (! empty($account['name']) && $user->name !== $account['name']) {
                         $updates['name'] = $account['name'];
