@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div v-scroll-lock class="overflow-y-auto space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -300,11 +300,12 @@
     </div>
 
     <!-- Payload & Diagnostic Inspector Modal -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="payloadModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
-      <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+      <div v-scroll-lock class="overflow-y-auto w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3 shrink-0">
           <div class="space-y-0.5">
             <div class="text-sm font-bold text-slate-900 dark:text-white font-mono flex items-center gap-2">
@@ -390,9 +391,11 @@
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Webhook Simulator Modal -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="simulatorModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
@@ -468,6 +471,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 

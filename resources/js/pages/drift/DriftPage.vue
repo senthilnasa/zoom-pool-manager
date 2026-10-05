@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div v-scroll-lock class="overflow-y-auto space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -129,7 +129,8 @@
     </div>
 
     <!-- Resolve Modal -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="resolveModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
@@ -183,6 +184,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 

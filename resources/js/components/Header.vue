@@ -10,7 +10,7 @@
       </button>
 
       <div class="flex items-center gap-2 min-w-0">
-        <h1 class="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 truncate max-w-[130px] sm:max-w-xs md:max-w-sm" :title="pageTitle">
+        <h1 class="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 truncate max-w-[130px] sm:max-w-[180px] md:max-w-xs xl:max-w-sm" :title="pageTitle">
           {{ pageTitle }}
         </h1>
 
@@ -27,8 +27,8 @@
       </div>
     </div>
 
-    <!-- Center Global Search Input (Desktop) -->
-    <div class="hidden md:flex items-center flex-1 min-w-0 max-w-xs lg:max-w-md mx-2 lg:mx-6 shrink">
+    <!-- Center Global Search Input (Desktop >= 1280px) -->
+    <div class="hidden xl:flex items-center flex-1 min-w-0 max-w-xs xl:max-w-md mx-2 xl:mx-6 shrink">
       <button
         type="button"
         @click="showSearchModal = true"
@@ -36,8 +36,7 @@
       >
         <div class="flex items-center gap-2 min-w-0 truncate">
           <Search class="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-500 transition-colors shrink-0" />
-          <span class="truncate whitespace-nowrap hidden lg:inline">Search modules, users, meetings...</span>
-          <span class="truncate whitespace-nowrap lg:hidden">Search...</span>
+          <span class="truncate whitespace-nowrap">Search modules, users, meetings...</span>
         </div>
         <kbd class="shrink-0 ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md">
           ⌘K
@@ -46,12 +45,12 @@
     </div>
 
     <div class="flex items-center gap-2 shrink-0">
-      <!-- Search Trigger Icon for Mobile -->
+      <!-- Search Trigger Icon for Mobile & Tablet (< xl) -->
       <button
         type="button"
         @click="showSearchModal = true"
-        class="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        title="Search"
+        class="xl:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        title="Search (⌘K)"
       >
         <Search class="w-4 h-4" />
       </button>

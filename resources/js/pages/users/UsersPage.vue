@@ -469,10 +469,12 @@
     <!-- ========================================== -->
     <!-- MODAL 1: CREATE / EDIT USER MODAL          -->
     <!-- ========================================== -->
-    <div
-      v-if="userModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
+    <Teleport to="body">
+      <div
+        v-if="userModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
       <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <h2 class="text-sm font-bold text-slate-900 dark:text-white">
@@ -574,14 +576,17 @@
         </form>
       </div>
     </div>
+  </Teleport>
 
     <!-- ========================================== -->
     <!-- MODAL 2: CREATE / EDIT CUSTOM ROLE MODAL   -->
     <!-- ========================================== -->
-    <div
-      v-if="roleModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
+    <Teleport to="body">
+      <div
+        v-if="roleModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
       <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -635,14 +640,17 @@
         </form>
       </div>
     </div>
+  </Teleport>
 
     <!-- ========================================== -->
     <!-- MODAL 3: PERMISSION MATRIX CONFIGURATOR    -->
     <!-- ========================================== -->
-    <div
-      v-if="matrixModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm"
-    >
+    <Teleport to="body">
+      <div
+        v-if="matrixModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
       <div class="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
         <!-- Matrix Modal Header -->
         <div class="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
@@ -759,14 +767,17 @@
         </div>
       </div>
     </div>
+  </Teleport>
 
     <!-- ========================================== -->
     <!-- MODAL 4: USER EFFECTIVE PERMISSIONS DRAWER -->
     <!-- ========================================== -->
-    <div
-      v-if="userPermissionsModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
+    <Teleport to="body">
+      <div
+        v-if="userPermissionsModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
       <div class="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
         <!-- Header -->
         <div class="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
@@ -848,6 +859,7 @@
         </div>
       </div>
     </div>
+  </Teleport>
   </div>
 </template>
 

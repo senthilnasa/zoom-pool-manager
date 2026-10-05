@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.18] - 2026-10-05
+
+### Fixed
+- **Modal Popups & Mobile Navigation Drawer Layout Break Fix:**
+  - Resolved UI layout break, page jump, and visual clipping when opening any modal popup (e.g. Identity Providers, Directory Sync, Users, Workflows, Pools, etc.) or the Mobile Navigation drawer across the application.
+  - **Root Causes:**
+    1. Modal overlays were rendered inside page route containers (`<main>`) rather than teleported to document `<body>`. Because `<Header>` has `sticky top-0 z-20`, modals nested inside `<main>` could not cover `<Header>`, causing the top header to poke through above the backdrop as an un-dimmed white strip.
+    2. Modals and the mobile drawer did not lock body scroll, allowing background page scrolling while open.
+    3. Missing scrollbar width compensation on modal open caused Windows browser scrollbars to collapse, triggering a 15–17px layout jump across the entire page.
+    4. At 1024px screen widths (tablets or resized windows), the Header expanded its search input to full width (`md:flex`), crowding out the title and ThemeSelector in the remaining 768px workspace and causing horizontal overflow.
+  - **Fixes Applied:**
+    - Created universal `useBodyScrollLock` composable and registered `v-scroll-lock` Vue directive globally.
+    - Systematically wrapped all modal overlays across all 26 Vue page components in `<Teleport to="body">` with `v-scroll-lock`.
+    - Teleported Mobile Sidebar Drawer in `AppLayout.vue` to `body` with `v-scroll-lock` and solid background (`bg-white dark:bg-slate-900 shadow-2xl`).
+    - Adjusted `Header.vue` responsive search bar to `xl:flex` (reserving icon trigger button for `< xl`), preventing header overflow on tablet/1024px widths.
+    - Added `overflow-x: hidden; max-width: 100vw;` to `html, body` in `app.css` to prevent horizontal page shifting.
+
+---
+
 ## [1.0.17] - 2026-10-05
 
 ### Fixed

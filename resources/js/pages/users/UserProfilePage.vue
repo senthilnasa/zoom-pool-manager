@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div v-scroll-lock class="overflow-y-auto space-y-6">
     <!-- Top Breadcrumb & Page Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-1">
       <div class="flex items-center gap-3.5">
@@ -742,11 +742,12 @@
     </div>
 
     <!-- MODAL 1: EDIT USER MODAL -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="editModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
-      <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+      <div v-scroll-lock class="overflow-y-auto w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <h2 class="text-sm font-bold text-slate-900 dark:text-white">
             Edit User Profile: {{ user.name }}
@@ -826,9 +827,11 @@
         </form>
       </div>
     </div>
+    </Teleport>
 
     <!-- MODAL 2: INSPECT PERMISSIONS MODAL -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="permissionsModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
@@ -880,6 +883,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 

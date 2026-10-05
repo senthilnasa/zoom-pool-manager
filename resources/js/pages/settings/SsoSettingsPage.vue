@@ -233,7 +233,8 @@
     </div>
 
     <!-- Create / Edit Provider Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <Teleport to="body">
+      <div v-if="showModal" v-scroll-lock class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
       <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 my-8 space-y-5">
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-4">
           <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -413,75 +414,78 @@
         </form>
       </div>
     </div>
+  </Teleport>
 
     <!-- SP Metadata Drawer / Modal -->
-    <div v-if="showSpModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
-          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FileCode2 class="w-5 h-5 text-indigo-500" />
-            <span>SAML Service Provider (SP) Credentials</span>
-          </h2>
-          <button @click="showSpModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
+    <Teleport to="body">
+      <div v-if="showSpModal" v-scroll-lock class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+            <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <FileCode2 class="w-5 h-5 text-indigo-500" />
+              <span>SAML Service Provider (SP) Credentials</span>
+            </h2>
+            <button @click="showSpModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <X class="w-5 h-5" />
+            </button>
+          </div>
 
-        <p class="text-xs text-slate-500 dark:text-slate-400">
-          Copy these values into your Identity Provider (Azure AD Enterprise App, Okta SAML Integration, Google SAML App):
-        </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Copy these values into your Identity Provider (Azure AD Enterprise App, Okta SAML Integration, Google SAML App):
+          </p>
 
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">SP Entity ID (Audience URI)</label>
-            <div class="flex gap-2">
-              <input
-                type="text"
-                readonly
-                :value="selectedProvider?.sp_entity_id"
-                class="w-full font-mono text-[11px] px-3 py-1.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-xl"
-              />
-              <button
-                @click="copyToClipboard(selectedProvider?.sp_entity_id)"
-                class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl font-medium shrink-0"
-              >
-                Copy
-              </button>
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">SP Entity ID (Audience URI)</label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  readonly
+                  :value="selectedProvider?.sp_entity_id"
+                  class="w-full font-mono text-[11px] px-3 py-1.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-xl"
+                />
+                <button
+                  @click="copyToClipboard(selectedProvider?.sp_entity_id)"
+                  class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl font-medium shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Assertion Consumer Service (ACS) URL (Reply URL)</label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  readonly
+                  :value="selectedProvider?.acs_url"
+                  class="w-full font-mono text-[11px] px-3 py-1.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-xl"
+                />
+                <button
+                  @click="copyToClipboard(selectedProvider?.acs_url)"
+                  class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl font-medium shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Assertion Consumer Service (ACS) URL (Reply URL)</label>
-            <div class="flex gap-2">
-              <input
-                type="text"
-                readonly
-                :value="selectedProvider?.acs_url"
-                class="w-full font-mono text-[11px] px-3 py-1.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-xl"
-              />
-              <button
-                @click="copyToClipboard(selectedProvider?.acs_url)"
-                class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl font-medium shrink-0"
-              >
-                Copy
-              </button>
-            </div>
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+            <a
+              :href="`/spa/settings/identity-providers/${selectedProvider?.public_id}/sp-metadata`"
+              target="_blank"
+              download
+              class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+            >
+              <Download class="w-4 h-4" />
+              <span>Download SP Metadata XML</span>
+            </a>
           </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/60">
-          <a
-            :href="`/spa/settings/identity-providers/${selectedProvider?.public_id}/sp-metadata`"
-            target="_blank"
-            download
-            class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <Download class="w-4 h-4" />
-            <span>Download SP Metadata XML</span>
-          </a>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

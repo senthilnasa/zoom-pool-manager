@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div v-scroll-lock class="overflow-y-auto space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
@@ -170,7 +170,8 @@
     </GlassCard>
 
     <!-- Register / Add Recording Modal -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="showCreateModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
@@ -247,6 +248,7 @@
         </form>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 

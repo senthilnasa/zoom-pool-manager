@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div v-scroll-lock class="overflow-y-auto space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -323,7 +323,7 @@
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
         @click.self="showModal = false"
       >
-        <div class="glass-card max-w-xl w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div v-scroll-lock class="glass-card max-w-xl w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-2">
               <GitMerge class="w-5 h-5 text-brand-600" />

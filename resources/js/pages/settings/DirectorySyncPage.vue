@@ -254,7 +254,8 @@
     </div>
 
     <!-- Add / Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <Teleport to="body">
+      <div v-if="showModal" v-scroll-lock class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
       <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 my-8 space-y-5">
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-4">
           <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -488,6 +489,7 @@
         </form>
       </div>
     </div>
+  </Teleport>
   </div>
 </template>
 

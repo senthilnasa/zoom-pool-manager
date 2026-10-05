@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div v-scroll-lock class="overflow-y-auto space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -209,7 +209,8 @@
     </GlassCard>
 
     <!-- Modal for Approval / Rejection Decision -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="showModal && activeApproval"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
     >
@@ -295,6 +296,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 

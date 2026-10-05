@@ -2,7 +2,8 @@
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 transition-all animate-in fade-in duration-150"
+      v-scroll-lock
+      class="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 transition-all animate-in fade-in duration-150 overflow-y-auto"
     >
       <!-- Dedicated full-screen backdrop overlay -->
       <div
@@ -340,7 +341,7 @@
       </div>
     </div>
   </div>
-</Teleport>
+  </Teleport>
 </template>
 
 <script setup>
@@ -615,16 +616,9 @@ function getStatusBadgeClass(status) {
 
 watch(isOpen, (newVal) => {
   if (newVal) {
-    // Measure scrollbar width before locking to prevent layout shift
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.paddingRight = scrollbarWidth > 0 ? `${scrollbarWidth}px` : '';
-    document.body.style.overflow = 'hidden';
     nextTick(() => {
       searchInputRef.value?.focus();
     });
-  } else {
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
   }
 });
 
@@ -650,8 +644,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  document.body.style.overflow = '';
-  document.body.style.paddingRight = '';
   window.removeEventListener('keydown', handleGlobalKeydown);
   if (abortController) {
     abortController.abort();

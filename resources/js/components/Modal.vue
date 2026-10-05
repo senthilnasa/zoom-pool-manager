@@ -8,8 +8,8 @@
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="close" />
+      <div v-if="show" v-scroll-lock class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" @click="close" />
 
         <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
           <transition

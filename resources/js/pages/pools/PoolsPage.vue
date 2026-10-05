@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div v-scroll-lock class="overflow-y-auto space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -357,11 +357,12 @@
     </div>
 
     <!-- Create/Edit Pool Modal -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="poolModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
-      <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <div v-scroll-lock class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <h2 class="text-sm font-bold text-slate-900 dark:text-white">{{ editingPool ? 'Edit Resource Pool' : 'Create Resource Pool' }}</h2>
           <button @click="poolModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
@@ -470,9 +471,11 @@
         </form>
       </div>
     </div>
+    </Teleport>
 
     <!-- Assign Resource to Pools Modal -->
-    <div
+    <Teleport to="body">
+      <div
       v-if="assignModal && selectedResource"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
     >
@@ -535,6 +538,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
