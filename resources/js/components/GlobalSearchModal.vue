@@ -615,12 +615,16 @@ function getStatusBadgeClass(status) {
 
 watch(isOpen, (newVal) => {
   if (newVal) {
+    // Measure scrollbar width before locking to prevent layout shift
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.paddingRight = scrollbarWidth > 0 ? `${scrollbarWidth}px` : '';
     document.body.style.overflow = 'hidden';
     nextTick(() => {
       searchInputRef.value?.focus();
     });
   } else {
     document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
   }
 });
 
@@ -647,6 +651,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
   window.removeEventListener('keydown', handleGlobalKeydown);
   if (abortController) {
     abortController.abort();

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.14] - 2026-10-05
+
+### Fixed
+- **Global Search Modal — UI Layout Break / Page Jump on Open:**
+  - Resolved page content shifting left (≈15–17 px on Windows) when the search modal opened, which made the table, header, and sidebar appear misaligned.
+  - **Root cause:** Setting `document.body.style.overflow = 'hidden'` to lock scroll removes the browser scrollbar, collapsing the viewport width and causing the page to re-layout.
+  - `GlobalSearchModal.vue`: Before locking body scroll, the scrollbar width is now measured with `window.innerWidth - document.documentElement.clientWidth` and applied as `document.body.style.paddingRight` to compensate exactly for the lost scrollbar space.
+  - `GlobalSearchModal.vue`: Both `overflow` and `paddingRight` are cleaned up on modal close and on component `unmount` to prevent any residual style leakage.
+
+---
+
 ## [1.0.13] - 2026-10-05
 
 ### Fixed
