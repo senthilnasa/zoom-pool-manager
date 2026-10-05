@@ -41,7 +41,7 @@
 ## ⚙️ Administration & Maintenance
 * [1-Click Zero-Downtime Updates](admin/updates.md)
 * [Database Backups & Snapshots](admin/backups.md)
-* [SSO & Directory Sync (Azure AD, LDAP, Google)](admin/sso.md)
+* [SSO & Directory Sync (Google, Azure AD, SAML, LDAP)](admin/sso.md)
 * [Background Jobs & Automation Cadence](admin/scheduled-jobs.md)
 * [Role-Based Access Control (RBAC)](admin/rbac.md)
 

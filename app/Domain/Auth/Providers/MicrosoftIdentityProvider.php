@@ -65,10 +65,12 @@ class MicrosoftIdentityProvider implements IdentityProviderInterface
 
     protected function configureSocialite(IdentityProvider $provider): void
     {
+        $currentProviderParam = request()?->route('provider') ?: 'microsoft';
+
         Config::set('services.azure', [
             'client_id' => $provider->client_id,
             'client_secret' => $provider->client_secret,
-            'redirect' => route('auth.sso.callback', ['provider' => $provider->public_id]),
+            'redirect' => route('auth.sso.callback', ['provider' => $currentProviderParam]),
             'tenant' => $provider->tenant_id ?: 'common',
         ]);
     }

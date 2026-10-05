@@ -297,6 +297,40 @@
                 />
               </div>
             </div>
+
+            <!-- Google Authorized Redirect URI helper box -->
+            <div class="p-3 bg-white dark:bg-slate-900/90 rounded-xl border border-sky-200 dark:border-sky-800/60 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <span>Google Authorized Redirect URI</span>
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800">
+                  Required in Google Cloud Console
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Copy and paste this URI into <strong>Google Cloud Console → APIs & Services → Credentials → Authorized redirect URIs</strong>:
+              </p>
+              <div class="flex items-center gap-2">
+                <input
+                  type="text"
+                  readonly
+                  :value="googleRedirectUri"
+                  class="flex-1 px-3 py-1.5 font-mono text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all"
+                />
+                <button
+                  type="button"
+                  @click="copyToClipboard(googleRedirectUri)"
+                  class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-semibold rounded-lg transition shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Copy class="w-3.5 h-3.5" />
+                  <span>Copy</span>
+                </button>
+              </div>
+              <div class="text-[10px] text-slate-400 dark:text-slate-500 pt-0.5">
+                Authorized JavaScript Origin: <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">{{ windowOrigin }}</code>
+              </div>
+            </div>
           </div>
 
           <!-- Microsoft Specific -->
@@ -329,6 +363,37 @@
                   :placeholder="isEditing ? '(Unchanged)' : 'Enter Client Secret'"
                   class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
+              </div>
+            </div>
+
+            <!-- Microsoft Redirect URI helper box -->
+            <div class="p-3 bg-white dark:bg-slate-900/90 rounded-xl border border-blue-200 dark:border-blue-800/60 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                  Microsoft Redirect URI (Web)
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800">
+                  Required in Azure App Registration
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Add this Redirect URI under <strong>Azure Portal → App registrations → Authentication → Platform configurations → Web</strong>:
+              </p>
+              <div class="flex items-center gap-2">
+                <input
+                  type="text"
+                  readonly
+                  :value="microsoftRedirectUri"
+                  class="flex-1 px-3 py-1.5 font-mono text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all"
+                />
+                <button
+                  type="button"
+                  @click="copyToClipboard(microsoftRedirectUri)"
+                  class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold rounded-lg transition shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Copy class="w-3.5 h-3.5" />
+                  <span>Copy</span>
+                </button>
               </div>
             </div>
           </div>
@@ -507,6 +572,7 @@ import {
   Search,
   X,
   Download,
+  Copy,
 } from 'lucide-vue-next';
 
 const providers = ref([]);
@@ -518,6 +584,10 @@ const isEditing = ref(false);
 const selectedProvider = ref(null);
 const domainsInput = ref('');
 const searchQuery = ref('');
+
+const windowOrigin = computed(() => (typeof window !== 'undefined' ? window.location.origin : 'https://zoom.yourdomain.com'));
+const googleRedirectUri = computed(() => `${windowOrigin.value}/auth/google/callback`);
+const microsoftRedirectUri = computed(() => `${windowOrigin.value}/auth/microsoft/callback`);
 
 const filteredProviders = computed(() => {
   if (!searchQuery.value.trim()) return providers.value;

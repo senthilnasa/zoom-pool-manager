@@ -25,10 +25,7 @@ class SsoController extends Controller
      */
     public function redirect(string $provider): \Symfony\Component\HttpFoundation\Response
     {
-        $idp = IdentityProvider::where('public_id', $provider)
-            ->where('enabled', true)
-            ->firstOrFail();
-
+        $idp = $this->resolveProvider($provider);
         $driver = $this->factory->make($idp);
 
         return $driver->getRedirectResponse($idp);
@@ -39,9 +36,7 @@ class SsoController extends Controller
      */
     public function callback(string $provider, Request $request): RedirectResponse
     {
-        $idp = IdentityProvider::where('public_id', $provider)
-            ->where('enabled', true)
-            ->firstOrFail();
+        $idp = $this->resolveProvider($provider);
 
         try {
             $driver = $this->factory->make($idp);
@@ -69,11 +64,7 @@ class SsoController extends Controller
      */
     public function samlMetadata(string $provider): Response
     {
-        $idp = IdentityProvider::where('public_id', $provider)
-            ->where('enabled', true)
-            ->where('driver', 'saml')
-            ->firstOrFail();
-
+        $idp = $this->resolveProvider($provider, 'saml');
         $xml = $this->samlProvider->generateSpMetadata($idp);
 
         return response($xml, 200, [
@@ -87,10 +78,7 @@ class SsoController extends Controller
      */
     public function samlAcs(string $provider, Request $request): RedirectResponse
     {
-        $idp = IdentityProvider::where('public_id', $provider)
-            ->where('enabled', true)
-            ->where('driver', 'saml')
-            ->firstOrFail();
+        $idp = $this->resolveProvider($provider, 'saml');
 
         try {
             $identityDto = $this->samlProvider->handleCallback($idp, $request);
@@ -110,5 +98,27 @@ class SsoController extends Controller
                 'email' => 'SAML authentication failed: '.$e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Resolve Identity Provider by public_id or driver keyword (e.g. 'google', 'microsoft', 'azure').
+     */
+    protected function resolveProvider(string $provider, ?string $requiredDriver = null): IdentityProvider
+    {
+        $query = IdentityProvider::where('enabled', true)
+            ->where(function ($q) use ($provider) {
+                $q->where('public_id', $provider)
+                    ->orWhere('driver', strtolower($provider));
+
+                if (in_array(strtolower($provider), ['azure', 'microsoft'], true)) {
+                    $q->orWhereIn('driver', ['azure', 'microsoft']);
+                }
+            });
+
+        if ($requiredDriver !== null) {
+            $query->where('driver', $requiredDriver);
+        }
+
+        return $query->firstOrFail();
     }
 }

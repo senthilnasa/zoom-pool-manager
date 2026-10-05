@@ -2,6 +2,15 @@
 
 Zoom Pool Manager utilizes Zoom's **Server-to-Server (S2S) OAuth** authentication model. Unlike user-managed OAuth apps, Server-to-Server OAuth operates with account-level administrative permissions and does not require individual faculty member logins.
 
+> [!NOTE]
+> **Looking for Google Sign-In or Microsoft SSO Redirect URLs?**
+> - Zoom Server-to-Server OAuth handles backend API pooling and does not require a redirect URL.
+> - For faculty/user Single Sign-On via Google Workspace, your **Authorized Redirect URI** is:
+>   ```text
+>   https://zoom.yourdomain.com/auth/google/callback
+>   ```
+> - See the full [Single Sign-On (SSO) & Directory Sync Guide](../admin/sso.md) for step-by-step Google Cloud Console and Azure setup instructions.
+
 ---
 
 ## 🛠️ Step 1: Create a Server-to-Server App in Zoom Marketplace

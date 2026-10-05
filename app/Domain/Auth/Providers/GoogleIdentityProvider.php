@@ -53,10 +53,12 @@ class GoogleIdentityProvider implements IdentityProviderInterface
 
     protected function configureSocialite(IdentityProvider $provider): void
     {
+        $currentProviderParam = request()?->route('provider') ?: 'google';
+
         Config::set('services.google', [
             'client_id' => $provider->client_id,
             'client_secret' => $provider->client_secret,
-            'redirect' => route('auth.sso.callback', ['provider' => $provider->public_id]),
+            'redirect' => route('auth.sso.callback', ['provider' => $currentProviderParam]),
         ]);
     }
 }

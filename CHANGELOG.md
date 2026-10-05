@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.20] - 2026-10-05
+
+### Added & Fixed
+- **Google Sign-In & SSO Authorized Redirect URI Documentation & UI:**
+  - Added comprehensive step-by-step setup guides for Google Workspace (OAuth 2.0 / OIDC) and Microsoft Entra ID in `docs/admin/sso.md`, detailing exact Authorized Redirect URIs, JavaScript Origins, and required OAuth scopes.
+  - Added cross-reference note in `docs/zoom/oauth-setup.md` clarifying the distinction between Zoom API Server-to-Server OAuth and User Sign-In (Google/Microsoft SSO) with immediate links to the redirect URI.
+  - Added Google Error 400 (`redirect_uri_mismatch`) diagnosis to `docs/troubleshooting/common-issues.md`.
+  - Added 1-click copyable **Authorized Redirect URI** helper boxes directly inside the Identity Provider configuration modal in `SsoSettingsPage.vue` (`https://<domain>/auth/google/callback` and `https://<domain>/auth/microsoft/callback`).
+  - Updated `SsoController` and OAuth drivers (`GoogleIdentityProvider`, `MicrosoftIdentityProvider`) to dynamically support both clean friendly provider routes (`/auth/google/callback`) and instance-specific ULID routes (`/auth/{public_id}/callback`).
+
+---
+
 ## [1.0.19] - 2026-10-05
 
 ### Fixed

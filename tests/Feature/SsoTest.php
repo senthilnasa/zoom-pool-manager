@@ -100,3 +100,30 @@ test('saml metadata endpoint outputs valid sp metadata xml', function () {
         ->assertSee('md:EntityDescriptor', false)
         ->assertSee('AssertionConsumerService', false);
 });
+
+test('sso routes support resolution by driver name for google and saml', function () {
+    $googleIdp = IdentityProvider::create([
+        'name' => 'Campus Google Workspace',
+        'driver' => 'google',
+        'client_id' => 'test.apps.googleusercontent.com',
+        'client_secret' => 'test-secret',
+        'enabled' => true,
+    ]);
+
+    $samlIdp = IdentityProvider::create([
+        'name' => 'Campus SAML',
+        'driver' => 'saml',
+        'metadata_url' => 'https://idp.university.edu/saml',
+        'enabled' => true,
+    ]);
+
+    // Test Google redirect by driver
+    $googleRes = $this->get('/auth/google/redirect');
+    $googleRes->assertStatus(302);
+    expect($googleRes->headers->get('Location'))->toContain('accounts.google.com');
+
+    // Test SAML metadata by driver
+    $samlRes = $this->get('/auth/saml/saml/metadata');
+    $samlRes->assertStatus(200)
+        ->assertSee('md:EntityDescriptor', false);
+});

@@ -45,3 +45,22 @@ Quick diagnostic solutions for frequent server and configuration issues.
   1. Open Zoom Marketplace → Feature → Event Subscriptions → Secret Token.
   2. In ZPM, go to **System Settings** → **Zoom Settings** and paste the identical Secret Token.
   3. Open the **Webhook Debugger** (`/app/api/inbound-webhooks`) and click **Test CRC Handshake** to verify signature computation.
+
+---
+
+## 5. Google Sign-In Error 400: `redirect_uri_mismatch`
+
+- **Cause**: The redirect URI passed in the authorization request does not match the Authorized redirect URIs configured in Google Cloud Console.
+- **Fix**:
+  1. Open [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **Credentials**.
+  2. Click on your OAuth 2.0 Client ID.
+  3. Under **Authorized redirect URIs**, ensure you have added:
+     ```text
+     https://zoom.yourdomain.com/auth/google/callback
+     ```
+     *(Ensure matching protocol `https://`, correct domain, and no trailing slash)*
+  4. Under **Authorized JavaScript origins**, ensure you have added:
+     ```text
+     https://zoom.yourdomain.com
+     ```
+  5. Click **Save** and wait 2–5 minutes for Google's global routing cache to propagate.
