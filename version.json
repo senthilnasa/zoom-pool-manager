@@ -1,5 +1,5 @@
 {
-  "version": "1.0.18",
+  "version": "1.0.19",
   "build": "stable",
   "release_date": "2026-10-05",
   "php_min": "8.2.0"

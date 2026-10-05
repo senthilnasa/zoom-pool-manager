@@ -1,5 +1,5 @@
 <template>
-  <div class="overflow-y-auto min-h-screen flex bg-slate-50/60 dark:bg-slate-950 transition-colors duration-200">
+  <div class="min-h-screen flex bg-slate-50/60 dark:bg-slate-950 transition-colors duration-200">
     <!-- Desktop Sidebar -->
     <Sidebar class="hidden lg:flex" />
 
@@ -10,8 +10,8 @@
         v-scroll-lock
         class="fixed inset-0 z-50 lg:hidden"
       >
-        <div v-scroll-lock
-          class="overflow-y-auto fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
+        <div
+          class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
           @click="mobileSidebarOpen = false"
         />
         <div class="fixed inset-y-0 left-0 flex max-w-full z-10">

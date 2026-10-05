@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.19] - 2026-10-05
+
+### Fixed
+- **Comprehensive Modal Scrolling & Overlay Polish:**
+  - Added universal `v-scroll-lock` and `overflow-y-auto` to all remaining modal containers across every module (Quotas, Pools, Recordings, Workflows, Blackout Periods, Booking Policies, General Settings, Scheduled Jobs, User Profiles, API Keys, Webhooks, Audit Logs, Delegations, Departments, Drift Conflicts, Approvals, Email Templates, Mail Settings, Emergency Actions, and Privacy Compliance).
+  - Enhanced `useBodyScrollLock` composable to lock both `document.body` and `document.documentElement` simultaneously while tracking reactive binding lifecycle (`updated` hook).
+  - Removed accidental `overflow-y-auto` from the root container of `AppLayout.vue` to ensure page scroll is managed cleanly at the window level, preventing rogue scrollbars and blue tracking slivers beside modals.
+  - Added responsive vertical margin (`my-8`) to modal cards to ensure comfortable scrolling on laptop and tablet viewports without clipping.
+
+---
+
 ## [1.0.18] - 2026-10-05
 
 ### Fixed

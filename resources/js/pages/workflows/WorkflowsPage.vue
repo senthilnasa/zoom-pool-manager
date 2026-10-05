@@ -320,10 +320,11 @@
     <Teleport to="body">
       <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
         @click.self="showModal = false"
       >
-        <div v-scroll-lock class="glass-card max-w-xl w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="glass-card max-w-xl w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto my-8">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-2">
               <GitMerge class="w-5 h-5 text-brand-600" />
@@ -539,10 +540,11 @@
     <Teleport to="body">
       <div
         v-if="showSimulateModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
         @click.self="showSimulateModal = false"
       >
-        <div class="glass-card max-w-lg w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="glass-card max-w-lg w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 max-h-[90vh] overflow-y-auto my-8">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-2">
               <Play class="w-4 h-4 text-amber-500" />

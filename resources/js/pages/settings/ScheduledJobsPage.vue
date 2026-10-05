@@ -247,10 +247,11 @@
     <!-- Execution Log Modal -->
     <Teleport to="body">
       <div
-      v-if="activeLogJob"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-    >
-      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh]">
+        v-if="activeLogJob"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh] my-8">
         <!-- Modal Header -->
         <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div class="flex items-center gap-2.5">

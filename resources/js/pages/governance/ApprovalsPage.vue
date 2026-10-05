@@ -211,10 +211,11 @@
     <!-- Modal for Approval / Rejection Decision -->
     <Teleport to="body">
       <div
-      v-if="showModal && activeApproval"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
-    >
-      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        v-if="showModal && activeApproval"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
         <!-- Modal Header -->
         <div
           class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between"

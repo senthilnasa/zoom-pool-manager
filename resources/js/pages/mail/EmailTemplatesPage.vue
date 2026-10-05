@@ -95,10 +95,11 @@
     <!-- Edit Template Modal -->
     <Teleport to="body">
       <div
-      v-if="editingModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div class="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+        v-if="editingModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-8">
         <div class="p-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <FileText class="w-4 h-4 text-brand-500" />

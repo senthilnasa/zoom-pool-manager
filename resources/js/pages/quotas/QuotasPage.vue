@@ -280,10 +280,11 @@
     <Teleport to="body">
       <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
         @click.self="showModal = false"
       >
-        <div class="glass-card max-w-md w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4">
+        <div class="glass-card max-w-md w-full p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl bg-white dark:bg-slate-900 space-y-4 my-8">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-2">
               <PieChart class="w-5 h-5 text-brand-600" />

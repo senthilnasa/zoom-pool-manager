@@ -1126,10 +1126,11 @@
     <!-- Custom Field Create / Edit Modal -->
     <Teleport to="body">
       <div
-      v-if="showCustomFieldModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
-    >
-      <div class="glass-card w-full max-w-lg p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4 shadow-2xl bg-white dark:bg-slate-900">
+        v-if="showCustomFieldModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="glass-card w-full max-w-lg p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4 shadow-2xl bg-white dark:bg-slate-900 my-8">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800 pb-3">
           <h3 class="text-sm font-bold text-slate-900 dark:text-white">
             {{ customFieldForm.id ? 'Edit Custom Field' : 'Add New Custom Field' }}

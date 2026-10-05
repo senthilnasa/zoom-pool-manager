@@ -187,10 +187,11 @@
     <!-- Anonymize Modal -->
     <Teleport to="body">
       <div
-      v-if="anonymizeModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+        v-if="anonymizeModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <div class="flex items-center gap-2 text-sm font-bold text-rose-600">
             <AlertTriangle class="w-4 h-4" />

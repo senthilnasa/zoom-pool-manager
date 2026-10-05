@@ -164,9 +164,10 @@
     <Teleport to="body">
       <div
       v-if="showCreateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+      v-scroll-lock
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
     >
-      <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+      <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <h2 class="text-sm font-bold text-slate-900 dark:text-white">Generate New API Key</h2>
           <button @click="showCreateModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">

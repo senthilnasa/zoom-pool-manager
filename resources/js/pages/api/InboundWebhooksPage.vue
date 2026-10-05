@@ -302,10 +302,11 @@
     <!-- Payload & Diagnostic Inspector Modal -->
     <Teleport to="body">
       <div
-      v-if="payloadModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div v-scroll-lock class="overflow-y-auto w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+        v-if="payloadModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col my-8">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3 shrink-0">
           <div class="space-y-0.5">
             <div class="text-sm font-bold text-slate-900 dark:text-white font-mono flex items-center gap-2">
@@ -396,10 +397,11 @@
     <!-- Webhook Simulator Modal -->
     <Teleport to="body">
       <div
-      v-if="simulatorModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div class="w-full max-w-xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+        v-if="simulatorModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <div class="flex items-center gap-2">
             <Play class="w-4 h-4 text-brand-500" />

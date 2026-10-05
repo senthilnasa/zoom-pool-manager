@@ -744,10 +744,11 @@
     <!-- MODAL 1: EDIT USER MODAL -->
     <Teleport to="body">
       <div
-      v-if="editModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div v-scroll-lock class="overflow-y-auto w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+        v-if="editModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <h2 class="text-sm font-bold text-slate-900 dark:text-white">
             Edit User Profile: {{ user.name }}
@@ -832,10 +833,11 @@
     <!-- MODAL 2: INSPECT PERMISSIONS MODAL -->
     <Teleport to="body">
       <div
-      v-if="permissionsModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div class="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+        v-if="permissionsModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-8">
         <div class="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <div>
             <h2 class="text-sm font-bold text-slate-900 dark:text-white">

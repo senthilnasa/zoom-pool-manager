@@ -133,10 +133,11 @@
     <!-- Payload Diff Modal -->
     <Teleport to="body">
       <div
-      v-if="diffModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-    >
-      <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+        v-if="diffModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto my-8">
         <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
           <div class="text-sm font-bold text-slate-900 dark:text-white font-mono">
             Audit Event: {{ selectedLog?.event }} (#{{ selectedLog?.id }})
