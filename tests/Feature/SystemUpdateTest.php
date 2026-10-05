@@ -191,7 +191,7 @@ class SystemUpdateTest extends TestCase
         $admin->assignRole('Super Administrator');
 
         // Acquire lock
-        $updateService = app(\App\Domain\System\Services\AppUpdateService::class);
+        $updateService = app(AppUpdateService::class);
         $updateService->acquireLock();
         $this->assertTrue($updateService->isLocked());
 
