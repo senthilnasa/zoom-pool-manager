@@ -85,6 +85,7 @@ import {
   Rocket,
   Shield,
   Sliders,
+  Headphones,
 } from 'lucide-vue-next';
 
 const brandingStore = useBrandingStore();
@@ -137,6 +138,12 @@ const chapters = [
     desc: 'Comprehensive OpenAPI documentation and endpoints for programmatic booking orchestration.',
     path: 'api/rest-api-overview',
     icon: Code,
+  },
+  {
+    title: 'Zoho Desk Integration',
+    desc: 'Install the marketplace extension, configure ticket reply templates, and auto-close resolved tickets.',
+    path: 'integrations/zoho-desk',
+    icon: Headphones,
   },
   {
     title: 'Troubleshooting & FAQ',

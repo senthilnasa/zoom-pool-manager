@@ -50,6 +50,7 @@
 * [API Keys & Scopes](api/keys.md)
 * [Outbound Webhooks](api/outbound-webhooks.md)
 * [OpenAPI Specification](api/openapi.md)
+* [Zoho Desk Extension & Integration](integrations/zoho-desk.md)
 
 ## 🛠️ Troubleshooting & FAQs
 * [Common Deployment Issues](troubleshooting/common-issues.md)
