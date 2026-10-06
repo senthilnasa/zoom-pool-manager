@@ -438,6 +438,18 @@
               <span class="text-slate-700 dark:text-slate-300 font-medium">Attendance Tracking</span>
               <input type="checkbox" v-model="bookingForm.attendance_tracking" class="rounded text-emerald-600 focus:ring-emerald-500">
             </label>
+
+            <!-- Auto-Send Attendance -->
+            <label class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 cursor-pointer">
+              <span class="text-slate-700 dark:text-slate-300 font-medium">Auto-Send Attendance</span>
+              <input type="checkbox" v-model="bookingForm.auto_send_attendance" class="rounded text-emerald-600 focus:ring-emerald-500">
+            </label>
+
+            <!-- Auto-Send Recording -->
+            <label class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 cursor-pointer">
+              <span class="text-slate-700 dark:text-slate-300 font-medium">Auto-Send Recording</span>
+              <input type="checkbox" v-model="bookingForm.auto_send_recording" class="rounded text-sky-600 focus:ring-sky-500">
+            </label>
           </div>
 
           <!-- Recording Mode Selector -->
@@ -749,6 +761,8 @@ const bookingForm = reactive({
   share_host_key: true,
   recording_mode: 'none',
   attendance_tracking: true,
+  auto_send_attendance: true,
+  auto_send_recording: true,
 });
 
 // Visible Hours Array
@@ -1006,6 +1020,8 @@ const openQuickBookModal = (prefill = {}) => {
   bookingForm.share_host_key = true;
   bookingForm.recording_mode = 'none';
   bookingForm.attendance_tracking = true;
+  bookingForm.auto_send_attendance = true;
+  bookingForm.auto_send_recording = true;
   showQuickModal.value = true;
 };
 
@@ -1043,6 +1059,8 @@ const submitQuickBook = async () => {
       share_host_key: bookingForm.share_host_key,
       recording_mode: bookingForm.recording_mode,
       attendance_tracking: bookingForm.attendance_tracking,
+      auto_send_attendance: bookingForm.auto_send_attendance,
+      auto_send_recording: bookingForm.auto_send_recording,
     };
 
     const res = await axios.post('/spa/calendar/quick-book', payload);

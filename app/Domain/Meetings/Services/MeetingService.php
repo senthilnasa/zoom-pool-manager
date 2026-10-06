@@ -230,6 +230,8 @@ class MeetingService
                 'join_before_host' => isset($data['join_before_host']) ? (bool) $data['join_before_host'] : false,
                 'jbh_time' => isset($data['jbh_time']) ? (int) $data['jbh_time'] : 0,
                 'attendance_tracking' => isset($data['attendance_tracking']) ? (bool) $data['attendance_tracking'] : true,
+                'auto_send_attendance' => ! empty($data['auto_send_attendance']),
+                'auto_send_recording' => ! empty($data['auto_send_recording']),
                 'share_host_key' => isset($data['share_host_key']) ? (bool) $data['share_host_key'] : false,
                 'external_participants' => ! empty($data['external_participants']),
                 'registration_enabled' => ! empty($data['registration_enabled']),
@@ -454,6 +456,12 @@ class MeetingService
             }
             if (isset($data['attendance_tracking'])) {
                 $meeting->attendance_tracking = (bool) $data['attendance_tracking'];
+            }
+            if (isset($data['auto_send_attendance'])) {
+                $meeting->auto_send_attendance = (bool) $data['auto_send_attendance'];
+            }
+            if (isset($data['auto_send_recording'])) {
+                $meeting->auto_send_recording = (bool) $data['auto_send_recording'];
             }
             if (isset($data['share_host_key'])) {
                 $meeting->share_host_key = (bool) $data['share_host_key'];

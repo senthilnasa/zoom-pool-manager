@@ -710,6 +710,8 @@ class SpaDataController extends Controller
                 'join_before_host' => (bool) $meeting->join_before_host,
                 'jbh_time' => (int) $meeting->jbh_time,
                 'attendance_tracking' => (bool) $meeting->attendance_tracking,
+                'auto_send_attendance' => (bool) $meeting->auto_send_attendance,
+                'auto_send_recording' => (bool) $meeting->auto_send_recording,
                 'share_host_key' => (bool) $meeting->share_host_key,
                 'participant_count' => $meeting->participant_count,
                 'owner' => $meeting->owner,
@@ -756,6 +758,8 @@ class SpaDataController extends Controller
             'join_before_host' => ['nullable', 'boolean'],
             'jbh_time' => ['nullable', 'integer', 'in:0,5,10,15'],
             'attendance_tracking' => ['nullable', 'boolean'],
+            'auto_send_attendance' => ['nullable', 'boolean'],
+            'auto_send_recording' => ['nullable', 'boolean'],
             'share_host_key' => ['nullable', 'boolean'],
             'passcode' => ['nullable', 'string', 'max:32'],
             'custom_fields' => ['nullable', 'array'],
@@ -843,7 +847,7 @@ class SpaDataController extends Controller
     {
         /** @var Meeting $meeting */
         $meeting = Meeting::where('public_id', $publicId)->firstOrFail();
-        $icsContent = $this->icsService->generate($meeting, 'REQUEST');
+        $icsContent = $this->icsService->generate($meeting, 'PUBLISH');
 
         return response($icsContent, 200, [
             'Content-Type' => 'text/calendar; charset=UTF-8',
@@ -923,6 +927,8 @@ class SpaDataController extends Controller
             'jbh_time' => ['nullable', 'integer', 'in:0,5,10,15'],
             'recording_mode' => ['nullable', 'string', 'in:none,cloud,local'],
             'attendance_tracking' => ['nullable', 'boolean'],
+            'auto_send_attendance' => ['nullable', 'boolean'],
+            'auto_send_recording' => ['nullable', 'boolean'],
             'share_host_key' => ['nullable', 'boolean'],
             'passcode' => ['nullable', 'string', 'max:32'],
             'custom_fields' => ['nullable', 'array'],
@@ -1048,6 +1054,89 @@ class SpaDataController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Recording deleted successfully.',
+        ]);
+    }
+
+    /**
+     * Update custom passcode for a cloud recording.
+     */
+    public function updateRecordingPasscode(Request $request, int $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        /** @var CloudRecording $recording */
+        $recording = CloudRecording::findOrFail($id);
+
+        $canManage = ($recording->logical_owner_user_id === $user->id)
+            || ($recording->meeting && $recording->meeting->requester_user_id === $user->id)
+            || $user->hasRole(RoleName::adminRoles())
+            || $user->can('recording.manage');
+
+        if (! $canManage) {
+            return response()->json(['message' => 'Unauthorized to update passcode for this recording.'], 403);
+        }
+
+        $validated = $request->validate([
+            'passcode' => ['required', 'string', 'max:50'],
+        ]);
+
+        $this->recordingService->updatePasscode($recording, $validated['passcode'], $user);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Custom recording passcode updated successfully!',
+            'passcode' => $recording->fresh()->passcode,
+        ]);
+    }
+
+    /**
+     * Send recording link and passcode to specified email recipients.
+     */
+    public function sendRecording(Request $request, int $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        /** @var CloudRecording $recording */
+        $recording = CloudRecording::with('meeting')->findOrFail($id);
+
+        $canShare = ($recording->logical_owner_user_id === $user->id)
+            || ($recording->meeting && $recording->meeting->requester_user_id === $user->id)
+            || $user->hasRole(RoleName::adminRoles())
+            || $user->can('recording.manage')
+            || $user->can('recording.view_any');
+
+        if (! $canShare) {
+            return response()->json(['message' => 'Unauthorized to share this recording.'], 403);
+        }
+
+        $rawEmails = $request->input('emails') ?? $request->input('recipient_emails');
+        if (is_array($rawEmails)) {
+            $emailList = array_filter(array_map('trim', $rawEmails));
+        } else {
+            $emailList = array_filter(array_map('trim', explode(',', (string) $rawEmails)));
+        }
+
+        if (empty($emailList)) {
+            return response()->json(['message' => 'At least one valid recipient email is required.'], 422);
+        }
+
+        $validated = $request->validate([
+            'message' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $sentCount = $this->recordingService->sendRecordingInvitation(
+            $recording,
+            $emailList,
+            $validated['message'] ?? null,
+            $user
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => "Recording invitation successfully sent to {$sentCount} recipient(s)!",
+            'sent_count' => $sentCount,
         ]);
     }
 }

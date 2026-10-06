@@ -104,11 +104,18 @@
                     • {{ r.resource?.zoom_user?.display_name || r.resource?.zoom_user?.email }}
                   </span>
                 </div>
-                <div v-if="r.passcode" class="flex items-center gap-1.5 mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-mono">
+                <div class="flex items-center gap-1.5 mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-mono">
                   <Key class="w-3 h-3" />
-                  <span>Passcode: {{ r.passcode }}</span>
-                  <button @click="copyText(r.passcode, 'Passcode')" class="hover:text-amber-700 dark:hover:text-amber-300 cursor-pointer" title="Copy Passcode">
+                  <span>Passcode: {{ r.passcode || 'None' }}</span>
+                  <button v-if="r.passcode" @click="copyText(r.passcode, 'Passcode')" class="hover:text-amber-700 dark:hover:text-amber-300 cursor-pointer" title="Copy Passcode">
                     <Copy class="w-3 h-3 inline" />
+                  </button>
+                  <button
+                    @click="openPasscodeModal(r)"
+                    class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition cursor-pointer"
+                    title="Change or set custom passcode for this recording"
+                  >
+                    Custom Password
                   </button>
                 </div>
               </td>
@@ -131,9 +138,25 @@
                   v-if="r.play_url || r.share_url"
                   @click="copyShareLink(r.share_url || r.play_url)"
                   class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer inline-flex"
-                  title="Copy Share Link"
+                  title="Copy Link Only"
                 >
                   <Copy class="w-3.5 h-3.5" />
+                </button>
+                <button
+                  v-if="r.play_url || r.share_url"
+                  @click="copyFullInvitation(r)"
+                  class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer inline-flex"
+                  title="Copy Full Recording Invitation (Link + Passcode)"
+                >
+                  <Share2 class="w-3.5 h-3.5" />
+                </button>
+                <button
+                  v-if="r.play_url || r.share_url"
+                  @click="openSendModal(r)"
+                  class="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer inline-flex"
+                  title="Send Recording via Email"
+                >
+                  <Mail class="w-3.5 h-3.5" />
                 </button>
                 <a
                   v-if="r.play_url || r.share_url"
@@ -250,6 +273,133 @@
       </div>
     </div>
     </Teleport>
+
+    <!-- Custom Passcode Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showPasscodeModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8">
+          <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Key class="w-4 h-4 text-amber-500" />
+              <span>Set Custom Passcode</span>
+            </h2>
+            <button @click="showPasscodeModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div class="text-xs text-slate-500 dark:text-slate-400">
+            Meeting: <strong class="text-slate-700 dark:text-slate-200">{{ selectedRecording?.topic }}</strong>
+          </div>
+
+          <form @submit.prevent="saveCustomPasscode" class="space-y-3.5 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">New Recording Passcode *</label>
+              <input
+                v-model="passcodeForm.passcode"
+                type="text"
+                required
+                maxlength="50"
+                placeholder="e.g. Pass@1234 or Secure2026"
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-brand-500"
+              />
+              <p class="text-[11px] text-slate-400 mt-1">
+                This passcode will be saved in ZPM and synced with Zoom Cloud Recording settings.
+              </p>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
+              <button
+                type="button"
+                @click="showPasscodeModal = false"
+                class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                :disabled="savingPasscode"
+                class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-500/20 transition disabled:opacity-50 cursor-pointer"
+              >
+                {{ savingPasscode ? 'Updating...' : 'Save Passcode' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Send Recording Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showSendModal"
+        v-scroll-lock
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8">
+          <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Mail class="w-4 h-4 text-sky-500" />
+              <span>Send Recording Invitation</span>
+            </h2>
+            <button @click="showSendModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div class="text-xs bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+            <div class="font-bold text-slate-800 dark:text-slate-200">{{ selectedRecording?.topic }}</div>
+            <div class="text-[11px] text-slate-500">Date: {{ formatDateTime(selectedRecording?.recording_start || selectedRecording?.created_at) }}</div>
+            <div class="text-[11px] text-amber-600 dark:text-amber-400 font-mono">Passcode: {{ selectedRecording?.passcode || 'None' }}</div>
+          </div>
+
+          <form @submit.prevent="submitSendRecording" class="space-y-3.5 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Recipient Email(s) *</label>
+              <input
+                v-model="sendForm.emails"
+                type="text"
+                required
+                placeholder="alice@univ.edu, bob@univ.edu"
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              />
+              <p class="text-[11px] text-slate-400 mt-1">Separate multiple emails with commas.</p>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Optional Note / Message</label>
+              <textarea
+                v-model="sendForm.message"
+                rows="2"
+                placeholder="Here is the recording of today's review session."
+                class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
+              <button
+                type="button"
+                @click="showSendModal = false"
+                class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                :disabled="sendingRecording"
+                class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-md shadow-sky-500/20 transition disabled:opacity-50 cursor-pointer"
+              >
+                {{ sendingRecording ? 'Sending...' : 'Send Recording' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -269,7 +419,9 @@ import {
   Copy,
   Trash2,
   Key,
-  X
+  X,
+  Share2,
+  Mail,
 } from 'lucide-vue-next';
 
 const toast = useToastStore();
@@ -280,6 +432,15 @@ const syncing = ref(false);
 const saving = ref(false);
 const searchQuery = ref('');
 const showCreateModal = ref(false);
+
+const showPasscodeModal = ref(false);
+const savingPasscode = ref(false);
+const selectedRecording = ref(null);
+const passcodeForm = ref({ passcode: '' });
+
+const showSendModal = ref(false);
+const sendingRecording = ref(false);
+const sendForm = ref({ emails: '', message: '' });
 
 const currentPage = ref(1);
 const totalPages = ref(1);
@@ -394,6 +555,79 @@ const copyText = async (text, label = 'Text') => {
     toast.success(`${label} copied to clipboard!`);
   } catch {
     toast.error(`Failed to copy ${label.toLowerCase()}.`);
+  }
+};
+
+const openPasscodeModal = (r) => {
+  selectedRecording.value = r;
+  passcodeForm.value.passcode = r.passcode || '';
+  showPasscodeModal.value = true;
+};
+
+const saveCustomPasscode = async () => {
+  if (!selectedRecording.value) return;
+  try {
+    savingPasscode.value = true;
+    const res = await axios.put(`/spa/recordings/${selectedRecording.value.id}/passcode`, {
+      passcode: passcodeForm.value.passcode,
+    });
+    toast.success(res.data?.message || 'Passcode updated successfully.');
+    showPasscodeModal.value = false;
+    await loadRecordings(currentPage.value);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Failed to update passcode.');
+  } finally {
+    savingPasscode.value = false;
+  }
+};
+
+const copyFullInvitation = async (r) => {
+  if (!r) return;
+  const topic = r.topic || 'Zoom Cloud Recording';
+  const date = formatDateTime(r.recording_start || r.created_at);
+  const url = r.share_url || r.play_url || '';
+  const passcode = r.passcode ? `\nPasscode: ${r.passcode}` : '';
+  const invitation = `Topic: ${topic}\nDate: ${date}\n\nRecording Link:\n${url}${passcode}`;
+
+  try {
+    await navigator.clipboard.writeText(invitation);
+    toast.success('Full recording invitation copied to clipboard!');
+  } catch {
+    toast.error('Failed to copy invitation.');
+  }
+};
+
+const openSendModal = (r) => {
+  selectedRecording.value = r;
+  sendForm.value = { emails: '', message: '' };
+  showSendModal.value = true;
+};
+
+const submitSendRecording = async () => {
+  if (!selectedRecording.value) return;
+  try {
+    sendingRecording.value = true;
+    const emails = sendForm.value.emails
+      .split(',')
+      .map((e) => e.trim())
+      .filter(Boolean);
+
+    if (emails.length === 0) {
+      toast.error('Please enter at least one recipient email.');
+      return;
+    }
+
+    const res = await axios.post(`/spa/recordings/${selectedRecording.value.id}/send`, {
+      recipient_emails: emails,
+      message: sendForm.value.message || null,
+    });
+
+    toast.success(res.data?.message || 'Recording invitation sent successfully!');
+    showSendModal.value = false;
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Failed to send recording invitation.');
+  } finally {
+    sendingRecording.value = false;
   }
 };
 

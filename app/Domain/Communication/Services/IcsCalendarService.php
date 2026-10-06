@@ -72,16 +72,15 @@ class IcsCalendarService
             }
         }
 
-        $timezoneStr = $meeting->timezone ?: Setting::get('org.timezone', 'Asia/Kolkata');
-        $tz = new DateTimeZone($timezoneStr);
-
-        $startsAt = (clone $meeting->starts_at)->setTimezone($tz);
-        $endsAt = (clone $meeting->ends_at)->setTimezone($tz);
+        // Use canonical UTC date-times for universal compatibility across Google Calendar, Gmail, Outlook, and Apple Calendar
+        $utcTz = new DateTimeZone('UTC');
+        $startsAtUtc = (clone $meeting->starts_at)->setTimezone($utcTz);
+        $endsAtUtc = (clone $meeting->ends_at)->setTimezone($utcTz);
 
         $event = Event::create($meeting->title)
             ->uniqueIdentifier($stableUid)
-            ->startsAt($startsAt)
-            ->endsAt($endsAt)
+            ->startsAt($startsAtUtc)
+            ->endsAt($endsAtUtc)
             ->description($description)
             ->address($joinUrl);
 
@@ -103,7 +102,10 @@ class IcsCalendarService
 
         // Add requester as attendee if distinct from owner and not already in invitees
         $requester = $meeting->requester;
-        $inviteeEmails = $meeting->invitees->pluck('email')->map(fn ($e) => strtolower(trim((string) $e)))->all();
+        $inviteeEmails = ($meeting->relationLoaded('invitees') ? $meeting->invitees : $meeting->invitees()->get())
+            ->pluck('email')
+            ->map(fn ($e) => strtolower(trim((string) $e)))
+            ->all();
 
         if ($requester && (! $owner || $requester->id !== $owner->id)) {
             if (! in_array(strtolower(trim($requester->email)), $inviteeEmails, true)) {
@@ -112,21 +114,32 @@ class IcsCalendarService
         }
 
         // Add invitees as attendees
-        foreach ($meeting->invitees as $invitee) {
+        $invitees = $meeting->relationLoaded('invitees') ? $meeting->invitees : $meeting->invitees()->get();
+        foreach ($invitees as $invitee) {
             $event->attendee($invitee->email, $invitee->name, ParticipationStatus::needs_action());
         }
 
+        // RFC 5545 strictly requires at least one ATTENDEE when METHOD:REQUEST is used
+        if ($method === 'REQUEST' && count($invitees) === 0) {
+            $primaryUser = $owner ?? $requester;
+            if ($primaryUser) {
+                $event->attendee($primaryUser->email, $primaryUser->name, ParticipationStatus::accepted());
+            }
+        }
+
         $calendar = Calendar::create("{$orgName} Calendar")
+            ->withoutAutoTimezoneComponents()
             ->event($event);
 
         $rawIcs = $calendar->get();
 
-        // Inject METHOD header right after BEGIN:VCALENDAR if needed
-        if ($method === 'CANCEL') {
-            $rawIcs = preg_replace('/BEGIN:VCALENDAR\r?\n/', "BEGIN:VCALENDAR\r\nMETHOD:CANCEL\r\n", $rawIcs, 1) ?? $rawIcs;
-        } else {
-            $rawIcs = preg_replace('/BEGIN:VCALENDAR\r?\n/', "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\n", $rawIcs, 1) ?? $rawIcs;
-        }
+        // Inject METHOD header right after BEGIN:VCALENDAR
+        $methodHeader = strtoupper($method);
+        $rawIcs = preg_replace('/BEGIN:VCALENDAR\r?\n/', "BEGIN:VCALENDAR\r\nMETHOD:{$methodHeader}\r\n", $rawIcs, 1) ?? $rawIcs;
+
+        // Ensure strict RFC 5545 CRLF line breaks throughout
+        $rawIcs = str_replace(["\r\n", "\r", "\n"], "\n", $rawIcs);
+        $rawIcs = str_replace("\n", "\r\n", $rawIcs);
 
         return $rawIcs;
     }

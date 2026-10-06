@@ -216,4 +216,52 @@ class CloudRecordingsTest extends TestCase
 
         $response->assertRedirect('https://zoom.us/rec/play/sample_play');
     }
+
+    public function test_owner_can_update_recording_passcode(): void
+    {
+        $recording = CloudRecording::create([
+            'meeting_id' => $this->meeting->id,
+            'logical_owner_user_id' => $this->ownerUser->id,
+            'zoom_meeting_id' => '777888999',
+            'topic' => 'Quantum Mechanics',
+            'play_url' => 'https://zoom.us/rec/play/sample_play',
+            'share_url' => 'https://zoom.us/rec/share/sample_play',
+            'passcode' => 'OldPass123',
+            'status' => 'completed',
+        ]);
+
+        $response = $this->actingAs($this->ownerUser)
+            ->putJson("/spa/recordings/{$recording->id}/passcode", [
+                'passcode' => 'NewCustomPass@2026',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $recording->refresh();
+        $this->assertEquals('NewCustomPass@2026', $recording->passcode);
+    }
+
+    public function test_owner_can_send_recording_invitation(): void
+    {
+        $recording = CloudRecording::create([
+            'meeting_id' => $this->meeting->id,
+            'logical_owner_user_id' => $this->ownerUser->id,
+            'zoom_meeting_id' => '777888999',
+            'topic' => 'Quantum Mechanics',
+            'play_url' => 'https://zoom.us/rec/play/sample_play',
+            'share_url' => 'https://zoom.us/rec/share/sample_play',
+            'passcode' => 'Pass@2026',
+            'status' => 'completed',
+        ]);
+
+        $response = $this->actingAs($this->ownerUser)
+            ->postJson("/spa/recordings/{$recording->id}/send", [
+                'recipient_emails' => ['student1@univ.edu', 'student2@univ.edu'],
+                'message' => 'Please watch session by Monday.',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+    }
 }

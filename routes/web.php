@@ -129,6 +129,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/meetings/{publicId}/invitees', [SpaDataController::class, 'addInvitee'])->name('meetings.invitees.store');
         Route::post('/meetings/{publicId}/end-early', [SpaDataController::class, 'endEarly'])->name('meetings.end-early');
         Route::delete('/recordings/{id}', [SpaDataController::class, 'deleteRecording'])->name('recordings.delete');
+        Route::put('/recordings/{id}/passcode', [SpaDataController::class, 'updateRecordingPasscode'])->name('recordings.passcode');
+        Route::post('/recordings/{id}/send', [SpaDataController::class, 'sendRecording'])->name('recordings.send');
 
         // Meeting Custom Fields Management
         Route::get('/meeting-custom-fields', [SpaMeetingCustomFieldController::class, 'index'])->name('spa.custom-fields.index');

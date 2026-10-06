@@ -109,6 +109,8 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
                 'attendance_tracking' => true,
                 'share_host_key' => true,
                 'recording_mode' => 'cloud',
+                'auto_send_attendance' => true,
+                'auto_send_recording' => true,
             ]);
 
         $response->assertStatus(200);
@@ -121,6 +123,8 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
         $this->assertEquals(10, $meeting->jbh_time);
         $this->assertTrue((bool) $meeting->attendance_tracking);
         $this->assertTrue((bool) $meeting->share_host_key);
+        $this->assertTrue((bool) $meeting->auto_send_attendance);
+        $this->assertTrue((bool) $meeting->auto_send_recording);
         $this->assertEquals('cloud', $meeting->recording_mode);
         $this->assertEquals('654321', $meeting->host_key);
         $this->assertEquals('scheduled', $meeting->status);
@@ -172,6 +176,8 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
                 'share_host_key' => true,
                 'recording_mode' => 'cloud',
                 'attendance_tracking' => true,
+                'auto_send_attendance' => true,
+                'auto_send_recording' => true,
             ]);
 
         $response->assertStatus(200);
@@ -183,12 +189,16 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
         $this->assertTrue((bool) $series->waiting_room);
         $this->assertTrue((bool) $series->share_host_key);
         $this->assertTrue((bool) $series->attendance_tracking);
+        $this->assertTrue((bool) $series->auto_send_attendance);
+        $this->assertTrue((bool) $series->auto_send_recording);
 
         // Check occurrences
         $this->assertEquals(3, $series->meetings()->count());
         $firstOccurrence = $series->meetings()->first();
         $this->assertEquals('cloud', $firstOccurrence->recording_mode);
         $this->assertTrue((bool) $firstOccurrence->share_host_key);
+        $this->assertTrue((bool) $firstOccurrence->auto_send_attendance);
+        $this->assertTrue((bool) $firstOccurrence->auto_send_recording);
         $this->assertEquals('654321', $firstOccurrence->host_key);
     }
 
@@ -209,6 +219,8 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
                 'share_host_key' => true,
                 'recording_mode' => 'local',
                 'attendance_tracking' => true,
+                'auto_send_attendance' => true,
+                'auto_send_recording' => false,
             ]);
 
         $response->assertStatus(200);
@@ -221,5 +233,38 @@ class ExtendedMeetingFlagsAndRecurrenceTest extends TestCase
         $this->assertEquals(5, $meeting->jbh_time);
         $this->assertEquals('local', $meeting->recording_mode);
         $this->assertTrue((bool) $meeting->share_host_key);
+        $this->assertTrue((bool) $meeting->auto_send_attendance);
+        $this->assertFalse((bool) $meeting->auto_send_recording);
+    }
+
+    public function test_ics_download_is_rfc5545_compliant_and_uses_method_publish(): void
+    {
+        $startsAt = Carbon::tomorrow()->setHour(11)->setMinute(0);
+        $endsAt = (clone $startsAt)->addHour();
+
+        $meeting = Meeting::create([
+            'title' => 'Faculty Board Sync',
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'requester_user_id' => $this->user->id,
+            'owner_user_id' => $this->user->id,
+            'department_id' => $this->department->id,
+            'status' => 'scheduled',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/spa/meetings/{$meeting->public_id}/ics");
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'text/calendar; charset=UTF-8');
+        $content = $response->getContent();
+
+        $this->assertStringContainsString('BEGIN:VCALENDAR', $content);
+        $this->assertStringContainsString('METHOD:PUBLISH', $content);
+        $this->assertStringContainsString('BEGIN:VEVENT', $content);
+        $this->assertStringContainsString('SUMMARY:Faculty Board Sync', $content);
+        // Verify UTC time formatting with 'Z' suffix so Google Calendar never fails
+        $this->assertMatchesRegularExpression('/DTSTART:\d{8}T\d{6}Z/', $content);
+        $this->assertMatchesRegularExpression('/DTEND:\d{8}T\d{6}Z/', $content);
     }
 }

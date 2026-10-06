@@ -4,6 +4,7 @@ namespace App\Domain\Attendance\Services;
 
 use App\Domain\Attendance\Models\MeetingAttendance;
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Communication\Services\MailDeliveryService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Zoom\Models\ZoomConnection;
 use Carbon\Carbon;
@@ -177,6 +178,10 @@ class ZoomAttendanceSyncService
                 newValues: ['attendees_count' => $count, 'meeting_id' => $meeting->id]
             );
 
+            if ($meeting->auto_send_attendance && $count > 0) {
+                $this->sendAttendanceReportEmail($meeting);
+            }
+
             return [
                 'success' => true,
                 'attendees_count' => $count,
@@ -236,10 +241,83 @@ class ZoomAttendanceSyncService
             $count++;
         }
 
+        if ($meeting->auto_send_attendance) {
+            $this->sendAttendanceReportEmail($meeting);
+        }
+
         return [
             'success' => true,
             'attendees_count' => $count,
             'message' => "Simulated {$count} attendance records for meeting #{$meeting->id}.",
         ];
+    }
+
+    /**
+     * Dispatch attendance report email to meeting owner and requester.
+     */
+    protected function sendAttendanceReportEmail(Meeting $meeting): void
+    {
+        try {
+            $attendances = MeetingAttendance::where('meeting_id', $meeting->id)
+                ->orderBy('join_time', 'asc')
+                ->get();
+
+            if ($attendances->isEmpty()) {
+                return;
+            }
+
+            $rowsHtml = '';
+            $rowsText = '';
+
+            foreach ($attendances as $att) {
+                $durationMin = round($att->duration_seconds / 60);
+                $pct = number_format($att->attendance_percentage, 1);
+                $statusColor = $att->status === 'present' ? '#16a34a' : ($att->status === 'partial' ? '#d97706' : '#dc2626');
+
+                $rowsHtml .= "<tr style=\"border-bottom: 1px solid #e2e8f0;\">
+                    <td style=\"padding: 8px 10px; font-weight: 600;\">{$att->participant_name}</td>
+                    <td style=\"padding: 8px 10px; color: #64748b;\">".($att->participant_email ?: 'N/A').'</td>
+                    <td style="padding: 8px 10px;">'.($att->join_time ? $att->join_time->format('H:i:s') : 'N/A')."</td>
+                    <td style=\"padding: 8px 10px;\">{$durationMin} min</td>
+                    <td style=\"padding: 8px 10px;\"><span style=\"color: {$statusColor}; font-weight: 600;\">{$pct}% (".ucfirst($att->status).')</span></td>
+                </tr>';
+
+                $rowsText .= "- {$att->participant_name} (".($att->participant_email ?: 'N/A')."): {$durationMin} min, {$pct}% (".ucfirst($att->status).")\n";
+            }
+
+            $tableHtml = "<table style=\"width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px;\">
+                <thead>
+                    <tr style=\"background: #f1f5f9; text-align: left; border-bottom: 2px solid #cbd5e1;\">
+                        <th style=\"padding: 8px 10px;\">Participant</th>
+                        <th style=\"padding: 8px 10px;\">Email</th>
+                        <th style=\"padding: 8px 10px;\">Join Time</th>
+                        <th style=\"padding: 8px 10px;\">Duration</th>
+                        <th style=\"padding: 8px 10px;\">Attendance</th>
+                    </tr>
+                </thead>
+                <tbody>{$rowsHtml}</tbody>
+            </table>";
+
+            $mailService = app(MailDeliveryService::class);
+            $recipients = collect([$meeting->owner, $meeting->requester])->filter()->unique('id');
+
+            foreach ($recipients as $recipient) {
+                $mailService->queueEmail(
+                    templateKey: 'meeting_attendance_report',
+                    recipientEmail: $recipient->email,
+                    recipientName: $recipient->name,
+                    context: [
+                        'meeting' => $meeting,
+                        'attendees_count' => (string) $attendances->count(),
+                        'attendance_table' => $tableHtml,
+                        'attendance_summary_text' => $rowsText,
+                    ],
+                    meeting: $meeting,
+                    eventId: "attendance_report_{$meeting->id}_{$recipient->id}"
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Failed to dispatch auto-attendance email for meeting #{$meeting->id}: {$e->getMessage()}");
+        }
     }
 }

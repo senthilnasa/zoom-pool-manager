@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.26] - 2026-10-06
+
+### Added & Enhanced
+- **Auto-Send Attendance & Cloud Recording Link Options:**
+  - Added booking options on **Create Meeting** (`MeetingCreatePage.vue`) and **Timeline Quick-Book** (`CalendarPage.vue`) to automatically deliver attendance summary tables and cloud recording URLs directly to the meeting host and requester.
+  - Automatically dispatches participant attendance summary and CSV breakdown email upon session conclusion and attendance sync.
+  - Automatically dispatches recording playback link and passcode email to meeting organizers as soon as Zoom Cloud finishes transcoding.
+- **Cloud Recording Custom Passcode & Full Invitation Sharing:**
+  - Enabled custom passcode viewing and live updating for cloud recordings (`PUT /spa/recordings/{id}/passcode`), synchronized bidirectionally with Zoom API (`PATCH /meetings/{meetingId}/recordings/settings`).
+  - Added **"Copy Full Invitation"** 1-click button to copy formatted topic, date, shareable playback link, and passcode to clipboard.
+  - Added **"Send Recording via Email"** modal (`POST /spa/recordings/{id}/send`) allowing organizers and IT staff to email recordings with custom instructions to one or multiple recipients.
+- **Google Calendar & Gmail `.ics` Parsing Fixes:**
+  - Standardized all calendar events and downloads to canonical RFC 5545 UTC timestamps (`...Z`) and excluded extraneous, mis-offset `VTIMEZONE` blocks (`withoutAutoTimezoneComponents()`) so Google Calendar and Gmail parse dates with 100% accuracy without timezone shifts or file read errors.
+  - Enforced `METHOD:PUBLISH` for direct browser `.ics` file downloads and guaranteed required `ATTENDEE` entries for `METHOD:REQUEST` invites.
+- **Host Key Email Delivery Bug Fix:**
+  - Fixed issue where email templates displayed `Host Key PIN: N/A` even when credential masking was disabled.
+  - Added auto-generation and Zoom API sync (`PATCH /users/{id}`) for hosts without a preset host key.
+  - Enhanced template recipient resolution so meeting owners and requesters receive their host key PIN regardless of mask settings.
+
+---
+
 ## [1.0.25] - 2026-10-06
 
 ### Added & Enhanced

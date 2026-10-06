@@ -3,16 +3,20 @@
 namespace App\Domain\Recordings\Services;
 
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Communication\Services\MailDeliveryService;
 use App\Domain\Communication\Services\NotificationCenterService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Recordings\Models\CloudRecording;
 use App\Domain\Recordings\Models\RecordingAccessLog;
 use App\Domain\Recordings\Models\RecordingFile;
 use App\Domain\Users\Models\User;
+use App\Domain\Zoom\Models\ZoomConnection;
 use App\Domain\Zoom\Models\ZoomResource;
 use App\Domain\Zoom\Models\ZoomUser;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CloudRecordingService
 {
@@ -190,6 +194,11 @@ class CloudRecordingService
             }
         }
 
+        // Auto-send recording email if meeting has auto_send_recording enabled
+        if ($meeting && $meeting->auto_send_recording) {
+            $this->sendRecordingNotificationEmail($recording, $meeting);
+        }
+
         $this->auditService->log(
             'recording.ingested',
             $recording,
@@ -260,5 +269,126 @@ class CloudRecordingService
         }
 
         return $targetUrl;
+    }
+
+    /**
+     * Update custom passcode for the recording and sync with Zoom API if active.
+     */
+    public function updatePasscode(CloudRecording $recording, string $newPasscode, User $actor): CloudRecording
+    {
+        $newPasscode = trim($newPasscode);
+        $oldPasscode = $recording->passcode;
+
+        $recording->passcode = $newPasscode !== '' ? $newPasscode : null;
+        $recording->save();
+
+        // Sync with Zoom API if live connection is configured
+        if (! config('app.demo') && ! app()->environment('testing') && ! empty($recording->zoom_meeting_id)) {
+            $conn = ZoomConnection::first();
+            if ($conn && ! empty($conn->account_id)) {
+                try {
+                    $basicAuth = base64_encode($conn->client_id.':'.$conn->client_secret);
+                    $tokenRes = Http::timeout(5)
+                        ->withHeaders(['Authorization' => 'Basic '.$basicAuth])
+                        ->post('https://zoom.us/oauth/token?grant_type=account_credentials&account_id='.urlencode($conn->account_id));
+
+                    if ($tokenRes->successful()) {
+                        $token = $tokenRes->json('access_token');
+                        Http::timeout(6)
+                            ->withToken($token)
+                            ->patch("https://api.zoom.us/v2/meetings/{$recording->zoom_meeting_id}/recordings/settings", [
+                                'share_recording' => 'publicly',
+                                'password' => $newPasscode,
+                            ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Failed to sync custom recording password to Zoom: {$e->getMessage()}");
+                }
+            }
+        }
+
+        $this->auditService->log(
+            'recording.passcode_updated',
+            $recording,
+            ['passcode' => $oldPasscode ? '***' : null],
+            ['passcode' => $newPasscode ? '***' : null],
+            $actor
+        );
+
+        return $recording;
+    }
+
+    /**
+     * Dispatch recording notification email to meeting owner and requester.
+     */
+    public function sendRecordingNotificationEmail(CloudRecording $recording, Meeting $meeting): void
+    {
+        try {
+            $mailService = app(MailDeliveryService::class);
+            $recipients = collect([$meeting->owner, $meeting->requester])->filter()->unique('id');
+
+            foreach ($recipients as $recipient) {
+                $mailService->queueEmail(
+                    templateKey: 'recording_ready',
+                    recipientEmail: $recipient->email,
+                    recipientName: $recipient->name,
+                    context: [
+                        'meeting' => $meeting,
+                        'recording' => $recording,
+                    ],
+                    meeting: $meeting,
+                    eventId: "recording_ready_{$recording->id}_{$recipient->id}"
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Failed to auto-send recording email for recording #{$recording->id}: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Send recording invitation email to one or more recipient emails.
+     *
+     * @param  array<int, string>  $recipientEmails
+     */
+    public function sendRecordingInvitation(CloudRecording $recording, array $recipientEmails, ?string $customMessage, User $actor): int
+    {
+        $mailService = app(MailDeliveryService::class);
+        $meeting = $recording->meeting;
+        $sentCount = 0;
+
+        foreach ($recipientEmails as $email) {
+            $email = trim($email);
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            $user = User::where('email', $email)->first();
+            $recipientName = $user ? $user->name : explode('@', $email)[0];
+
+            $mailService->queueEmail(
+                templateKey: 'recording_invitation',
+                recipientEmail: $email,
+                recipientName: $recipientName,
+                context: array_filter([
+                    'meeting' => $meeting,
+                    'recording' => $recording,
+                    'custom_message' => $customMessage,
+                ]),
+                meeting: $meeting,
+                eventId: "recording_invite_{$recording->id}_".md5($email).'_'.time()
+            );
+
+            $sentCount++;
+        }
+
+        $this->auditService->log(
+            'recording.invitation_sent',
+            $recording,
+            null,
+            ['recipients_count' => $sentCount],
+            $actor
+        );
+
+        return $sentCount;
     }
 }

@@ -4,7 +4,10 @@ namespace App\Domain\HostControl\Services;
 
 use App\Domain\HostControl\Contracts\MeetingHostProviderInterface;
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Zoom\Models\ZoomConnection;
 use App\Domain\Zoom\Models\ZoomResource;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class ZoomMeetingHostProvider implements MeetingHostProviderInterface
@@ -31,6 +34,31 @@ class ZoomMeetingHostProvider implements MeetingHostProviderInterface
         }
 
         // When live Zoom connection is active, sends PATCH /users/{id} with new host_key.
+        if (! config('app.demo') && ! app()->environment('testing')) {
+            $conn = ZoomConnection::first();
+            $zoomUser = $resource->zoomUser;
+            if ($conn && ! empty($conn->account_id) && $zoomUser) {
+                try {
+                    $basicAuth = base64_encode($conn->client_id.':'.$conn->client_secret);
+                    $tokenRes = Http::timeout(5)
+                        ->withHeaders(['Authorization' => 'Basic '.$basicAuth])
+                        ->post('https://zoom.us/oauth/token?grant_type=account_credentials&account_id='.urlencode($conn->account_id));
+
+                    if ($tokenRes->successful()) {
+                        $token = $tokenRes->json('access_token');
+                        $zoomUserIdentifier = $zoomUser->email ?: $zoomUser->zoom_user_id;
+                        Http::timeout(5)
+                            ->withToken($token)
+                            ->patch("https://api.zoom.us/v2/users/{$zoomUserIdentifier}", [
+                                'host_key' => $newHostKey,
+                            ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Live Zoom host key PATCH failed: {$e->getMessage()}");
+                }
+            }
+        }
+
         return true;
     }
 }

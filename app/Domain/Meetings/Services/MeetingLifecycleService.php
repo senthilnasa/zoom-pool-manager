@@ -216,8 +216,25 @@ class MeetingLifecycleService
                             $meeting->zoom_meeting_id = (string) ($zoomData['id'] ?? $meetingId);
                             $meeting->join_url = $zoomData['join_url'] ?? "https://zoom.us/j/{$meetingId}?pwd={$passcode}";
                             $meeting->passcode = $zoomData['password'] ?? $passcode;
+
                             if (! empty($resource->zoomUser->host_key)) {
                                 $meeting->host_key = $resource->zoomUser->host_key;
+                            } else {
+                                $newKey = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+                                $resource->zoomUser->host_key = $newKey;
+                                $resource->zoomUser->save();
+                                $meeting->host_key = $newKey;
+
+                                // Sync host_key to Zoom
+                                try {
+                                    Http::timeout(5)
+                                        ->withToken($token)
+                                        ->patch("https://api.zoom.us/v2/users/{$zoomUserEmail}", [
+                                            'host_key' => $newKey,
+                                        ]);
+                                } catch (\Throwable $e) {
+                                    Log::warning("Initial Zoom user host key sync failed: {$e->getMessage()}");
+                                }
                             }
 
                             return;
@@ -235,10 +252,14 @@ class MeetingLifecycleService
         $meeting->passcode = $passcode;
 
         $resource = $meeting->zoomResource ?? ($meeting->zoom_resource_id ? ZoomResource::with('zoomUser')->find($meeting->zoom_resource_id) : null);
-        if ($resource && $resource->zoomUser && ! empty($resource->zoomUser->host_key)) {
+        if ($resource && $resource->zoomUser) {
+            if (empty($resource->zoomUser->host_key)) {
+                $resource->zoomUser->host_key = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+                $resource->zoomUser->save();
+            }
             $meeting->host_key = $resource->zoomUser->host_key;
         } elseif (empty($meeting->host_key)) {
-            $meeting->host_key = str_pad((string) rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+            $meeting->host_key = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         }
     }
 

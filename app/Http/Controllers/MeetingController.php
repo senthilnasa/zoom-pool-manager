@@ -122,6 +122,8 @@ class MeetingController extends Controller
             'join_before_host' => ['nullable', 'boolean'],
             'jbh_time' => ['nullable', 'integer', 'in:0,5,10,15'],
             'attendance_tracking' => ['nullable', 'boolean'],
+            'auto_send_attendance' => ['nullable', 'boolean'],
+            'auto_send_recording' => ['nullable', 'boolean'],
             'share_host_key' => ['nullable', 'boolean'],
             'passcode' => ['nullable', 'string', 'max:32'],
             'custom_fields' => ['nullable', 'array'],
@@ -295,7 +297,7 @@ class MeetingController extends Controller
         $meeting = Meeting::where('public_id', $publicId)->firstOrFail();
 
         $icsService = app(IcsCalendarService::class);
-        $icsContent = $icsService->generate($meeting);
+        $icsContent = $icsService->generate($meeting, 'PUBLISH');
 
         return response($icsContent, 200, [
             'Content-Type' => 'text/calendar; charset=UTF-8',

@@ -33,6 +33,8 @@ class MeetingSeries extends Model
         'join_before_host',
         'jbh_time',
         'attendance_tracking',
+        'auto_send_attendance',
+        'auto_send_recording',
         'share_host_key',
         'status',
         'zoom_meeting_id',
@@ -50,6 +52,8 @@ class MeetingSeries extends Model
         'join_before_host' => 'boolean',
         'jbh_time' => 'integer',
         'attendance_tracking' => 'boolean',
+        'auto_send_attendance' => 'boolean',
+        'auto_send_recording' => 'boolean',
         'share_host_key' => 'boolean',
         'custom_fields' => 'array',
     ];

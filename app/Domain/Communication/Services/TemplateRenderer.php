@@ -3,6 +3,7 @@
 namespace App\Domain\Communication\Services;
 
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Recordings\Models\CloudRecording;
 use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\User;
 
@@ -115,16 +116,47 @@ class TemplateRenderer
 
             // Host key is provided from meeting or assigned Zoom user
             $hostKey = ! empty($meeting->host_key) ? (string) $meeting->host_key : (string) ($meeting->zoomResource?->zoomUser->host_key ?? '');
+            if (empty($hostKey) && $meeting->zoomResource?->zoomUser) {
+                $hostKey = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+                $meeting->zoomResource->zoomUser->host_key = $hostKey;
+                $meeting->zoomResource->zoomUser->save();
+                $meeting->host_key = $hostKey;
+                $meeting->saveQuietly();
+            } elseif (empty($hostKey)) {
+                $hostKey = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+                $meeting->host_key = $hostKey;
+                $meeting->saveQuietly();
+            }
+
             if (! $maskCredentials) {
                 $vars['meeting.host_key'] = ! empty($hostKey) ? $hostKey : 'N/A';
             } else {
-                $isRequesterOrOwner = $recipient && ($recipient->id === ($meeting->requester_user_id ?? null) || $recipient->id === ($meeting->owner_user_id ?? null));
+                $recipientEmail = strtolower(trim((string) ($context['recipient_email'] ?? ($recipient ? $recipient->email : ''))));
+                $ownerEmail = strtolower(trim((string) ($meeting->owner ? $meeting->owner->email : '')));
+                $requesterEmail = strtolower(trim((string) ($meeting->requester ? $meeting->requester->email : '')));
+
+                $isRequesterOrOwner = ($recipient && ($recipient->id === ($meeting->requester_user_id ?? null) || $recipient->id === ($meeting->owner_user_id ?? null)))
+                    || ($recipientEmail !== '' && ($recipientEmail === $ownerEmail || $recipientEmail === $requesterEmail));
+
                 if (($meeting->share_host_key || $isRequesterOrOwner) && ! empty($hostKey)) {
                     $vars['meeting.host_key'] = $hostKey;
                 } else {
                     $vars['meeting.host_key'] = '[Log into ZPM to reveal host key during meeting]';
                 }
             }
+        }
+
+        // Recording info
+        /** @var CloudRecording|null $recording */
+        $recording = $context['recording'] ?? null;
+        if ($recording) {
+            $vars['recording.topic'] = (string) $recording->topic;
+            $vars['recording.share_url'] = (string) ($recording->share_url ?: $recording->play_url ?: '');
+            $vars['recording.play_url'] = (string) ($recording->play_url ?: $recording->share_url ?: '');
+            $vars['recording.passcode'] = (string) ($recording->passcode ?: 'None');
+            $vars['recording.duration_minutes'] = (string) $recording->duration_minutes;
+            $vars['recording.zoom_meeting_id'] = (string) ($recording->zoom_meeting_id ?: '');
+            $vars['recording.formatted_start'] = $recording->recording_start ? $recording->recording_start->format('Y-m-d H:i') : 'N/A';
         }
 
         // Merge any extra explicit scalar variables (e.g. reason, approver_name, notes)

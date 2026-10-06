@@ -365,6 +365,40 @@
               <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-600"></div>
             </label>
           </div>
+
+          <!-- Auto-Send Attendance Report -->
+          <div class="flex items-start justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40">
+            <div class="flex items-start gap-3">
+              <Mail class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div class="text-xs font-bold text-slate-900 dark:text-white">Auto-Send Attendance Report via Email</div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Automatically email the participant attendance summary and attendance table to host/requester once the meeting concludes.
+                </p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+              <input type="checkbox" v-model="form.auto_send_attendance" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-600"></div>
+            </label>
+          </div>
+
+          <!-- Auto-Send Recording Link -->
+          <div v-if="form.recording_mode === 'cloud'" class="flex items-start justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40">
+            <div class="flex items-start gap-3">
+              <Share2 class="w-5 h-5 text-sky-500 shrink-0 mt-0.5" />
+              <div>
+                <div class="text-xs font-bold text-slate-900 dark:text-white">Auto-Send Cloud Recording Link & Passcode</div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Automatically email the cloud recording link and passcode to the host/requester as soon as it is processed by Zoom.
+                </p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+              <input type="checkbox" v-model="form.auto_send_recording" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-sky-600"></div>
+            </label>
+          </div>
         </div>
       </GlassCard>
 
@@ -605,6 +639,8 @@ import {
   Users2,
   Repeat,
   RefreshCw,
+  Mail,
+  Share2,
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -659,6 +695,8 @@ const form = ref({
   share_host_key: true,
   recording_mode: 'none',
   attendance_tracking: true,
+  auto_send_attendance: true,
+  auto_send_recording: true,
   passcode: '',
   invitees: '',
   // Recurring
