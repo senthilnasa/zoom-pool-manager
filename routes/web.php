@@ -154,6 +154,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/settings/zoho-desk', [SpaZohoDeskController::class, 'show'])->name('settings.zoho-desk.show');
         Route::put('/settings/zoho-desk', [SpaZohoDeskController::class, 'update'])->name('settings.zoho-desk.update');
         Route::post('/settings/zoho-desk/test', [SpaZohoDeskController::class, 'test'])->name('settings.zoho-desk.test');
+        Route::post('/settings/zoho-desk/regenerate-token', [SpaZohoDeskController::class, 'regenerateToken'])->name('settings.zoho-desk.regenerate-token');
         Route::get('/settings/zoho-desk/extension/download', [SpaZohoDeskController::class, 'downloadExtensionPackage'])->name('settings.zoho-desk.download-extension');
 
         // SSO & SAML Identity Providers (Google, Microsoft, SAML 2.0)

@@ -186,6 +186,15 @@
           <td>
             <div style="font-weight: 600;">{{ $m->zoomResource?->name ?? 'Pooled Auto-Assign' }}</div>
             <div style="color: #64748b; font-size: 9px;">Owner: {{ $m->owner?->name ?? 'N/A' }}</div>
+            @if(!empty($m->custom_fields['booked_by_agent_name']))
+              <div style="color: #0369a1; font-size: 8.5px; font-weight: 600;">
+                By: {{ $m->custom_fields['booked_by_agent_name'] }} (Desk #{{ $m->custom_fields['zoho_ticket_number'] ?? 'N/A' }})
+              </div>
+            @elseif($m->requester && $m->requester_user_id !== $m->owner_user_id)
+              <div style="color: #0369a1; font-size: 8.5px; font-weight: 600;">
+                By: {{ $m->requester->name }}
+              </div>
+            @endif
           </td>
           <td class="font-mono">
             {{ $m->zoom_meeting_id ?: 'N/A' }}

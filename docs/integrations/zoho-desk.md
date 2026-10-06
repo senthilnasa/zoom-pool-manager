@@ -235,10 +235,55 @@ Header: X-API-KEY: zpm_zd_your_api_token
 
 ---
 
+## 🔒 Security Safeguards & Leaked Credential Protection
+
+In enterprise helpdesk environments, safeguarding video conferencing resources against leaked staff credentials, compromised agent passwords, or unauthorized API access is critical. ZPM incorporates defense-in-depth measures:
+
+### 1. Allowed Recipient Domains Whitelist (`allowed_domains`)
+* Administrators can restrict Zoho Desk delegated booking strictly to authorized organizational domains (e.g., `krea.edu.in, student.krea.edu.in`).
+* If an attacker gains access to an IT agent's password or integration token and attempts to schedule meetings for external or unauthorized email addresses, ZPM's backend **immediately rejects the request with a security policy violation error (HTTP 422)**.
+
+### 2. 1-Click API Token Rotation & Revocation
+* Located in **Settings → Zoho Desk Integration** (`/app/settings/zoho-desk`).
+* Clicking **Regenerate Token** instantly revokes the compromised API key, produces a new cryptographically secure 48-character hex token, and writes a tamper-evident event into the cryptographic `AuditLog`.
+* Any compromised widget installation or unauthorized script is cut off immediately.
+
+### 3. IT Agent Attribution & Cryptographic Audit Trails
+* Every booking automatically queries the Zoho Desk Apps SDK (`ZOHODESK.get('currentUser')`) to verify the agent's name, email, and agent ID.
+* The meeting is created with:
+  * **Requester:** The IT Agent who performed the booking (`requester_user_id`).
+  * **Owner / Host:** The ticket creator who requested the meeting (`owner_user_id`).
+* All metadata is sealed in `custom_fields`:
+  * `booked_by_agent_name`
+  * `booked_by_agent_email`
+  * `booked_by_agent_id`
+  * `on_behalf_of_name`
+  * `on_behalf_of_email`
+  * `zoho_ticket_number`
+* The SHA-256 tamper-evident audit log records the exact agent email and ticket ID. If an agent password is leaked, security auditors can instantly query all bookings performed by that credential.
+
+---
+
+## 📊 Meeting Reports & Portal Visibility
+
+In the **Zoom Pool Manager Portal**:
+* **Meetings List (`/app/meetings`):**
+  * Meetings booked via Zoho Desk display a dedicated `Desk #12345` badge in the Topic column.
+  * The Host / Resource column clearly shows the Host alongside a `By: [Agent Name]` attribution tag.
+* **Meeting Details Modal:**
+  * Displays a prominent **Delegated Booking & IT Agent Attribution** card showing both the IT agent and the ticket requester.
+* **Official Export Reports (XLSX, CSV, PDF):**
+  * Reports include dedicated audit columns: **Booked By (Agent)**, **Agent Email**, and **Zoho Ticket #**.
+
+---
+
 ## ❓ Frequently Asked Questions (FAQ)
 
 ### What happens if the ticket creator doesn't have an account in ZPM?
 ZPM automatically provisions an account for the user using their email and contact name from the Zoho Desk ticket and assigns them the default user role. When they sign in to ZPM via SSO or credentials, the meeting appears in their personal meeting dashboard.
+
+### How does ZPM know which IT agent booked the meeting?
+When the IT agent opens the widget inside Zoho Desk, the widget accesses `ZOHODESK.get('currentUser')` via the Zoho Desk developer SDK and transmits the agent's verified identity to ZPM with the booking request.
 
 ### Can agents change the meeting duration or resource pool?
 Yes. The extension right-panel widget provides dropdown selectors for meeting duration and specific resource pools (e.g. 300-seat, 500-seat, or 1000-seat pools).

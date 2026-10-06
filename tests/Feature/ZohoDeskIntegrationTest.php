@@ -335,4 +335,157 @@ class ZohoDeskIntegrationTest extends TestCase
         $audit = AuditLog::where('event', 'zoho_desk.meeting_booked')->first();
         $this->assertNotNull($audit);
     }
+
+    public function test_spa_regenerate_token_creates_new_token_and_audits(): void
+    {
+        $oldToken = Setting::get('zoho_desk.api_token');
+
+        $response = $this->actingAs($this->adminUser)->postJson('/spa/settings/zoho-desk/regenerate-token');
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $newToken = $response->json('api_token');
+        $this->assertNotEmpty($newToken);
+        $this->assertNotEquals($oldToken, $newToken);
+        $this->assertStringStartsWith('zpm_zd_', $newToken);
+        $this->assertEquals($newToken, Setting::get('zoho_desk.api_token'));
+
+        $audit = AuditLog::where('event', 'zoho_desk.token_regenerated')->first();
+        $this->assertNotNull($audit);
+    }
+
+    public function test_allowed_domains_restriction_rejects_unauthorized_email(): void
+    {
+        Setting::set('zoho_desk.allowed_domains', 'krea.edu.in, university.edu');
+
+        $startsAt = Carbon::now()->addHours(2);
+
+        $payload = [
+            'ticket_id' => '99001',
+            'ticket_number' => 'TKT-99001',
+            'ticket_email' => 'malicious_user@attacker.com',
+            'ticket_contact_name' => 'Bad Actor',
+            'title' => 'Unauthorized Meeting',
+            'starts_at' => $startsAt->toIso8601String(),
+            'duration_minutes' => 60,
+            'pool_id' => $this->pool->id,
+            'post_to_ticket' => false,
+        ];
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => $this->apiToken,
+        ])->postJson('/api/v1/integrations/zoho-desk/book-and-reply', $payload);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+        ]);
+        $this->assertStringContainsString('attacker.com', $response->json('message'));
+        $this->assertStringContainsString('not permitted', $response->json('message'));
+    }
+
+    public function test_agent_attribution_stores_metadata_and_attributes_requester(): void
+    {
+        $startsAt = Carbon::now()->addHours(4);
+
+        $payload = [
+            'ticket_id' => '88221',
+            'ticket_number' => 'TKT-88221',
+            'ticket_subject' => 'Classroom Zoom Request',
+            'ticket_email' => 'student.arjun@krea.edu.in',
+            'ticket_contact_name' => 'Arjun Varma',
+            'agent_id' => 'zd_agent_404',
+            'agent_name' => 'John IT Support',
+            'agent_email' => 'john.it@krea.edu.in',
+            'title' => 'Economics Tutoring Session',
+            'starts_at' => $startsAt->toIso8601String(),
+            'duration_minutes' => 60,
+            'pool_id' => $this->pool->id,
+            'post_to_ticket' => false,
+        ];
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => $this->apiToken,
+        ])->postJson('/api/v1/integrations/zoho-desk/book-and-reply', $payload);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+        ]);
+
+        // Agent user should have been resolved/created
+        $agentUser = User::where('email', 'john.it@krea.edu.in')->first();
+        $this->assertNotNull($agentUser);
+        $this->assertEquals('John IT Support', $agentUser->name);
+
+        // Ticket user should have been resolved/created
+        $ticketUser = User::where('email', 'student.arjun@krea.edu.in')->first();
+        $this->assertNotNull($ticketUser);
+        $this->assertEquals('Arjun Varma', $ticketUser->name);
+
+        // Meeting attribution: requester is the IT Agent, owner is the Ticket Requester
+        $meeting = Meeting::where('owner_user_id', $ticketUser->id)->first();
+        $this->assertNotNull($meeting);
+        $this->assertEquals($agentUser->id, $meeting->requester_user_id);
+        $this->assertEquals($ticketUser->id, $meeting->owner_user_id);
+
+        // Custom fields must store delegated metadata
+        $customFields = $meeting->custom_fields;
+        $this->assertIsArray($customFields);
+        $this->assertEquals('John IT Support', $customFields['booked_by_agent_name']);
+        $this->assertEquals('john.it@krea.edu.in', $customFields['booked_by_agent_email']);
+        $this->assertEquals('zd_agent_404', $customFields['booked_by_agent_id']);
+        $this->assertEquals('Arjun Varma', $customFields['on_behalf_of_name']);
+        $this->assertEquals('student.arjun@krea.edu.in', $customFields['on_behalf_of_email']);
+        $this->assertEquals('TKT-88221', $customFields['zoho_ticket_number']);
+
+        // Audit log must track the agent attribution
+        $audit = AuditLog::where('event', 'zoho_desk.meeting_booked')
+            ->where('auditable_id', $meeting->id)
+            ->first();
+        $this->assertNotNull($audit);
+        $this->assertEquals('John IT Support', $audit->new_values['booked_by_agent_name']);
+        $this->assertEquals('john.it@krea.edu.in', $audit->new_values['booked_by_agent_email']);
+        $this->assertEquals('student.arjun@krea.edu.in', $audit->new_values['on_behalf_of_email']);
+        $this->assertEquals('TKT-88221', $audit->new_values['ticket_number']);
+    }
+
+    public function test_meeting_export_includes_booked_by_and_ticket_number(): void
+    {
+        $startsAt = Carbon::now()->addHours(3);
+
+        $payload = [
+            'ticket_id' => '77331',
+            'ticket_number' => 'TKT-77331',
+            'ticket_email' => 'faculty.rao@krea.edu.in',
+            'ticket_contact_name' => 'Prof. Rao',
+            'agent_name' => 'Sarah Admin',
+            'agent_email' => 'sarah.admin@krea.edu.in',
+            'title' => 'Advisory Board Meeting',
+            'starts_at' => $startsAt->toIso8601String(),
+            'duration_minutes' => 60,
+            'pool_id' => $this->pool->id,
+            'post_to_ticket' => false,
+        ];
+
+        $bookRes = $this->withHeaders([
+            'X-API-KEY' => $this->apiToken,
+        ])->postJson('/api/v1/integrations/zoho-desk/book-and-reply', $payload);
+        $bookRes->assertStatus(200);
+
+        $response = $this->actingAs($this->adminUser)->get('/spa/meetings/export?format=xlsx');
+        $response->assertStatus(200);
+
+        ob_start();
+        $response->sendContent();
+        $content = (string) ob_get_clean();
+
+        $this->assertStringContainsString('Booked By (Agent)', $content);
+        $this->assertStringContainsString('Agent Email', $content);
+        $this->assertStringContainsString('Zoho Ticket #', $content);
+        $this->assertStringContainsString('Sarah Admin', $content);
+        $this->assertStringContainsString('sarah.admin@krea.edu.in', $content);
+        $this->assertStringContainsString('TKT-77331', $content);
+    }
 }

@@ -192,6 +192,9 @@ class SpaDataController extends Controller
                 'Status',
                 'Host / Owner',
                 'Owner Email',
+                'Booked By (Agent)',
+                'Agent Email',
+                'Zoho Ticket #',
                 'Assigned Resource',
                 'Zoom Meeting ID',
                 'Start Date & Time',
@@ -204,12 +207,19 @@ class SpaDataController extends Controller
 
             $query->chunk(200, function ($batch) use ($handle) {
                 foreach ($batch as $m) {
+                    $bookedByName = $m->custom_fields['booked_by_agent_name'] ?? ($m->requester && $m->requester_user_id !== $m->owner_user_id ? $m->requester->name : 'Direct (Host)');
+                    $bookedByEmail = $m->custom_fields['booked_by_agent_email'] ?? ($m->requester && $m->requester_user_id !== $m->owner_user_id ? $m->requester->email : ($m->owner->email ?? 'N/A'));
+                    $ticketNumber = $m->custom_fields['zoho_ticket_number'] ?? 'N/A';
+
                     fputcsv($handle, [
                         $m->public_id,
                         $m->title,
                         strtoupper($m->status),
                         $m->owner->name ?? 'N/A',
                         $m->owner->email ?? 'N/A',
+                        $bookedByName,
+                        $bookedByEmail,
+                        $ticketNumber,
                         $m->zoomResource->name ?? 'Pooled Auto-Assign',
                         $m->zoom_meeting_id ?: 'N/A',
                         $m->starts_at ? $m->starts_at->toIso8601String() : 'N/A',

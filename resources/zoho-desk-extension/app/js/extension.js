@@ -15,6 +15,12 @@
     contactName: ''
   };
 
+  let currentAgent = {
+    id: '',
+    name: '',
+    email: ''
+  };
+
   let zpmOptions = {
     pools: [],
     templates: []
@@ -31,6 +37,8 @@
   const lblTicketNumber = document.getElementById('lbl-ticket-number');
   const lblTicketEmail = document.getElementById('lbl-ticket-email');
   const lblContactName = document.getElementById('lbl-contact-name');
+  const lblAgentName = document.getElementById('lbl-agent-name');
+  const lblAgentEmail = document.getElementById('lbl-agent-email');
 
   const formBooking = document.getElementById('booking-form');
   const inpTopic = document.getElementById('inp-topic');
@@ -188,6 +196,9 @@
         ticket_subject: currentTicket.subject,
         ticket_email: currentTicket.email,
         ticket_contact_name: currentTicket.contactName,
+        agent_id: currentAgent.id,
+        agent_name: currentAgent.name,
+        agent_email: currentAgent.email,
         title: topic,
         starts_at: startsAt,
         duration_minutes: duration,
@@ -256,7 +267,8 @@
     formBooking.classList.add('hidden');
     resultCard.classList.remove('hidden');
 
-    lblResultStatus.textContent = `Scheduled on behalf of ${meeting.owner?.name || currentTicket.contactName}`;
+    const bookedByName = (res.meeting && res.meeting.booked_by && res.meeting.booked_by.name) || currentAgent.name || 'IT Agent';
+    lblResultStatus.textContent = `Scheduled by ${bookedByName} on behalf of ${meeting.owner?.name || currentTicket.contactName}`;
     resJoinUrl.value = meeting.join_url || '';
     resMeetingId.value = meeting.zoom_meeting_id || '';
     resPasscode.value = meeting.passcode || '';
@@ -297,6 +309,7 @@
   function initDeskSdk() {
     if (typeof ZOHODESK !== 'undefined') {
       ZOHODESK.init().then(function(App) {
+        // 1. Fetch current ticket context
         ZOHODESK.get('ticket').then(function(response) {
           const t = response && (response.ticket || response['ticket']);
           if (t) {
@@ -311,6 +324,19 @@
         }).catch(function(err) {
           console.warn('Failed to get ticket from Desk SDK:', err);
         });
+
+        // 2. Fetch logged-in IT Agent identity for cryptographic audit & attribution
+        ZOHODESK.get('currentUser').then(function(userRes) {
+          const u = userRes && (userRes.currentUser || userRes['currentUser']);
+          if (u) {
+            currentAgent.id = u.id || '';
+            currentAgent.name = u.name || '';
+            currentAgent.email = u.email || '';
+            updateAgentUi();
+          }
+        }).catch(function(err) {
+          console.warn('Failed to get currentUser from Desk SDK:', err);
+        });
       }).catch(function(err) {
         console.warn('Desk SDK init error:', err);
       });
@@ -323,8 +349,19 @@
         email: 'faculty@krea.edu.in',
         contactName: 'Prof. Rajesh Sharma'
       };
+      currentAgent = {
+        id: 'agent-101',
+        name: 'IT Support Engineer',
+        email: 'it-support@krea.edu.in'
+      };
       updateTicketUi();
+      updateAgentUi();
     }
+  }
+
+  function updateAgentUi() {
+    if (lblAgentName) lblAgentName.textContent = currentAgent.name || 'IT Support';
+    if (lblAgentEmail) lblAgentEmail.textContent = currentAgent.email ? `(${currentAgent.email})` : '';
   }
 
   function updateTicketUi() {

@@ -75,6 +75,7 @@ class SpaZohoDeskController extends Controller
             'auto_close_ticket' => 'nullable|boolean',
             'ticket_close_status' => 'nullable|string|max:50',
             'comment_template' => 'nullable|string',
+            'allowed_domains' => 'nullable|string|max:500',
         ]);
 
         $this->zohoDeskService->updateConfiguration($validated, $request->user());
@@ -83,6 +84,22 @@ class SpaZohoDeskController extends Controller
             'success' => true,
             'message' => 'Zoho Desk configuration updated successfully.',
             'config' => $this->zohoDeskService->getConfiguration(),
+        ]);
+    }
+
+    /**
+     * Regenerate Zoho Desk API Token immediately.
+     */
+    public function regenerateToken(Request $request): JsonResponse
+    {
+        $this->authorizeSettings($request);
+
+        $newToken = $this->zohoDeskService->regenerateToken($request->user());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Zoho Desk API Token has been regenerated. Existing widget installations must be updated with the new token.',
+            'api_token' => $newToken,
         ]);
     }
 

@@ -132,6 +132,9 @@ class ZohoDeskIntegrationController extends Controller
             'ticket_status' => 'nullable|string|max:50',
             'custom_comment' => 'nullable|string',
             'share_host_key' => 'nullable|boolean',
+            'agent_id' => 'nullable|string|max:100',
+            'agent_name' => 'nullable|string|max:255',
+            'agent_email' => 'nullable|email|max:255',
         ]);
 
         try {

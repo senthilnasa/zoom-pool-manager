@@ -211,11 +211,48 @@
                 >
                   <Copy class="w-3.5 h-3.5" />
                 </button>
+                <button
+                  type="button"
+                  @click="regenerateApiToken"
+                  :disabled="regeneratingToken"
+                  class="p-1.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                  title="Regenerate token (Revokes current token)"
+                >
+                  <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': regeneratingToken }" />
+                </button>
               </div>
             </div>
             <p class="text-[11px] text-slate-400">
-              Authenticated token bundled into the extension package.
+              Authenticated token bundled into the extension package. Click refresh to rotate.
             </p>
+          </div>
+        </div>
+
+        <!-- Security & Domain Whitelist Safeguard -->
+        <div class="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/50 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <ShieldAlert class="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span class="text-xs font-bold text-amber-900 dark:text-amber-200">
+                Security Safeguard: Allowed Recipient Domains
+              </span>
+            </div>
+            <span class="text-[10px] text-amber-700 dark:text-amber-300 font-medium bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded">
+              Leaked Password & Token Protection
+            </span>
+          </div>
+
+          <p class="text-xs text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
+            Specify comma-separated domains (e.g. <code>krea.edu.in, student.krea.edu.in</code>). Even if an IT agent account or widget token is ever compromised, meeting requests for unauthorized recipient domains will be instantly rejected by the server.
+          </p>
+
+          <div>
+            <input
+              type="text"
+              v-model="form.allowed_domains"
+              placeholder="e.g. krea.edu.in, student.krea.edu.in (leave empty to allow all domains)"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-amber-300/80 dark:border-amber-700/80 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none"
+            />
           </div>
         </div>
       </GlassCard>
@@ -550,7 +587,9 @@ import {
   Check,
   Copy,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw,
+  ShieldAlert,
 } from 'lucide-vue-next';
 
 const toast = useToastStore();
@@ -585,7 +624,10 @@ const form = ref({
   auto_close_ticket: true,
   ticket_close_status: 'Closed',
   comment_template: '',
+  allowed_domains: '',
 });
+
+const regeneratingToken = ref(false);
 
 const placeholders = [
   { tag: '{requester_name}', description: 'Contact / Requester name' },
@@ -657,10 +699,33 @@ const loadConfig = async () => {
       form.value.auto_close_ticket = res.data.config.auto_close_ticket !== false;
       form.value.ticket_close_status = res.data.config.ticket_close_status || 'Closed';
       form.value.comment_template = res.data.config.comment_template || '';
+      form.value.allowed_domains = res.data.config.allowed_domains || '';
     }
   } catch (e) {
     console.error('Failed to load Zoho Desk configuration', e);
     toast.error('Could not load Zoho Desk configuration.');
+  }
+};
+
+const regenerateApiToken = async () => {
+  if (!confirm('Are you sure you want to regenerate the Zoho Desk API Token? Existing widget installations will immediately lose access until updated with this new token.')) {
+    return;
+  }
+
+  try {
+    regeneratingToken.value = true;
+    const res = await axios.post('/spa/settings/zoho-desk/regenerate-token');
+    if (res.data.success) {
+      form.value.api_token = res.data.api_token;
+      if (config.value) {
+        config.value.api_token = res.data.api_token;
+      }
+      toast.success(res.data.message || 'Zoho Desk API Token regenerated successfully!');
+    }
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Failed to regenerate API Token.');
+  } finally {
+    regeneratingToken.value = false;
   }
 };
 

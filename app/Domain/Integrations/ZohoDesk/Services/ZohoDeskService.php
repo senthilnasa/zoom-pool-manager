@@ -132,8 +132,28 @@ TPL;
             'auto_close_ticket' => (bool) Setting::get('zoho_desk.auto_close_ticket', true),
             'ticket_close_status' => (string) Setting::get('zoho_desk.ticket_close_status', 'Closed'),
             'comment_template' => (string) Setting::get('zoho_desk.comment_template', $this->getDefaultCommentTemplate()),
+            'allowed_domains' => (string) Setting::get('zoho_desk.allowed_domains', ''),
             'data_centers' => self::DATA_CENTERS,
         ];
+    }
+
+    /**
+     * Regenerate Zoho Desk API Token and log security audit event.
+     */
+    public function regenerateToken(?User $actor = null): string
+    {
+        $newToken = 'zpm_zd_'.bin2hex(random_bytes(24));
+        Setting::set('zoho_desk.api_token', $newToken);
+
+        $this->auditService->log(
+            'zoho_desk.token_regenerated',
+            null,
+            null,
+            ['action' => 'api_token_regenerated'],
+            $actor
+        );
+
+        return $newToken;
     }
 
     /**
@@ -153,6 +173,10 @@ TPL;
 
         if (! empty($data['api_token'])) {
             Setting::set('zoho_desk.api_token', trim((string) $data['api_token']));
+        }
+
+        if (array_key_exists('allowed_domains', $data)) {
+            Setting::set('zoho_desk.allowed_domains', trim((string) $data['allowed_domains']));
         }
 
         if (isset($data['dc'])) {
@@ -537,12 +561,22 @@ TPL;
             throw new \InvalidArgumentException('Valid ticket contact email is required.');
         }
 
+        // Domain Whitelist Safeguard: Prevent unauthorized bookings if credentials leak
+        $allowedDomainsStr = (string) Setting::get('zoho_desk.allowed_domains', '');
+        if (! empty(trim($allowedDomainsStr))) {
+            $allowedDomains = array_filter(array_map('trim', explode(',', strtolower($allowedDomainsStr))));
+            $ticketDomain = strtolower(substr(strrchr($ticketEmail, '@') ?: '', 1));
+            if (! in_array($ticketDomain, $allowedDomains, true)) {
+                throw new \InvalidArgumentException("Recipient email domain '{$ticketDomain}' is not permitted by organizational security policy. Allowed domains: {$allowedDomainsStr}");
+            }
+        }
+
         $contactName = trim((string) ($data['ticket_contact_name'] ?? ''));
         if (empty($contactName)) {
             $contactName = explode('@', $ticketEmail)[0];
         }
 
-        // 1. Find or create User for the ticket requester
+        // 1. Find or create User for the ticket requester (Meeting Host / Owner)
         /** @var User $requesterUser */
         $requesterUser = User::firstOrCreate(
             ['email' => $ticketEmail],
@@ -560,13 +594,41 @@ TPL;
             }
         }
 
-        // 2. Parse times
+        // 2. Resolve IT Agent identity (Who is booking on behalf of the requester)
+        $agentEmail = ! empty($data['agent_email']) ? strtolower(trim((string) $data['agent_email'])) : null;
+        $agentName = ! empty($data['agent_name']) ? trim((string) $data['agent_name']) : null;
+        $agentId = ! empty($data['agent_id']) ? trim((string) $data['agent_id']) : null;
+
+        $agentUser = null;
+        if ($agentEmail && filter_var($agentEmail, FILTER_VALIDATE_EMAIL)) {
+            /** @var User $agentUser */
+            $agentUser = User::firstOrCreate(
+                ['email' => $agentEmail],
+                [
+                    'name' => $agentName ?: explode('@', $agentEmail)[0],
+                    'password' => Hash::make(Str::random(32)),
+                    'timezone' => Setting::get('org.timezone', 'Asia/Kolkata'),
+                ]
+            );
+
+            if (! $agentUser->hasAnyRole(Role::all())) {
+                $itRole = Role::whereIn('name', ['it_admin', 'Administrator', 'User'])->first();
+                if ($itRole) {
+                    $agentUser->assignRole($itRole);
+                }
+            }
+        }
+
+        $effectiveAgentName = $agentName ?: ($agentUser ? $agentUser->name : ($actor ? $actor->name : 'Zoho Desk Agent'));
+        $effectiveAgentEmail = $agentEmail ?: ($agentUser ? $agentUser->email : ($actor ? $actor->email : 'agent@helpdesk'));
+
+        // 3. Parse times
         $startsAt = isset($data['starts_at']) ? Carbon::parse($data['starts_at']) : Carbon::now()->addMinutes(15);
         $durationMinutes = isset($data['duration_minutes']) ? max(15, (int) $data['duration_minutes']) : (int) Setting::get('zoho_desk.default_duration_minutes', 60);
 
         $endsAt = isset($data['ends_at']) ? Carbon::parse($data['ends_at']) : $startsAt->copy()->addMinutes($durationMinutes);
 
-        // 3. Prepare meeting data
+        // 4. Prepare meeting data
         $ticketId = (string) ($data['ticket_id'] ?? '');
         $ticketNumber = (string) ($data['ticket_number'] ?? '');
         $ticketSubject = (string) ($data['ticket_subject'] ?? '');
@@ -578,9 +640,22 @@ TPL;
 
         $shareHostKey = isset($data['share_host_key']) ? (bool) $data['share_host_key'] : true;
 
+        $description = "Scheduled via Zoho Desk Ticket #{$ticketNumber} by {$effectiveAgentName} ({$effectiveAgentEmail}) on behalf of {$contactName} ({$ticketEmail})";
+
+        $customFields = [
+            'zoho_ticket_id' => $ticketId,
+            'zoho_ticket_number' => $ticketNumber,
+            'booked_by_agent_name' => $effectiveAgentName,
+            'booked_by_agent_email' => $effectiveAgentEmail,
+            'booked_by_agent_id' => $agentId,
+            'on_behalf_of_name' => $contactName,
+            'on_behalf_of_email' => $ticketEmail,
+            'booking_channel' => 'zoho_desk_extension',
+        ];
+
         $meetingData = [
             'title' => $title,
-            'description' => "Scheduled via Zoho Desk Ticket #{$ticketNumber} for {$contactName} ({$ticketEmail})",
+            'description' => $description,
             'starts_at' => $startsAt->toIso8601String(),
             'ends_at' => $endsAt->toIso8601String(),
             'participant_count' => isset($data['participant_count']) ? (int) $data['participant_count'] : 10,
@@ -588,21 +663,17 @@ TPL;
             'preferred_pool_id' => $poolId ?: null,
             'template_id' => $templateId ?: null,
             'share_host_key' => $shareHostKey,
-            'custom_fields' => [
-                'zoho_ticket_id' => $ticketId,
-                'zoho_ticket_number' => $ticketNumber,
-                'booked_by_agent' => $actor ? $actor->name : 'Zoho Desk Agent',
-            ],
+            'custom_fields' => $customFields,
             'source' => 'zoho_desk',
         ];
 
-        // 4. Create Meeting via MeetingService
-        $bookingUser = $actor ?? $requesterUser;
+        // 5. Create Meeting via MeetingService with the booking agent as requester
+        $bookingUser = $agentUser ?? $actor ?? $requesterUser;
         $meeting = $this->meetingService->createMeeting($bookingUser, $meetingData, [$ticketEmail]);
 
         $meeting->refresh();
 
-        // 5. Render comment for ticket
+        // 6. Render comment for ticket
         $commentText = $this->renderComment($meeting, [
             'ticket_contact_name' => $contactName,
             'ticket_number' => $ticketNumber,
@@ -619,7 +690,7 @@ TPL;
         $closeTicket = isset($data['close_ticket']) ? (bool) $data['close_ticket'] : (bool) Setting::get('zoho_desk.auto_close_ticket', false);
         $closeStatus = (string) ($data['ticket_status'] ?? Setting::get('zoho_desk.ticket_close_status', 'Closed'));
 
-        // 6. Post comment to Zoho Desk if ticketId present and credentials available
+        // 7. Post comment to Zoho Desk if ticketId present and credentials available
         if ($postToTicket && ! empty($ticketId)) {
             $commentRes = $this->postTicketComment($ticketId, $commentText, $isPublic);
             $commentPosted = $commentRes['success'];
@@ -628,7 +699,7 @@ TPL;
             }
         }
 
-        // 7. Update ticket status if requested
+        // 8. Update ticket status if requested
         if ($closeTicket && ! empty($ticketId)) {
             $closeRes = $this->updateTicketStatus($ticketId, $closeStatus);
             $ticketClosed = $closeRes['success'];
@@ -637,6 +708,7 @@ TPL;
             }
         }
 
+        // 9. Tamper-evident Audit Logging with exact agent attribution
         $this->auditService->log(
             'zoho_desk.meeting_booked',
             $meeting,
@@ -644,10 +716,15 @@ TPL;
             [
                 'ticket_id' => $ticketId,
                 'ticket_number' => $ticketNumber,
+                'booked_by_agent_name' => $effectiveAgentName,
+                'booked_by_agent_email' => $effectiveAgentEmail,
+                'booked_by_agent_id' => $agentId,
+                'on_behalf_of_name' => $contactName,
+                'on_behalf_of_email' => $ticketEmail,
                 'comment_posted' => $commentPosted,
                 'ticket_closed' => $ticketClosed,
             ],
-            $actor ?? $requesterUser
+            $bookingUser
         );
 
         return [
@@ -669,6 +746,11 @@ TPL;
                     'name' => $requesterUser->name,
                     'email' => $requesterUser->email,
                 ],
+                'booked_by' => [
+                    'name' => $effectiveAgentName,
+                    'email' => $effectiveAgentEmail,
+                ],
+                'custom_fields' => $customFields,
             ],
             'comment_text' => $commentText,
             'ticket_comment_posted' => $commentPosted,
@@ -812,6 +894,20 @@ TPL;
         <span class="ticket-email" id="lbl-ticket-email">Loading...</span>
       </div>
       <div class="ticket-contact-name" id="lbl-contact-name">Requester</div>
+    </div>
+
+    <!-- IT Agent Attribution Card -->
+    <div class="card agent-card">
+      <div class="agent-info">
+        <span class="agent-badge-icon">👤</span>
+        <div class="agent-details">
+          <span class="agent-label">Booking as IT Agent</span>
+          <div>
+            <strong class="agent-name" id="lbl-agent-name">IT Support</strong>
+            <span class="agent-email" id="lbl-agent-email">(Detecting...)</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Booking Form -->
@@ -1303,6 +1399,43 @@ input:focus, select:focus {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.agent-card {
+  padding: 8px 10px;
+  background: #f0f9ff;
+  border-left: 3px solid var(--primary);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.agent-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-badge-icon {
+  font-size: 14px;
+}
+.agent-details {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.agent-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.agent-name {
+  font-size: 12px;
+  color: var(--text);
+  margin-right: 4px;
+}
+.agent-email {
+  font-size: 11px;
+  color: var(--text-muted);
+}
 CSS;
     }
 
@@ -1329,6 +1462,12 @@ CSS;
     contactName: ''
   };
 
+  let currentAgent = {
+    id: '',
+    name: '',
+    email: ''
+  };
+
   let zpmOptions = {
     pools: [],
     templates: []
@@ -1345,6 +1484,8 @@ CSS;
   const lblTicketNumber = document.getElementById('lbl-ticket-number');
   const lblTicketEmail = document.getElementById('lbl-ticket-email');
   const lblContactName = document.getElementById('lbl-contact-name');
+  const lblAgentName = document.getElementById('lbl-agent-name');
+  const lblAgentEmail = document.getElementById('lbl-agent-email');
 
   const formBooking = document.getElementById('booking-form');
   const inpTopic = document.getElementById('inp-topic');
@@ -1503,6 +1644,9 @@ CSS;
         ticket_subject: currentTicket.subject,
         ticket_email: currentTicket.email,
         ticket_contact_name: currentTicket.contactName,
+        agent_id: currentAgent.id,
+        agent_name: currentAgent.name,
+        agent_email: currentAgent.email,
         title: topic,
         starts_at: startsAt,
         duration_minutes: duration,
@@ -1572,7 +1716,8 @@ CSS;
     formBooking.classList.add('hidden');
     resultCard.classList.remove('hidden');
 
-    lblResultStatus.textContent = `Scheduled on behalf of ${meeting.owner?.name || currentTicket.contactName}`;
+    const bookedByName = (res.meeting && res.meeting.booked_by && res.meeting.booked_by.name) || currentAgent.name || 'IT Agent';
+    lblResultStatus.textContent = `Scheduled by ${bookedByName} on behalf of ${meeting.owner?.name || currentTicket.contactName}`;
     resJoinUrl.value = meeting.join_url || '';
     resMeetingId.value = meeting.zoom_meeting_id || '';
     resPasscode.value = meeting.passcode || '';
@@ -1613,6 +1758,7 @@ CSS;
   function initDeskSdk() {
     if (typeof ZOHODESK !== 'undefined') {
       ZOHODESK.init().then(function(App) {
+        // 1. Fetch current ticket context
         ZOHODESK.get('ticket').then(function(response) {
           const t = response && (response.ticket || response['ticket']);
           if (t) {
@@ -1627,6 +1773,19 @@ CSS;
         }).catch(function(err) {
           console.warn('Failed to get ticket from Desk SDK:', err);
         });
+
+        // 2. Fetch logged-in IT Agent identity for cryptographic audit & attribution
+        ZOHODESK.get('currentUser').then(function(userRes) {
+          const u = userRes && (userRes.currentUser || userRes['currentUser']);
+          if (u) {
+            currentAgent.id = u.id || '';
+            currentAgent.name = u.name || '';
+            currentAgent.email = u.email || '';
+            updateAgentUi();
+          }
+        }).catch(function(err) {
+          console.warn('Failed to get currentUser from Desk SDK:', err);
+        });
       }).catch(function(err) {
         console.warn('Desk SDK init error:', err);
       });
@@ -1639,8 +1798,19 @@ CSS;
         email: 'faculty@krea.edu.in',
         contactName: 'Prof. Rajesh Sharma'
       };
+      currentAgent = {
+        id: 'agent-101',
+        name: 'IT Support Engineer',
+        email: 'it-support@krea.edu.in'
+      };
       updateTicketUi();
+      updateAgentUi();
     }
+  }
+
+  function updateAgentUi() {
+    if (lblAgentName) lblAgentName.textContent = currentAgent.name || 'IT Support';
+    if (lblAgentEmail) lblAgentEmail.textContent = currentAgent.email ? `(${currentAgent.email})` : '';
   }
 
   function updateTicketUi() {

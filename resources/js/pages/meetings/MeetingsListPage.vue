@@ -243,6 +243,16 @@
                     <span>Attendance</span>
                   </span>
 
+                  <!-- Zoho Desk Ticket Badge -->
+                  <span
+                    v-if="m.custom_fields && m.custom_fields.zoho_ticket_number"
+                    class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                    :title="`Zoho Desk Ticket #${m.custom_fields.zoho_ticket_number}`"
+                  >
+                    <Headphones class="w-3 h-3" />
+                    <span>Desk #{{ m.custom_fields.zoho_ticket_number }}</span>
+                  </span>
+
                   <!-- Host Key PIN 1-Click Copy Chip -->
                   <button
                     v-if="m.host_key || m.share_host_key"
@@ -266,6 +276,14 @@
                 </div>
                 <div class="text-slate-400 text-[11px]">
                   Owner: {{ m.owner?.name || 'System' }}
+                </div>
+                <div
+                  v-if="m.custom_fields?.booked_by_agent_name || (m.requester && m.requester_user_id !== m.owner_user_id)"
+                  class="text-[10px] text-sky-600 dark:text-sky-400 font-medium flex items-center gap-1 mt-0.5"
+                  :title="`Scheduled by ${m.custom_fields?.booked_by_agent_name || m.requester?.name} on behalf of ${m.owner?.name}`"
+                >
+                  <UserCheck class="w-3 h-3 text-sky-500 shrink-0" />
+                  <span class="truncate">By: {{ m.custom_fields?.booked_by_agent_name || m.requester?.name }}</span>
                 </div>
               </td>
               <td class="py-3.5 px-4">
@@ -548,6 +566,48 @@
           <p>{{ selectedMeeting.description }}</p>
         </div>
 
+        <!-- Delegated Booking / IT Attribution Card -->
+        <div
+          v-if="selectedMeeting.custom_fields?.booked_by_agent_name || (selectedMeeting.requester && selectedMeeting.requester_user_id !== selectedMeeting.owner_user_id)"
+          class="p-4 rounded-xl bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/60 space-y-3"
+        >
+          <div class="flex items-center justify-between">
+            <div class="text-xs font-bold text-sky-900 dark:text-sky-200 flex items-center gap-1.5">
+              <UserCheck class="w-4 h-4 text-sky-600 dark:text-sky-400" />
+              <span>Delegated Booking & IT Agent Attribution</span>
+            </div>
+            <span
+              v-if="selectedMeeting.custom_fields?.zoho_ticket_number"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700"
+            >
+              <Headphones class="w-3 h-3" />
+              <span>Zoho Desk #{{ selectedMeeting.custom_fields.zoho_ticket_number }}</span>
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-2.5 rounded-lg bg-white/90 dark:bg-slate-800 border border-sky-100 dark:border-slate-700 space-y-0.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Created By (IT Team / Agent)</span>
+              <span class="font-semibold text-slate-800 dark:text-slate-200 block">
+                {{ selectedMeeting.custom_fields?.booked_by_agent_name || selectedMeeting.requester?.name || 'IT Agent' }}
+              </span>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                {{ selectedMeeting.custom_fields?.booked_by_agent_email || selectedMeeting.requester?.email || 'N/A' }}
+              </span>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-white/90 dark:bg-slate-800 border border-sky-100 dark:border-slate-700 space-y-0.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">On Behalf Of (Host / Ticket Requester)</span>
+              <span class="font-semibold text-slate-800 dark:text-slate-200 block">
+                {{ selectedMeeting.custom_fields?.on_behalf_of_name || selectedMeeting.owner?.name || 'Requester' }}
+              </span>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                {{ selectedMeeting.custom_fields?.on_behalf_of_email || selectedMeeting.owner?.email || 'N/A' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Custom Fields if present -->
         <div v-if="selectedMeeting.custom_fields && Object.keys(selectedMeeting.custom_fields).length > 0" class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/60 space-y-2">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Custom Fields</div>
@@ -785,6 +845,8 @@ import {
   Pencil,
   Clock,
   ClipboardCopy,
+  UserCheck,
+  Headphones,
 } from 'lucide-vue-next';
 
 const toast = useToastStore();
