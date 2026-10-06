@@ -55,10 +55,10 @@
     </div>
 
     <!-- Top Navigation Tabs -->
-    <div class="flex border-b border-slate-200/80 dark:border-slate-800/80 gap-6">
+    <div class="flex border-b border-slate-200/80 dark:border-slate-800/80 gap-3 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth">
       <button
         @click="switchTab('users')"
-        class="pb-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2"
+        class="pb-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2 shrink-0 cursor-pointer whitespace-nowrap"
         :class="activeTab === 'users' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
       >
         <Users class="w-4 h-4" />
@@ -70,7 +70,7 @@
 
       <button
         @click="switchTab('roles')"
-        class="pb-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2"
+        class="pb-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2 shrink-0 cursor-pointer whitespace-nowrap"
         :class="activeTab === 'roles' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
       >
         <ShieldCheck class="w-4 h-4" />

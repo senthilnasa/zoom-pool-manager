@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AvailabilityController;
+use App\Http\Controllers\Api\V1\GoogleWorkspaceIntegrationController;
 use App\Http\Controllers\Api\V1\MeetingController;
 use App\Http\Controllers\Api\V1\NocMeetingController;
 use App\Http\Controllers\Api\V1\RecordingController;
@@ -76,4 +77,14 @@ Route::prefix('v1/integrations/zoho-desk')->middleware(['api', 'throttle:60,1'])
         ->name('api.v1.integrations.zoho-desk.options');
     Route::post('/book-and-reply', [ZohoDeskIntegrationController::class, 'bookAndReply'])
         ->name('api.v1.integrations.zoho-desk.book-and-reply');
+});
+
+// Google Workspace Add-on (Calendar Conferencing & Gmail Compose) Endpoints
+Route::prefix('v1/integrations/google-workspace')->middleware(['api', 'throttle:60,1'])->group(function () {
+    Route::get('/options', [GoogleWorkspaceIntegrationController::class, 'options'])
+        ->name('api.v1.integrations.google-workspace.options');
+    Route::post('/book-conference', [GoogleWorkspaceIntegrationController::class, 'bookConference'])
+        ->name('api.v1.integrations.google-workspace.book-conference');
+    Route::post('/book-link', [GoogleWorkspaceIntegrationController::class, 'bookLink'])
+        ->name('api.v1.integrations.google-workspace.book-link');
 });

@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\SpaAuthController;
 use App\Http\Controllers\Api\SpaDashboardController;
 use App\Http\Controllers\Api\SpaDataController;
 use App\Http\Controllers\Api\SpaGeneralSettingsController;
+use App\Http\Controllers\Api\SpaGoogleWorkspaceController;
 use App\Http\Controllers\Api\SpaIdentityController;
 use App\Http\Controllers\Api\SpaJobSettingsController;
 use App\Http\Controllers\Api\SpaMeetingCustomFieldController;
@@ -156,6 +157,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/settings/zoho-desk/test', [SpaZohoDeskController::class, 'test'])->name('settings.zoho-desk.test');
         Route::post('/settings/zoho-desk/regenerate-token', [SpaZohoDeskController::class, 'regenerateToken'])->name('settings.zoho-desk.regenerate-token');
         Route::get('/settings/zoho-desk/extension/download', [SpaZohoDeskController::class, 'downloadExtensionPackage'])->name('settings.zoho-desk.download-extension');
+
+        // Google Workspace Integration Settings & Add-on Package Download
+        Route::get('/settings/google-workspace', [SpaGoogleWorkspaceController::class, 'show'])->name('settings.google-workspace.show');
+        Route::put('/settings/google-workspace', [SpaGoogleWorkspaceController::class, 'update'])->name('settings.google-workspace.update');
+        Route::post('/settings/google-workspace/test', [SpaGoogleWorkspaceController::class, 'test'])->name('settings.google-workspace.test');
+        Route::post('/settings/google-workspace/regenerate-token', [SpaGoogleWorkspaceController::class, 'regenerateToken'])->name('settings.google-workspace.regenerate-token');
+        Route::get('/settings/google-workspace/addon/download', [SpaGoogleWorkspaceController::class, 'downloadAddonPackage'])->name('settings.google-workspace.download-addon');
 
         // SSO & SAML Identity Providers (Google, Microsoft, SAML 2.0)
         Route::get('/settings/identity-providers', [SpaIdentityController::class, 'identityProviders'])->name('settings.idp.index');

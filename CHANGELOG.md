@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.25] - 2026-10-06
+
+### Added & Enhanced
+- **Google Workspace Add-on Integration (Google Calendar & Gmail):**
+  - Native Google Calendar conferencing provider (`conferenceSolution`), allocating Zoom hosts dynamically from resource pools and attaching join URL, passcode, and host key.
+  - Gmail Compose 1-click meeting generator and link inserter (`composeTrigger`) using formatted responsive HTML cards.
+  - Dedicated admin settings page under **Developer & Integrations > Google Workspace Add-on** (`/app/settings/google-workspace`).
+  - Allowed Google Account Domains whitelist and 1-click token regeneration.
+  - Downloadable ready-to-deploy Google Apps Script ZIP package (`zoom-pool-manager-google-workspace-addon.zip`) with `appsscript.json`, `Code.gs`, and `README.md`.
+- **UI & Mobile / Tablet Navbar and Modal Layout Fixes:**
+  - Removed erroneous `v-scroll-lock` from root containers of 23 administrative SPA pages, completely restoring window and page scrolling.
+  - Added global `resetScrollLock()` hook into `router.afterEach()` to guarantee page scroll is always unlocked upon route changes.
+  - Made Header navbar responsive on mobile and tablet screens, preventing title, search icon, help guide button, and theme switcher from breaking or wrapping awkwardly.
+  - Fixed Modal dialogs (`Modal.vue`) to use a responsive flex column layout (`max-h-[90vh]`) with scrollable body area, eliminating modal overflow clipping on mobile and tablets.
+  - Added dedicated close button to mobile sidebar drawer and automatic drawer closing upon route change.
+  - Made top navigation tab bars (`UsersPage.vue`, `UserProfilePage.vue`, etc.) horizontally scrollable with smooth touch scrolling.
+
+---
+
+## [1.0.24] - 2026-10-06
+
+### Added & Security
+- **IT Agent Attribution & Audit Forensics:**
+  - Integrated Zoho Desk Apps SDK (`currentUser`) to capture IT agent name, email, and ID.
+  - Attributed meetings to ticket requester as owner and IT agent as requester.
+  - Saved metadata in meeting `custom_fields` and displayed IT agent attribution badges in Meetings list, inspector modal, and exports.
+- **Leaked Credential & Domain Safeguards:**
+  - Configurable allowed recipient domain whitelisting.
+  - 1-click instant token rotation and revocation endpoint.
+
+---
+
 ## [1.0.22] - 2026-10-05
 
 ### Fixed & Enhanced

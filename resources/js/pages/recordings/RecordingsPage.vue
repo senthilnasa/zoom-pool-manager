@@ -1,5 +1,5 @@
 <template>
-  <div v-scroll-lock class="overflow-y-auto space-y-6">
+  <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">

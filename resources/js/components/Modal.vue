@@ -8,46 +8,44 @@
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div v-if="show" v-scroll-lock class="fixed inset-0 z-50 overflow-y-auto">
+      <div v-if="show" v-scroll-lock class="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden flex items-center justify-center p-3 sm:p-4 md:p-6">
         <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" @click="close" />
 
-        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-          <transition
-            enter-active-class="transition ease-out duration-300 transform"
-            enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            enter-to-class="opacity-100 translate-y-0 sm:scale-100"
-            leave-active-class="transition ease-in duration-200 transform"
-            leave-from-class="opacity-100 translate-y-0 sm:scale-100"
-            leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+        <transition
+          enter-active-class="transition ease-out duration-300 transform"
+          enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+          enter-to-class="opacity-100 translate-y-0 sm:scale-100"
+          leave-active-class="transition ease-in duration-200 transform"
+          leave-from-class="opacity-100 translate-y-0 sm:scale-100"
+          leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+        >
+          <div
+            v-if="show"
+            class="relative transform rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl p-4 sm:p-6 text-left shadow-2xl transition-all w-full max-h-[90vh] flex flex-col border border-slate-200/80 dark:border-slate-800 z-10"
+            :class="maxWidthClass"
           >
-            <div
-              v-if="show"
-              class="relative transform overflow-hidden rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl p-4 sm:p-6 text-left shadow-2xl transition-all my-4 sm:my-8 w-[94vw] sm:w-full border border-slate-200/80 dark:border-slate-800"
-              :class="maxWidthClass"
-            >
-              <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-800 gap-2">
-                <h3 class="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
-                  {{ title }}
-                </h3>
-                <button
-                  type="button"
-                  @click="close"
-                  class="rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                  <X class="w-5 h-5" />
-                </button>
-              </div>
-
-              <div>
-                <slot />
-              </div>
-
-              <div v-if="$slots.footer" class="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <slot name="footer" />
-              </div>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-800 gap-2 shrink-0">
+              <h3 class="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
+                {{ title }}
+              </h3>
+              <button
+                type="button"
+                @click="close"
+                class="rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+              >
+                <X class="w-5 h-5" />
+              </button>
             </div>
-          </transition>
-        </div>
+
+            <div class="overflow-y-auto overflow-x-hidden flex-1 pr-1 custom-scrollbar min-w-0">
+              <slot />
+            </div>
+
+            <div v-if="$slots.footer" class="mt-4 sm:mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <slot name="footer" />
+            </div>
+          </div>
+        </transition>
       </div>
     </transition>
   </teleport>

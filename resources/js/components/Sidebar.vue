@@ -3,8 +3,8 @@
     class="w-64 shrink-0 border-r border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl flex flex-col transition-all duration-300 z-30 sticky top-0 h-screen"
   >
     <!-- Brand Header -->
-    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200/60 dark:border-slate-800/60">
-      <router-link to="/app/dashboard" class="flex items-center gap-3 group min-w-0 w-full">
+    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200/60 dark:border-slate-800/60 gap-2">
+      <router-link to="/app/dashboard" class="flex items-center gap-3 group min-w-0 flex-1">
         <!-- Logo Image or Fallback Initial Mark -->
         <div v-if="brandingStore.orgLogoUrl || brandingStore.orgLogoDarkUrl" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 p-1 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
           <img :src="effectiveLogoUrl" :alt="brandingStore.orgName" class="w-full h-full object-contain" />
@@ -21,6 +21,16 @@
           </div>
         </div>
       </router-link>
+
+      <!-- Mobile Close Drawer Button (Only shown on screens < lg) -->
+      <button
+        type="button"
+        @click="$emit('close')"
+        class="lg:hidden p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+        aria-label="Close sidebar drawer"
+      >
+        <X class="w-5 h-5" />
+      </button>
     </div>
 
     <!-- Nav Links (Scrollable) -->
@@ -334,6 +344,16 @@
             <span>Zoho Desk Widget</span>
           </router-link>
 
+          <router-link
+            v-if="authStore.isAdmin || authStore.can('settings.manage')"
+            to="/app/settings/google-workspace"
+            class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all"
+            :class="isActive('/app/settings/google-workspace') ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'"
+          >
+            <Calendar class="w-4 h-4 shrink-0" />
+            <span>Google Workspace Add-on</span>
+          </router-link>
+
           <a
             v-if="authStore.can('api.manage') || authStore.isAdmin"
             href="/docs/api"
@@ -596,7 +616,10 @@ import {
   Settings,
   Headphones,
   LogOut,
+  X,
 } from 'lucide-vue-next';
+
+defineEmits(['close']);
 
 const route = useRoute();
 const authStore = useAuthStore();

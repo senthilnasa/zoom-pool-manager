@@ -27,6 +27,13 @@ export function unlockScroll() {
   }
 }
 
+export function resetScrollLock() {
+  lockCount = 0;
+  document.body.style.overflow = originalOverflow || '';
+  document.body.style.paddingRight = originalPaddingRight || '';
+  document.documentElement.style.overflow = originalDocOverflow || '';
+}
+
 export const vScrollLock = {
   mounted(el, binding) {
     if (binding.value === undefined || binding.value) {

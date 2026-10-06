@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { resetScrollLock } from '@/composables/useBodyScrollLock';
 
 // 1. Core Scheduling
 import DashboardPage from '@/pages/DashboardPage.vue';
@@ -50,6 +51,7 @@ import ZoomUsageReportPage from '@/pages/analytics/ZoomUsageReportPage.vue';
 import GeneralSettingsPage from '@/pages/settings/GeneralSettingsPage.vue';
 import ZoomSettingsPage from '@/pages/settings/ZoomSettingsPage.vue';
 import ZohoDeskSettingsPage from '@/pages/settings/ZohoDeskSettingsPage.vue';
+import GoogleWorkspaceSettingsPage from '@/pages/settings/GoogleWorkspaceSettingsPage.vue';
 import SsoSettingsPage from '@/pages/settings/SsoSettingsPage.vue';
 import DirectorySyncPage from '@/pages/settings/DirectorySyncPage.vue';
 import ScheduledJobsPage from '@/pages/settings/ScheduledJobsPage.vue';
@@ -375,6 +377,12 @@ const routes = [
                 meta: { title: 'Zoho Desk Integration', adminOnly: true },
             },
             {
+                path: 'settings/google-workspace',
+                name: 'settings.google-workspace',
+                component: GoogleWorkspaceSettingsPage,
+                meta: { title: 'Google Workspace Add-on', adminOnly: true },
+            },
+            {
                 path: 'settings/sso',
                 name: 'settings.sso',
                 component: SsoSettingsPage,
@@ -530,6 +538,7 @@ router.beforeEach((to, from, next) => {
 });
 
 router.afterEach((to) => {
+    resetScrollLock();
     const orgName = window.__ZPM__?.branding?.org_name || 'Zoom Pool Manager';
     document.title = to.meta?.title
         ? `${to.meta.title} - ${orgName}`

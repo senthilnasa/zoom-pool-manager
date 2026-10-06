@@ -1,5 +1,5 @@
 <template>
-  <div v-scroll-lock class="overflow-y-auto space-y-6">
+  <div class="space-y-6">
     <!-- Top Breadcrumb & Page Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-1">
       <div class="flex items-center gap-3.5">
@@ -392,7 +392,7 @@
       <!-- 3. TABBED SECTIONS -->
       <div class="space-y-4">
         <!-- Tab Bar -->
-        <div class="flex border-b border-slate-200/80 dark:border-slate-800 gap-6 overflow-x-auto">
+        <div class="flex border-b border-slate-200/80 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth">
           <button
             @click="activeTab = 'meetings'"
             class="pb-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2 shrink-0 cursor-pointer"
