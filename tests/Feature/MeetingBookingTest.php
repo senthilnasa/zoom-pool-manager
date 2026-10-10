@@ -132,9 +132,60 @@ class MeetingBookingTest extends TestCase
 
         $response->assertOk();
         $response->assertJson([
+            'available' => true,
             'has_conflict' => false,
             'available_resource_count' => 1,
         ]);
+    }
+
+    public function test_preview_conflicts_supports_pool_id_alias_and_detects_notice_violation(): void
+    {
+        // Enforce 2h notice policy
+        \App\Domain\Settings\Models\Setting::set('org.min_notice_hours', 2);
+
+        // Schedule meeting only 30 minutes in the future (violates 2h notice)
+        $startsAt = Carbon::now()->addMinutes(30);
+        $endsAt = Carbon::now()->addMinutes(90);
+
+        $response = $this->actingAs($this->user)
+            ->postJson(route('meetings.preview-conflicts'), [
+                'starts_at' => $startsAt->toIso8601String(),
+                'ends_at' => $endsAt->toIso8601String(),
+                'pool_id' => $this->pool->id, // tests alias
+            ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'available' => false,
+            'has_conflict' => true,
+        ]);
+        $this->assertStringContainsString('2 hours advance notice', $response->json('message'));
+    }
+
+    public function test_meeting_options_returns_effective_booking_policy(): void
+    {
+        \App\Domain\Settings\Models\Setting::set('org.min_notice_hours', 4);
+        \App\Domain\Settings\Models\Setting::set('org.max_advance_days', 60);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/spa/meetings/options');
+
+        $response->assertOk();
+        $response->assertJsonStructure([
+            'templates',
+            'profiles',
+            'pools',
+            'policy' => [
+                'min_notice_hours',
+                'max_advance_days',
+                'buffer_minutes',
+                'max_duration_minutes',
+                'earliest_start_iso',
+                'is_notice_exempt',
+            ],
+        ]);
+        $this->assertEquals(4, $response->json('policy.min_notice_hours'));
+        $this->assertEquals(60, $response->json('policy.max_advance_days'));
     }
 
     public function test_booking_form_submission_creates_meeting_and_reserves_resource(): void

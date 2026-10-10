@@ -16,6 +16,7 @@ use App\Domain\Meetings\Services\MeetingStateMachine;
 use App\Domain\Meetings\Services\SeriesAllocationService;
 use App\Domain\Recordings\Models\CloudRecording;
 use App\Domain\Recordings\Services\CloudRecordingService;
+use App\Domain\Scheduling\Services\EffectivePolicyResolver;
 use App\Domain\Scheduling\Models\MeetingTemplate;
 use App\Domain\Scheduling\Models\ResourceReservation;
 use App\Domain\Scheduling\Models\SecurityProfile;
@@ -48,7 +49,8 @@ class SpaDataController extends Controller
         protected SeriesAllocationService $seriesAllocationService,
         protected MeetingStateMachine $stateMachine,
         protected WaitlistService $waitlistService,
-        protected IcsCalendarService $icsService
+        protected IcsCalendarService $icsService,
+        protected EffectivePolicyResolver $policyResolver
     ) {}
 
     /**
@@ -265,6 +267,15 @@ class SpaDataController extends Controller
             ->orderBy('id', 'asc')
             ->get();
 
+        $effectivePolicy = $this->policyResolver->resolve(
+            user: $user,
+            department: $user?->department
+        );
+
+        $minNoticeHours = $effectivePolicy->minNoticeHours;
+        $now = Carbon::now();
+        $earliestAllowed = (clone $now)->addHours($minNoticeHours);
+
         return response()->json([
             'templates' => $templates,
             'profiles' => $profiles,
@@ -272,6 +283,14 @@ class SpaDataController extends Controller
             'can_book_on_behalf' => $canBookOnBehalf,
             'users' => $users,
             'custom_fields' => $customFields,
+            'policy' => [
+                'min_notice_hours' => $minNoticeHours,
+                'max_advance_days' => $effectivePolicy->maxAdvanceDays,
+                'buffer_minutes' => $effectivePolicy->bufferMinutes,
+                'max_duration_minutes' => $effectivePolicy->maxDurationMinutes,
+                'earliest_start_iso' => $earliestAllowed->toIso8601String(),
+                'is_notice_exempt' => $minNoticeHours === 0,
+            ],
         ]);
     }
 

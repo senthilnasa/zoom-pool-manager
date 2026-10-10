@@ -11,7 +11,9 @@ use Symfony\Component\Uid\Ulid;
  * @property int $id
  * @property string $public_id
  * @property string $key
+ * @property string|null $category
  * @property string $name
+ * @property string|null $description
  * @property string $subject_template
  * @property string $body_html_template
  * @property string $body_text_template
@@ -28,7 +30,9 @@ class EmailTemplate extends Model
     protected $fillable = [
         'public_id',
         'key',
+        'category',
         'name',
+        'description',
         'subject_template',
         'body_html_template',
         'body_text_template',

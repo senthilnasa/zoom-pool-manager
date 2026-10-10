@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.28] - 2026-10-10
+
+### Fixed & Enhanced
+- **Policy-Aware Date & Time Autofill**:
+  - Resolved an issue on the meeting booking form (`MeetingCreatePage.vue`) and timeline quick-book (`CalendarPage.vue`) where default start and end times were populated as `now + 1 hour`, immediately violating configured advance notice policies (e.g. `Bookings require at least 2 hours advance notice`).
+  - The booking form now dynamically fetches the user's effective scheduling policy (`/spa/meetings/options`) and automatically seeds initial start times to the earliest permissible future interval that fully satisfies `min_notice_hours` (snapped to the next clean 30-minute slot with safety buffer).
+  - Enforced native HTML `:min` and `:max` date-time input bounds matching the active policy (`min_notice_hours` and `max_advance_days`), preventing users from picking past dates or lead-time violating slots.
+  - Added visual notice requirement badge (`Min. Xh advance notice`) and instant inline warning message informing users of the exact earliest allowed booking slot before form submission.
+- **Resilient Real-time Conflict Engine Preview**:
+  - Fixed `/meetings/preview-conflicts` endpoint to support `pool_id` alias alongside `preferred_pool_id`, evaluate delegated bookings on behalf of other users, and return explicit `available` and user-friendly `message` strings.
+  - Updated live conflict checker in `MeetingCreatePage.vue` to reliably detect and display advance notice violations and resource availability in real time.
+- **Enterprise Email Template Architecture & Categorization**:
+  - Implemented `EmailTemplateRegistry` providing centralized master definitions, metadata descriptions, categories, and one-click Google Calendar and Outlook link support.
+
+---
+
 ## [1.0.27] - 2026-10-10
 
 ### Fixed & Enhanced

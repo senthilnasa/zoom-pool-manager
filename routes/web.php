@@ -360,9 +360,13 @@ Route::middleware('auth')->group(function () {
     // Email Templates Administration
     Route::prefix('admin/email-templates')->name('admin.templates.')->group(function () {
         Route::get('/', [EmailTemplateController::class, 'index'])->name('index');
+        Route::post('/reset-all', [EmailTemplateController::class, 'resetAll'])->name('reset-all');
+        Route::get('/{id}', [EmailTemplateController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [EmailTemplateController::class, 'edit'])->name('edit');
         Route::put('/{id}', [EmailTemplateController::class, 'update'])->name('update');
         Route::post('/{id}/preview', [EmailTemplateController::class, 'preview'])->name('preview');
+        Route::post('/{id}/reset', [EmailTemplateController::class, 'reset'])->name('reset');
+        Route::post('/{id}/send-test', [EmailTemplateController::class, 'sendTest'])->name('send-test');
     });
 
     // Cloud Recordings (SPEC Part H11)

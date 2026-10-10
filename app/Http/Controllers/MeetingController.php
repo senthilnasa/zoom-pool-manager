@@ -64,36 +64,54 @@ class MeetingController extends Controller
         $validated = $request->validate([
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
-            'participant_count' => ['required', 'integer', 'min:1'],
+            'participant_count' => ['nullable', 'integer', 'min:1'],
             'template_id' => ['nullable', 'integer'],
             'security_profile_id' => ['nullable', 'integer'],
             'preferred_pool_id' => ['nullable', 'integer'],
+            'pool_id' => ['nullable', 'integer'],
+            'owner_user_id' => ['nullable', 'integer'],
         ]);
 
         /** @var User $user */
         $user = $request->user();
 
+        // If booking on behalf, resolve target user if specified
+        $evalUser = $user;
+        if (! empty($validated['owner_user_id']) && (int) $validated['owner_user_id'] !== $user->id) {
+            $owner = User::find($validated['owner_user_id']);
+            if ($owner) {
+                $evalUser = $owner;
+            }
+        }
+
+        $preferredPoolId = $validated['preferred_pool_id'] ?? $validated['pool_id'] ?? null;
+        /** @var ResourcePool|null $pool */
+        $pool = ! empty($preferredPoolId) ? ResourcePool::find($preferredPoolId) : null;
         /** @var MeetingTemplate|null $template */
         $template = ! empty($validated['template_id']) ? MeetingTemplate::find($validated['template_id']) : null;
         /** @var SecurityProfile|null $profile */
         $profile = ! empty($validated['security_profile_id']) ? SecurityProfile::find($validated['security_profile_id']) : null;
-        /** @var ResourcePool|null $pool */
-        $pool = ! empty($validated['preferred_pool_id']) ? ResourcePool::find($validated['preferred_pool_id']) : null;
 
         $result = $this->meetingService->previewConflicts(
             startsAt: Carbon::parse($validated['starts_at']),
             endsAt: Carbon::parse($validated['ends_at']),
-            participantCount: (int) $validated['participant_count'],
-            user: $user,
+            participantCount: (int) ($validated['participant_count'] ?? 10),
+            user: $evalUser,
             template: $template,
             securityProfile: $profile,
             pool: $pool,
             requestInput: $request->all()
         );
 
+        $firstMsg = $result->hasConflict && ! empty($result->conflicts)
+            ? $result->conflicts[0]['message']
+            : null;
+
         return response()->json([
+            'available' => ! $result->hasConflict,
             'has_conflict' => $result->hasConflict,
             'conflicts' => $result->conflicts,
+            'message' => $firstMsg ?? (! $result->hasConflict ? 'Pool resources available for this timeframe.' : 'Resource allocation conflict detected.'),
             'available_resource_count' => $result->availableResourceCount,
         ]);
     }

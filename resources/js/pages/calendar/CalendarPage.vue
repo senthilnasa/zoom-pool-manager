@@ -1007,8 +1007,23 @@ const onTrackClick = (event, res) => {
 const openQuickBookModal = (prefill = {}) => {
   bookingForm.title = '';
   bookingForm.date = prefill.date || selectedDateString.value;
-  bookingForm.startTime = prefill.startTime || '10:00';
-  bookingForm.endTime = prefill.endTime || '11:00';
+
+  // Calculate safe default time conforming to notice policy (at least 2 hours advance)
+  const now = new Date();
+  const safeStart = new Date(now.getTime() + 2 * 3600 * 1000);
+  const mins = safeStart.getMinutes();
+  if (mins > 0 && mins <= 30) {
+    safeStart.setMinutes(30, 0, 0);
+  } else if (mins > 30) {
+    safeStart.setHours(safeStart.getHours() + 1, 0, 0, 0);
+  } else {
+    safeStart.setSeconds(0, 0);
+  }
+  const safeEnd = new Date(safeStart.getTime() + 60 * 60 * 1000);
+  const pad = (n) => String(n).padStart(2, '0');
+
+  bookingForm.startTime = prefill.startTime || `${pad(safeStart.getHours())}:${pad(safeStart.getMinutes())}`;
+  bookingForm.endTime = prefill.endTime || `${pad(safeEnd.getHours())}:${pad(safeEnd.getMinutes())}`;
   bookingForm.pool_id = prefill.resource?.pools?.[0]?.id || selectedPoolId.value || null;
   bookingForm.department_id = null;
   bookingForm.participant_count = 10;

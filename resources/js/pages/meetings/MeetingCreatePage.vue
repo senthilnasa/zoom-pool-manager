@@ -55,26 +55,50 @@
           <!-- Date & Times -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Start Time *
-              </label>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Start Time *
+                </label>
+                <span
+                  v-if="options.policy && options.policy.min_notice_hours > 0"
+                  class="text-[11px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-2 py-0.5 rounded-md border border-brand-200/50 dark:border-brand-800/50 flex items-center gap-1"
+                >
+                  <Clock class="w-3 h-3" />
+                  Min. {{ options.policy.min_notice_hours }}h advance notice
+                </span>
+              </div>
               <input
                 v-model="form.starts_at"
                 type="datetime-local"
+                :min="minStartDateTime"
+                :max="maxStartDateTime"
                 required
-                @change="checkConflicts"
+                @input="userHasManuallyChangedTime = true"
+                @change="onStartTimeChanged"
                 class="w-full glass-input"
+                :class="noticeViolationWarning ? 'border-rose-400 focus:ring-rose-500' : ''"
               />
+              <p v-if="noticeViolationWarning" class="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1">
+                <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+                {{ noticeViolationWarning }}
+              </p>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                End Time *
-              </label>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  End Time *
+                </label>
+                <span v-if="meetingDurationDisplay" class="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  {{ meetingDurationDisplay }}
+                </span>
+              </div>
               <input
                 v-model="form.ends_at"
                 type="datetime-local"
+                :min="minEndDateTime"
                 required
+                @input="userHasManuallyChangedTime = true"
                 @change="checkConflicts"
                 class="w-full glass-input"
               />
@@ -630,6 +654,7 @@ import {
   Calendar as CalendarIcon,
   CheckCircle2,
   AlertCircle,
+  Clock,
   UserCheck,
   ShieldAlert,
   PlayCircle,
@@ -763,29 +788,144 @@ const toggleDay = (code) => {
   }
 };
 
-const setDefaultTimes = () => {
-  const start = new Date();
-  start.setHours(start.getHours() + 1, 0, 0, 0);
-  const end = new Date(start);
-  end.setMinutes(end.getMinutes() + 60);
+const userHasManuallyChangedTime = ref(false);
 
-  const formatInput = (d) => {
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
+const selectedTemplateDuration = computed(() => {
+  if (!form.value.template_id) return null;
+  const t = options.value.templates?.find((x) => x.id === form.value.template_id);
+  return t?.default_duration_minutes || null;
+});
+
+const pad = (n) => String(n).padStart(2, '0');
+
+const formatInput = (d) => {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const formatDisplayDate = (d) => {
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+};
+
+const minStartDateTime = computed(() => {
+  const minNoticeHours = Number(options.value.policy?.min_notice_hours ?? 0);
+  const now = new Date();
+  const minDate = new Date(now.getTime() + (minNoticeHours * 3600 * 1000));
+  return formatInput(minDate);
+});
+
+const minEndDateTime = computed(() => {
+  return form.value.starts_at || minStartDateTime.value;
+});
+
+const maxStartDateTime = computed(() => {
+  const maxDays = Number(options.value.policy?.max_advance_days ?? 365);
+  const now = new Date();
+  const maxDate = new Date(now.getTime() + (maxDays * 86400 * 1000));
+  return formatInput(maxDate);
+});
+
+const noticeViolationWarning = computed(() => {
+  if (!form.value.starts_at) return null;
+  const minNoticeHours = Number(options.value.policy?.min_notice_hours ?? 0);
+  if (minNoticeHours <= 0) return null;
+
+  const start = new Date(form.value.starts_at);
+  if (isNaN(start.getTime())) return null;
+
+  const now = new Date();
+  const minAllowed = new Date(now.getTime() + (minNoticeHours * 3600 * 1000));
+
+  if (start.getTime() < minAllowed.getTime()) {
+    const timeStr = formatDisplayDate(minAllowed);
+    const isToday = minAllowed.toDateString() === now.toDateString();
+    const datePrefix = isToday ? 'Today' : minAllowed.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return `Bookings require at least ${minNoticeHours} hours advance notice (Earliest allowed: ${datePrefix} at ${timeStr}).`;
+  }
+
+  return null;
+});
+
+const meetingDurationDisplay = computed(() => {
+  if (!form.value.starts_at || !form.value.ends_at) return '';
+  const s = new Date(form.value.starts_at);
+  const e = new Date(form.value.ends_at);
+  if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) return '';
+  const diffMins = Math.round((e.getTime() - s.getTime()) / 60000);
+  if (diffMins < 60) return `(${diffMins} mins)`;
+  const hrs = Math.floor(diffMins / 60);
+  const remainingMins = diffMins % 60;
+  return remainingMins > 0 ? `(${hrs}h ${remainingMins}m)` : `(${hrs}h)`;
+});
+
+const setDefaultTimes = (policy = null) => {
+  const minNoticeHours = Number(policy?.min_notice_hours ?? 2);
+  const now = new Date();
+
+  // Earliest permissible start is now + minNoticeHours
+  const earliest = new Date(now.getTime() + (minNoticeHours * 3600 * 1000));
+
+  // Snap forward to next clean 30-minute interval
+  const start = new Date(earliest);
+  const mins = start.getMinutes();
+  if (mins > 0 && mins <= 30) {
+    start.setMinutes(30, 0, 0);
+  } else if (mins > 30) {
+    start.setHours(start.getHours() + 1, 0, 0, 0);
+  } else {
+    start.setSeconds(0, 0);
+  }
+
+  // Ensure start is at least (now + minNoticeHours + 2 minutes buffer)
+  // so slow form completion or submission does not violate the exact minute cutoff
+  const safeCutoff = new Date(now.getTime() + (minNoticeHours * 3600 * 1000) + (2 * 60 * 1000));
+  if (start.getTime() < safeCutoff.getTime()) {
+    start.setMinutes(start.getMinutes() + 30);
+  }
+
+  const durationMins = selectedTemplateDuration.value || 60;
+  const end = new Date(start.getTime() + durationMins * 60 * 1000);
 
   form.value.starts_at = formatInput(start);
   form.value.ends_at = formatInput(end);
 
-  // Default day to current day
+  // Default day to start day
   const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
   form.value.byday = [dayNames[start.getDay()]];
+};
+
+const onStartTimeChanged = () => {
+  userHasManuallyChangedTime.value = true;
+  if (form.value.starts_at) {
+    const s = new Date(form.value.starts_at);
+    if (!isNaN(s.getTime())) {
+      // Sync byday for recurring series to match start day
+      const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+      const dayCode = dayNames[s.getDay()];
+      if (!form.value.byday.includes(dayCode)) {
+        form.value.byday = [dayCode];
+      }
+
+      // If ends_at is empty or before/equal starts_at, adjust ends_at
+      const durationMins = selectedTemplateDuration.value || 60;
+      if (!form.value.ends_at || new Date(form.value.ends_at) <= s) {
+        const e = new Date(s.getTime() + durationMins * 60 * 1000);
+        form.value.ends_at = formatInput(e);
+      }
+    }
+  }
+  checkConflicts();
 };
 
 const loadOptions = async () => {
   try {
     const res = await axios.get('/spa/meetings/options');
     options.value = res.data;
+
+    // Auto-fill times aligning with active policy if user hasn't manually edited
+    if (!userHasManuallyChangedTime.value) {
+      setDefaultTimes(res.data.policy);
+    }
+
     if (res.data.custom_fields && Array.isArray(res.data.custom_fields)) {
       res.data.custom_fields.forEach((f) => {
         if (f.default_value !== null && f.default_value !== undefined && form.value.custom_fields[f.field_key] === undefined) {
@@ -793,6 +933,9 @@ const loadOptions = async () => {
         }
       });
     }
+
+    // Verify availability for auto-filled schedule
+    checkConflicts();
   } catch (e) {
     console.error('Failed to load meeting options', e);
   }
@@ -805,18 +948,38 @@ const checkConflicts = async () => {
       starts_at: form.value.starts_at,
       ends_at: form.value.ends_at,
       pool_id: form.value.pool_id,
+      preferred_pool_id: form.value.pool_id,
       participant_count: form.value.participant_count,
+      template_id: form.value.template_id,
+      owner_user_id: bookOnBehalf.value ? form.value.owner_user_id : null,
     });
     conflictStatus.value = {
-      has_conflict: !res.data.available,
-      message: res.data.message || (res.data.available ? 'Pool resources available for this timeframe.' : 'Resource allocation conflict detected.'),
+      has_conflict: Boolean(res.data.has_conflict),
+      message: res.data.message || (res.data.has_conflict ? 'Scheduling conflict detected.' : 'Pool resources available for this timeframe.'),
     };
   } catch (e) {
-    // ignore
+    const msg = e.response?.data?.message;
+    if (msg) {
+      conflictStatus.value = {
+        has_conflict: true,
+        message: msg,
+      };
+    }
   }
 };
 
+watch(() => form.value.owner_user_id, () => {
+  if (bookOnBehalf.value) {
+    checkConflicts();
+  }
+});
+
 const submitBooking = async () => {
+  if (noticeViolationWarning.value) {
+    toast.error(noticeViolationWarning.value);
+    return;
+  }
+
   if (bookOnBehalf.value && !form.value.owner_user_id) {
     toast.error('Please select the user on whose behalf you are booking.');
     return;
