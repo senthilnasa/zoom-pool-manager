@@ -80,6 +80,8 @@ class TemplateRenderer
             $vars['meeting.meeting_type'] = ucfirst($meeting->meeting_type);
             $vars['meeting.starts_at'] = $meeting->starts_at->setTimezone($timezone)->format('Y-m-d H:i T');
             $vars['meeting.ends_at'] = $meeting->ends_at->setTimezone($timezone)->format('Y-m-d H:i T');
+            $vars['meeting.starts_at_iso'] = $meeting->starts_at->toIso8601String();
+            $vars['meeting.ends_at_iso'] = $meeting->ends_at->toIso8601String();
             $vars['meeting.duration_minutes'] = (string) $meeting->duration_minutes;
             $vars['meeting.timezone'] = $timezone;
             $vars['meeting.join_url'] = (string) ($meeting->join_url ?? route('meetings.show', $meeting->public_id));
@@ -109,6 +111,36 @@ class TemplateRenderer
                     $vars['meeting.passcode'] = '[Protected / Included in Join Link]';
                 }
             }
+
+            // 1-Click Calendar Deep Links (Google Calendar, Outlook & .ICS)
+            $joinUrl = $vars['meeting.join_url'];
+            $passcodeSnippet = ! empty($passcode) ? "\nPasscode: {$passcode}" : '';
+            $calDetails = ($meeting->description ? "{$meeting->description}\n\n" : '')
+                ."Join Zoom Meeting: {$joinUrl}\n"
+                .'Meeting ID: '.($meeting->zoom_meeting_id ?: 'N/A')
+                .$passcodeSnippet;
+
+            $utcTz = new \DateTimeZone('UTC');
+            $startsUtc = (clone $meeting->starts_at)->setTimezone($utcTz)->format('Ymd\THis\Z');
+            $endsUtc = (clone $meeting->ends_at)->setTimezone($utcTz)->format('Ymd\THis\Z');
+
+            $vars['meeting.google_calendar_url'] = 'https://calendar.google.com/calendar/render?'.http_build_query([
+                'action' => 'TEMPLATE',
+                'text' => $meeting->title,
+                'dates' => "{$startsUtc}/{$endsUtc}",
+                'details' => $calDetails,
+                'location' => $joinUrl,
+            ]);
+
+            $vars['meeting.outlook_calendar_url'] = 'https://outlook.live.com/calendar/0/deeplink/compose?'.http_build_query([
+                'subject' => $meeting->title,
+                'startdt' => $meeting->starts_at->toIso8601String(),
+                'enddt' => $meeting->ends_at->toIso8601String(),
+                'body' => $calDetails,
+                'location' => $joinUrl,
+            ]);
+
+            $vars['meeting.ics_url'] = route('meetings.ics', $meeting->public_id);
 
             // Host Key & Start URL Handling:
             // start_url is kept behind authenticated portal
@@ -193,8 +225,8 @@ class TemplateRenderer
      */
     protected function sanitizeHtml(string $html): string
     {
-        // Remove script tags and contents
-        $clean = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $html) ?? $html;
+        // Remove executable script tags and contents, while preserving safe structured metadata like application/ld+json
+        $clean = preg_replace('/<script\b(?![^>]*\btype=["\']application\/ld\+json["\'])[^>]*>(.*?)<\/script>/is', '', $html) ?? $html;
 
         // Remove dangerous on* attributes
         $clean = preg_replace('/\s+on[a-zA-Z]+\s*=\s*(["\']).*?\1/i', '', $clean) ?? $clean;

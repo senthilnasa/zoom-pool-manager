@@ -306,10 +306,14 @@ class MeetingService
                 }
             }
 
-            // Record invitees
+            // Record invitees (exclude owner to avoid self-invite loops)
+            $ownerEmail = strtolower(trim((string) $owner->email));
             foreach ($inviteeEmails as $email) {
                 $email = trim($email);
                 if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    if (strtolower($email) === $ownerEmail) {
+                        continue;
+                    }
                     $internalUser = User::where('email', $email)->first();
                     MeetingInvitee::create([
                         'meeting_id' => $meeting->id,

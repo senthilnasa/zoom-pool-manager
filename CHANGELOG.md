@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.27] - 2026-10-10
+
+### Fixed & Enhanced
+- **Google Calendar & Gmail "Unable to load event" Fix:**
+  - Resolved Google Calendar anti-spoofing and self-invite parser failure where meeting hosts received invitations with `METHOD:REQUEST` listing themselves as both `ORGANIZER` and `ATTENDEE`.
+  - Enforced `METHOD:PUBLISH` for meeting hosts/organizers so confirmed meetings automatically attach as direct calendar imports without circular RSVP loops.
+  - Retained `METHOD:REQUEST` with clean `PARTSTAT=NEEDS-ACTION` exclusively for genuine invitees, strictly excluding the organizer from the attendee list under RFC 5545/RFC 5546.
+  - Automatically injected `ORGANIZER;SENT-BY="mailto:{system_mailer}"` when the notification sender differs from the meeting owner to satisfy Google Workspace and Outlook DMARC/sender-organizer verification.
+- **1-Click Calendar Add Links & Google Email Markup:**
+  - Added 1-click **"+ Google Calendar"** and **"+ Outlook"** direct web deep-link buttons into meeting email notification templates, alongside `.ics` file downloads.
+  - Integrated structured Schema.org `EventReservation` JSON-LD markup into meeting HTML email bodies, enabling native Gmail card parsing and automatic Google Calendar synchronization.
+  - Allowed safe `application/ld+json` script metadata in `TemplateRenderer` while preserving strict executable script sanitization.
+- **Google Workspace Add-on Booking Refinement:**
+  - Filtered out meeting owner from the `$invitees` array during Google Calendar conference creation to prevent circular self-invitation duplicates.
+
+---
+
 ## [1.0.26] - 2026-10-06
 
 ### Added & Enhanced

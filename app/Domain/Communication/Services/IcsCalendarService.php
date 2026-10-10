@@ -16,11 +16,16 @@ class IcsCalendarService
      * Generate an RFC 5545 iCalendar (.ics) string for a meeting.
      *
      * @param  Meeting  $meeting  The meeting model
-     * @param  string  $method  'REQUEST' or 'CANCEL'
+     * @param  string  $method  'REQUEST', 'PUBLISH', or 'CANCEL'
      * @param  int|null  $sequence  Calendar sequence number
+     * @param  string|null  $recipientEmail  Target recipient email for attendee customization
      */
-    public function generate(Meeting $meeting, string $method = 'REQUEST', ?int $sequence = null): string
-    {
+    public function generate(
+        Meeting $meeting,
+        string $method = 'REQUEST',
+        ?int $sequence = null,
+        ?string $recipientEmail = null
+    ): string {
         $orgName = trim((string) (
             Setting::get('org.name')
             ?: Setting::get('organization_name')
@@ -82,7 +87,8 @@ class IcsCalendarService
             ->startsAt($startsAtUtc)
             ->endsAt($endsAtUtc)
             ->description($description)
-            ->address($joinUrl);
+            ->address($joinUrl)
+            ->url($joinUrl);
 
         if ($sequence > 0) {
             $event->sequence($sequence);
@@ -96,34 +102,47 @@ class IcsCalendarService
 
         // Add organizer
         $owner = $meeting->owner ?? $meeting->requester;
+        $ownerEmail = $owner ? strtolower(trim((string) $owner->email)) : '';
         if ($owner) {
             $event->organizer($owner->email, $owner->name);
         }
 
-        // Add requester as attendee if distinct from owner and not already in invitees
-        $requester = $meeting->requester;
-        $inviteeEmails = ($meeting->relationLoaded('invitees') ? $meeting->invitees : $meeting->invitees()->get())
-            ->pluck('email')
-            ->map(fn ($e) => strtolower(trim((string) $e)))
-            ->all();
+        // RFC 5545 / RFC 5546 attendee rules:
+        // - METHOD:PUBLISH: Used when sending calendar events to the host/organizer or direct browser downloads.
+        //   In PUBLISH, no attendee entries are required, and the organizer MUST NOT be listed as an attendee.
+        // - METHOD:REQUEST: Used when sending invitations to attendees.
+        //   Only invitees and distinct requesters are added as attendees with PARTSTAT=NEEDS-ACTION.
+        //   The organizer MUST NEVER be added to the ATTENDEE list in REQUEST.
+        $methodUpper = strtoupper($method);
+        if ($methodUpper === 'REQUEST' || $methodUpper === 'CANCEL') {
+            $requester = $meeting->requester;
+            $invitees = $meeting->relationLoaded('invitees') ? $meeting->invitees : $meeting->invitees()->get();
+            $inviteeEmails = $invitees->pluck('email')
+                ->map(fn ($e) => strtolower(trim((string) $e)))
+                ->all();
 
-        if ($requester && (! $owner || $requester->id !== $owner->id)) {
-            if (! in_array(strtolower(trim($requester->email)), $inviteeEmails, true)) {
-                $event->attendee($requester->email, $requester->name, ParticipationStatus::accepted());
+            // Add requester as attendee if distinct from owner and not already in invitees
+            if ($requester && (! $owner || $requester->id !== $owner->id)) {
+                $reqEmail = strtolower(trim((string) $requester->email));
+                if (! in_array($reqEmail, $inviteeEmails, true)) {
+                    $event->attendee($requester->email, $requester->name, ParticipationStatus::needs_action());
+                }
             }
-        }
 
-        // Add invitees as attendees
-        $invitees = $meeting->relationLoaded('invitees') ? $meeting->invitees : $meeting->invitees()->get();
-        foreach ($invitees as $invitee) {
-            $event->attendee($invitee->email, $invitee->name, ParticipationStatus::needs_action());
-        }
+            // Add invitees as attendees (excluding owner if mistakenly present)
+            foreach ($invitees as $invitee) {
+                if ($ownerEmail !== '' && strtolower(trim((string) $invitee->email)) === $ownerEmail) {
+                    continue;
+                }
+                $event->attendee($invitee->email, $invitee->name, ParticipationStatus::needs_action());
+            }
 
-        // RFC 5545 strictly requires at least one ATTENDEE when METHOD:REQUEST is used
-        if ($method === 'REQUEST' && count($invitees) === 0) {
-            $primaryUser = $owner ?? $requester;
-            if ($primaryUser) {
-                $event->attendee($primaryUser->email, $primaryUser->name, ParticipationStatus::accepted());
+            // If a specific recipient is targeted who is an invitee, ensure they are in attendee list
+            if (! empty($recipientEmail)) {
+                $cleanRecipient = strtolower(trim($recipientEmail));
+                if ($cleanRecipient !== $ownerEmail && ! in_array($cleanRecipient, $inviteeEmails, true)) {
+                    $event->attendee($recipientEmail, null, ParticipationStatus::needs_action());
+                }
             }
         }
 
@@ -137,6 +156,17 @@ class IcsCalendarService
         $methodHeader = strtoupper($method);
         $rawIcs = preg_replace('/BEGIN:VCALENDAR\r?\n/', "BEGIN:VCALENDAR\r\nMETHOD:{$methodHeader}\r\n", $rawIcs, 1) ?? $rawIcs;
 
+        // Inject SENT-BY parameter on ORGANIZER if email was sent from system address to satisfy Google Calendar / Outlook anti-spoofing
+        $fromAddress = (string) Setting::get('mail.from_address', config('mail.from.address', ''));
+        if (! empty($fromAddress) && $owner && strcasecmp($fromAddress, $owner->email) !== 0) {
+            $rawIcs = preg_replace(
+                '/ORGANIZER;CN=([^:\r\n]+):MAILTO:([^\r\n]+)/',
+                'ORGANIZER;SENT-BY="mailto:'.$fromAddress.'";CN=$1:MAILTO:$2',
+                $rawIcs,
+                1
+            ) ?? $rawIcs;
+        }
+
         // Ensure strict RFC 5545 CRLF line breaks throughout
         $rawIcs = str_replace(["\r\n", "\r", "\n"], "\n", $rawIcs);
         $rawIcs = str_replace("\n", "\r\n", $rawIcs);
@@ -149,9 +179,9 @@ class IcsCalendarService
      *
      * @return array{name: string, data: string, mime: string}
      */
-    public function getAttachment(Meeting $meeting, string $method = 'REQUEST'): array
+    public function getAttachment(Meeting $meeting, string $method = 'REQUEST', ?string $recipientEmail = null): array
     {
-        $icsContent = $this->generate($meeting, $method);
+        $icsContent = $this->generate($meeting, $method, null, $recipientEmail);
 
         return [
             'name' => "meeting-{$meeting->public_id}.ics",

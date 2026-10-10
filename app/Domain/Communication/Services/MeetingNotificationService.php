@@ -18,11 +18,11 @@ class MeetingNotificationService
      */
     public function notifyMeetingConfirmed(Meeting $meeting, bool $sync = false): void
     {
-        $icsAttachment = $this->icsService->getAttachment($meeting, 'REQUEST');
         $owner = $meeting->owner ?? $meeting->requester;
+        $hostAttachment = $owner ? $this->icsService->getAttachment($meeting, 'PUBLISH', $owner->email) : null;
 
-        // 1. Notify Owner
-        if ($owner) {
+        // 1. Notify Owner (uses METHOD:PUBLISH so host calendar adds event directly without self-invite RSVP loop)
+        if ($owner && $hostAttachment) {
             $this->mailService->queueEmail(
                 templateKey: 'meeting_confirmed',
                 recipientEmail: $owner->email,
@@ -30,7 +30,7 @@ class MeetingNotificationService
                 context: ['meeting' => $meeting],
                 meeting: $meeting,
                 eventId: "confirmed_{$meeting->id}_{$meeting->status}",
-                attachments: [$icsAttachment],
+                attachments: [$hostAttachment],
                 sync: $sync
             );
 
@@ -48,6 +48,7 @@ class MeetingNotificationService
         $inviteeEmails = $meeting->invitees->pluck('email')->map(fn ($e) => strtolower(trim((string) $e)))->all();
 
         if ($requester && (! $owner || $requester->id !== $owner->id)) {
+            $reqAttachment = $this->icsService->getAttachment($meeting, 'PUBLISH', $requester->email);
             if (! in_array(strtolower(trim($requester->email)), $inviteeEmails, true)) {
                 $this->mailService->queueEmail(
                     templateKey: 'meeting_confirmed',
@@ -56,7 +57,7 @@ class MeetingNotificationService
                     context: ['meeting' => $meeting],
                     meeting: $meeting,
                     eventId: "confirmed_requester_{$meeting->id}_{$requester->id}",
-                    attachments: [$icsAttachment],
+                    attachments: [$reqAttachment],
                     sync: $sync
                 );
             }
@@ -70,8 +71,10 @@ class MeetingNotificationService
             );
         }
 
-        // 2. Notify Invitees
+        // 2. Notify Invitees (uses METHOD:REQUEST with RSVP actions and attendee matching)
         foreach ($meeting->invitees as $invitee) {
+            $inviteeAttachment = $this->icsService->getAttachment($meeting, 'REQUEST', $invitee->email);
+
             $this->mailService->queueEmail(
                 templateKey: 'meeting_confirmed',
                 recipientEmail: $invitee->email,
@@ -79,7 +82,7 @@ class MeetingNotificationService
                 context: ['meeting' => $meeting],
                 meeting: $meeting,
                 eventId: "confirmed_invitee_{$invitee->id}_{$meeting->id}",
-                attachments: [$icsAttachment],
+                attachments: [$inviteeAttachment],
                 sync: $sync
             );
 
@@ -145,6 +148,7 @@ class MeetingNotificationService
     {
         $requester = $meeting->requester;
         if ($requester) {
+            $hostAttachment = $this->icsService->getAttachment($meeting, 'PUBLISH', $requester->email);
             $this->mailService->queueEmail(
                 templateKey: 'meeting_approved',
                 recipientEmail: $requester->email,
@@ -152,6 +156,7 @@ class MeetingNotificationService
                 context: ['meeting' => $meeting],
                 meeting: $meeting,
                 eventId: "approved_{$meeting->id}",
+                attachments: [$hostAttachment],
                 sync: $sync
             );
 
@@ -318,10 +323,10 @@ class MeetingNotificationService
      */
     public function notifyWaitlistAllocated(Meeting $meeting, bool $sync = false): void
     {
-        $icsAttachment = $this->icsService->getAttachment($meeting, 'REQUEST');
         $requester = $meeting->requester;
+        $hostAttachment = $requester ? $this->icsService->getAttachment($meeting, 'PUBLISH', $requester->email) : null;
 
-        if ($requester) {
+        if ($requester && $hostAttachment) {
             $this->mailService->queueEmail(
                 templateKey: 'waitlist_allocated',
                 recipientEmail: $requester->email,
@@ -329,7 +334,7 @@ class MeetingNotificationService
                 context: ['meeting' => $meeting],
                 meeting: $meeting,
                 eventId: "waitlist_allocated_{$meeting->id}",
-                attachments: [$icsAttachment],
+                attachments: [$hostAttachment],
                 sync: $sync
             );
 

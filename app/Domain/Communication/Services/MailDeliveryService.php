@@ -202,6 +202,49 @@ HTML;
         <p style="margin: 6px 0; font-size: 13px;"><strong>Passcode:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">{{meeting.passcode}}</code></p>
         <p style="margin: 6px 0; font-size: 13px;"><strong>Host Key PIN:</strong> <code style="background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold;">{{meeting.host_key}}</code> <span style="font-size: 11px; color: #64748b;">(Claim Host: In Zoom client &gt; Participants &gt; Claim Host)</span></p>
     </div>
+
+    <!-- 1-Click Calendar Add Options -->
+    <div style="margin: 20px 0; padding: 16px; background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px; text-align: center;">
+        <p style="font-size: 11px; color: #64748b; margin: 0 0 10px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Add To Your Calendar</p>
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+            <tr>
+                <td style="padding: 0 4px;">
+                    <a href="{{meeting.google_calendar_url}}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 8px 14px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 600;">+ Google Calendar</a>
+                </td>
+                <td style="padding: 0 4px;">
+                    <a href="{{meeting.outlook_calendar_url}}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 8px 14px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 600;">+ Outlook</a>
+                </td>
+                <td style="padding: 0 4px;">
+                    <a href="{{meeting.ics_url}}" style="display: inline-block; padding: 8px 14px; background-color: #ffffff; color: #334155; text-decoration: none; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; font-weight: 600;">Download .ICS</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Google Calendar Email Schema.org Event Reservation Markup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EventReservation",
+      "reservationNumber": "{{meeting.id}}",
+      "reservationStatus": "https://schema.org/Confirmed",
+      "underName": {
+        "@type": "Person",
+        "name": "{{recipient.name}}"
+      },
+      "reservationFor": {
+        "@type": "Event",
+        "name": "{{meeting.title}}",
+        "startDate": "{{meeting.starts_at_iso}}",
+        "endDate": "{{meeting.ends_at_iso}}",
+        "location": {
+          "@type": "VirtualLocation",
+          "url": "{{meeting.join_url}}"
+        }
+      }
+    }
+    </script>
+
     <p style="font-size: 13px; color: #475569;">To view host controls or manage this booking, log into the <a href="{{org.website}}" style="color: #2563eb; font-weight: 600;">{{org.name}} Portal</a>.</p>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
     <p style="font-size: 11px; color: #94a3b8; margin: 0;">This email was sent automatically by {{org.name}}.</p>

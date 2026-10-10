@@ -358,12 +358,12 @@ TPL;
         if (! empty($data['invitees']) && is_array($data['invitees'])) {
             foreach ($data['invitees'] as $inv) {
                 if (is_string($inv) && filter_var(trim($inv), FILTER_VALIDATE_EMAIL)) {
-                    $invitees[] = strtolower(trim($inv));
+                    $cleanInv = strtolower(trim($inv));
+                    if ($cleanInv !== strtolower(trim($owner->email))) {
+                        $invitees[] = $cleanInv;
+                    }
                 }
             }
-        }
-        if (! in_array($owner->email, $invitees, true)) {
-            $invitees[] = $owner->email;
         }
 
         // Schedule meeting
