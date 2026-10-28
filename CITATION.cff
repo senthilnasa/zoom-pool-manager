@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use Zoom Pool Manager in research or at your institution, please cite it as below."
+title: "Zoom Pool Manager (ZPM): Open-Source Zoom License Pooling and Meeting Scheduler"
+type: software
+authors:
+  - given-names: Senthil Prabhu
+    family-names: K
+    alias: senthilnasa
+repository-code: "https://github.com/senthilnasa/zoom-pool-manager"
+url: "https://senthilnasa.gitbook.io/zoom-pool-manager-zpm"
+license: MIT
+version: "1.0.26"
+date-released: "2026-10-06"
+keywords:
+  - zoom
+  - zoom license pooling
+  - meeting scheduler
+  - higher education
+  - laravel
+  - vue

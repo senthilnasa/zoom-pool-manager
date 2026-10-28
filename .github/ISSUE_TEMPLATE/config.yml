@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://senthilnasa.gitbook.io/zoom-pool-manager-zpm
+    about: Installation, Zoom S2S OAuth setup, API and troubleshooting guides.
+  - name: Security vulnerability
+    url: https://github.com/senthilnasa/zoom-pool-manager/security/policy
+    about: Please report security issues privately, not as public issues.
