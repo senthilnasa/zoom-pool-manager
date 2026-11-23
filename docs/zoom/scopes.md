@@ -13,6 +13,7 @@ To manage meetings, sync host accounts, and harvest recordings, your Server-to-S
 | **User Management** | `user:read:admin` | `user:read` | Query Zoom users to import and synchronize host licenses into ZPM resource pools. |
 | **Host Key Rotation** | `user:write:admin` | `user:write` | Automatically rotate and reset host keys on accounts after meeting conclusion. |
 | **Cloud Recordings** | `recording:read:admin` | `cloud_recording:read:recording:admin`<br>`cloud_recording:read:list_user_recordings:admin`<br>`cloud_recording:read:list_recording_files:admin` | Index completed cloud recordings, generate secure playback redirects, and sync transcripts. |
+| **Custom Recording Passcodes** | `recording:write:admin` | `cloud_recording:update:recording_settings:admin` | Set a custom passcode on a recording (`PATCH /meetings/{meetingId}/recordings/settings`). Without it, Zoom rejects custom passcodes with "does not contain scopes". |
 | **Usage Reports** | `report:read:admin` | `dashboard:read:admin` | Pull concurrency analytics, meeting participant counts, and duration telemetry. |
 
 ---

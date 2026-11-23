@@ -106,6 +106,9 @@ class ProcessZoomWebhookJob implements ShouldQueue
     protected function handleMeetingStarted(array $object): void
     {
         $meeting = $this->findMeetingByZoomObject($object);
+        if ($meeting) {
+            $this->rememberSessionUuid($meeting, $object);
+        }
         if ($meeting && in_array($meeting->status, ['scheduled', 'approved', 'allocating'])) {
             $meeting->update(['status' => 'started']);
             $meeting->statusHistory()->create([
@@ -123,6 +126,9 @@ class ProcessZoomWebhookJob implements ShouldQueue
     protected function handleMeetingEnded(array $object, HostControlService $hostControlService): void
     {
         $meeting = $this->findMeetingByZoomObject($object);
+        if ($meeting) {
+            $this->rememberSessionUuid($meeting, $object);
+        }
         if ($meeting && $meeting->status !== 'completed' && $meeting->status !== 'cancelled') {
             $targetStatus = ($meeting->recording_mode && $meeting->recording_mode !== 'none')
                 ? 'recording_processing'
@@ -214,6 +220,20 @@ class ProcessZoomWebhookJob implements ShouldQueue
                     ],
                 ]
             );
+        }
+    }
+
+    /**
+     * Keep the UUID of the latest Zoom session so attendance reports can target that exact
+     * instance; the numeric meeting ID alone is not always resolvable by the report API.
+     *
+     * @param  array<string, mixed>  $object
+     */
+    protected function rememberSessionUuid(Meeting $meeting, array $object): void
+    {
+        $uuid = (string) ($object['uuid'] ?? '');
+        if ($uuid !== '' && $meeting->zoom_uuid !== $uuid) {
+            $meeting->update(['zoom_uuid' => $uuid]);
         }
     }
 

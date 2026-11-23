@@ -1113,6 +1113,7 @@ class SpaDataController extends Controller
             'message' => 'Recording passcode updated on Zoom successfully!',
             'passcode' => $fresh?->passcode,
             'one_click_url' => $fresh?->one_click_url,
+            'share_link' => $fresh?->share_link,
         ]);
     }
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **Custom Recording Passcode Scope**: Setting a custom recording passcode needs the `cloud_recording:update:recording_settings:admin` (classic `recording:write:admin`) scope, which ZPM did not list. It is now in the Zoom Settings scope checklist and `docs/zoom/scopes.md`, a recording read scope no longer marks it as granted, and when Zoom rejects a passcode for a missing scope the error now names the scope to add.
+- **Recording Links Bypassed the Passcode**: Since 1.0.29, recording emails and the copied invitation used the 1-click link with Zoom's `?pwd=` token, so anyone with the link could watch without the passcode. Recordings now have two copy options:
+  - **Copy Mail Invitation**: passcode-protected link plus the passcode. Recording emails use this form too, and any `pwd` parameter is stripped from links in emails.
+  - **Copy Direct Login**: the 1-click link with the token embedded, for cases where skipping the passcode prompt is intended.
+- **Readable Passcode Rule Errors**: ZPM now asks Zoom for JSON when setting a recording passcode, and shows the specific rule that failed (e.g. "Password must contain at least 1 number") instead of Zoom's raw XML or a generic "Validation Failed."
+- **Attendance Sync "Meeting does not exist" (3001)**:
+  - The Zoom session UUID is now saved from `meeting.started` / `meeting.ended` webhooks, and the participant report is requested by that UUID instead of only the numeric meeting ID.
+  - When Zoom still answers 3001, ZPM lists the meeting's past sessions (`GET /past_meetings/{id}/instances`) and reports on the one closest to the booking's start time.
+  - Meetings that were never started in Zoom now get a clear message instead of a raw HTTP 404, and the bulk sync no longer picks bookings that merely passed their scheduled end time.
+  - Participant reports larger than 300 attendees are now fully imported (all pages).
+
+---
+
 ## [1.0.29] - 2026-11-23
 
 ### Fixed

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Communication\Services\TemplateRenderer;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Recordings\Models\CloudRecording;
 use App\Domain\Recordings\Services\CloudRecordingService;
@@ -250,7 +251,8 @@ class CloudRecordingsTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('one_click_url', 'https://zoom.us/rec/share/sample_play?pwd=newPlayToken123');
+            ->assertJsonPath('one_click_url', 'https://zoom.us/rec/share/sample_play?pwd=newPlayToken123')
+            ->assertJsonPath('share_link', 'https://zoom.us/rec/share/sample_play');
 
         $recording->refresh();
         $this->assertEquals('NewCustomPass@2026', $recording->passcode);
@@ -290,6 +292,82 @@ class CloudRecordingsTest extends TestCase
             ->assertJsonFragment(['message' => 'Zoom rejected the new passcode: Passcode does not meet the requirements.']);
 
         $this->assertEquals('OldPass@123', $recording->fresh()->passcode);
+    }
+
+    public function test_passcode_rejected_for_missing_scope_names_the_scope(): void
+    {
+        Http::fake([
+            'zoom.us/oauth/token*' => Http::response(['access_token' => 'tok_123']),
+            'api.zoom.us/v2/meetings/*/recordings/settings' => Http::response([
+                'code' => 4711,
+                'message' => 'Invalid access token, does not contain scopes:[cloud_recording:update:recording_settings, cloud_recording:update:recording_settings:admin].',
+            ], 400),
+        ]);
+
+        $recording = CloudRecording::create([
+            'meeting_id' => $this->meeting->id,
+            'logical_owner_user_id' => $this->ownerUser->id,
+            'zoom_meeting_id' => '777888999',
+            'zoom_recording_id' => 'uuidAbc==',
+            'topic' => 'Quantum Mechanics',
+            'share_url' => 'https://zoom.us/rec/share/sample_play',
+            'passcode' => 'OldPass@123',
+            'status' => 'completed',
+        ]);
+
+        $response = $this->actingAs($this->ownerUser)
+            ->putJson("/spa/recordings/{$recording->id}/passcode", ['passcode' => 'NewPass@2026'])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertStringContainsString('cloud_recording:update:recording_settings:admin', (string) $response->json('message'));
+        $this->assertEquals('OldPass@123', $recording->fresh()->passcode);
+    }
+
+    public function test_passcode_rule_violation_shows_zoom_field_error_not_raw_xml(): void
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><result><code>300</code><message>Validation Failed.</message>'
+            .'<errors><field>password</field><message>Password provided does not match the password requirement settings set for this account. '
+            .'The password must follow these rules: [Password must contain at least 1 number (1, 2, 3...).].</message></errors></result>';
+
+        Http::fake([
+            'zoom.us/oauth/token*' => Http::response(['access_token' => 'tok_123']),
+            'api.zoom.us/v2/meetings/*/recordings/settings' => Http::response($xml, 400, ['Content-Type' => 'application/xml']),
+        ]);
+
+        $recording = CloudRecording::create([
+            'meeting_id' => $this->meeting->id,
+            'logical_owner_user_id' => $this->ownerUser->id,
+            'zoom_meeting_id' => '777888999',
+            'zoom_recording_id' => 'uuidAbc==',
+            'topic' => 'Quantum Mechanics',
+            'share_url' => 'https://zoom.us/rec/share/sample_play',
+            'passcode' => 'OldPass@123',
+            'status' => 'completed',
+        ]);
+
+        $response = $this->actingAs($this->ownerUser)
+            ->putJson("/spa/recordings/{$recording->id}/passcode", ['passcode' => 'NoDigits@Here'])
+            ->assertStatus(422);
+
+        $message = (string) $response->json('message');
+        $this->assertStringContainsString('Password must contain at least 1 number', $message);
+        $this->assertStringNotContainsString('<?xml', $message);
+        $this->assertEquals('OldPass@123', $recording->fresh()->passcode);
+
+        Http::assertSent(fn (Request $req) => $req->method() === 'PATCH' && $req->hasHeader('Accept', 'application/json'));
+    }
+
+    public function test_zoom_error_message_prefers_json_field_errors(): void
+    {
+        $body = json_encode([
+            'code' => 300,
+            'message' => 'Validation Failed.',
+            'errors' => [['field' => 'password', 'message' => 'Password must contain at least 1 number.']],
+        ]);
+
+        $this->assertEquals('Password must contain at least 1 number.', CloudRecordingService::zoomErrorMessage((string) $body));
+        $this->assertEquals('Passcode does not meet the requirements.', CloudRecordingService::zoomErrorMessage('{"code":300,"message":"Passcode does not meet the requirements."}'));
     }
 
     public function test_list_api_play_token_is_not_stored_as_passcode(): void
@@ -381,5 +459,39 @@ class CloudRecordingsTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('success', true);
+    }
+
+    public function test_invitation_link_requires_passcode_while_direct_login_link_skips_it(): void
+    {
+        $recording = CloudRecording::create([
+            'meeting_id' => $this->meeting->id,
+            'logical_owner_user_id' => $this->ownerUser->id,
+            'zoom_meeting_id' => '777888999',
+            'topic' => 'Quantum Mechanics',
+            'play_url' => 'https://zoom.us/rec/play/sample_play?pwd=leakedToken',
+            'share_url' => 'https://zoom.us/rec/share/sample_play',
+            'passcode' => 'Krea@!234$',
+            'play_passcode' => 'playToken123',
+            'status' => 'completed',
+        ]);
+
+        // "Copy Direct Login": opens without the passcode prompt.
+        $this->assertEquals('https://zoom.us/rec/share/sample_play?pwd=playToken123', $recording->one_click_url);
+
+        // "Copy Mail Invitation" and emails: Zoom must ask for the passcode.
+        $this->assertEquals('https://zoom.us/rec/share/sample_play', $recording->share_link);
+
+        $vars = app(TemplateRenderer::class)->extractVariables(['recording' => $recording]);
+        $this->assertEquals('https://zoom.us/rec/share/sample_play', $vars['recording.share_url']);
+        $this->assertEquals('https://zoom.us/rec/play/sample_play', $vars['recording.play_url']);
+        $this->assertEquals('Krea@!234$', $vars['recording.passcode']);
+    }
+
+    public function test_without_play_token_strips_only_the_pwd_parameter(): void
+    {
+        $this->assertEquals('https://zoom.us/rec/share/abc', CloudRecording::withoutPlayToken('https://zoom.us/rec/share/abc?pwd=tok'));
+        $this->assertEquals('https://zoom.us/rec/share/abc?startTime=1', CloudRecording::withoutPlayToken('https://zoom.us/rec/share/abc?pwd=tok&startTime=1'));
+        $this->assertEquals('https://zoom.us/rec/share/abc?startTime=1', CloudRecording::withoutPlayToken('https://zoom.us/rec/share/abc?startTime=1&pwd=tok'));
+        $this->assertEquals('https://zoom.us/rec/share/abc', CloudRecording::withoutPlayToken('https://zoom.us/rec/share/abc'));
     }
 }

@@ -183,9 +183,9 @@ class TemplateRenderer
         $recording = $context['recording'] ?? null;
         if ($recording) {
             $vars['recording.topic'] = (string) $recording->topic;
-            // One-click link: embeds Zoom's encoded `?pwd=` token so viewers skip the passcode prompt.
-            $vars['recording.share_url'] = (string) $recording->one_click_url;
-            $vars['recording.play_url'] = (string) ($recording->play_url ?: $recording->share_url ?: '');
+            // Emails are invitations: passcode-protected link plus the passcode, never the `?pwd=` direct-login token.
+            $vars['recording.share_url'] = (string) $recording->share_link;
+            $vars['recording.play_url'] = CloudRecording::withoutPlayToken((string) ($recording->play_url ?: $recording->share_url ?: ''));
             $vars['recording.passcode'] = (string) ($recording->passcode ?: 'None');
             $vars['recording.duration_minutes'] = (string) $recording->duration_minutes;
             $vars['recording.zoom_meeting_id'] = (string) ($recording->zoom_meeting_id ?: '');

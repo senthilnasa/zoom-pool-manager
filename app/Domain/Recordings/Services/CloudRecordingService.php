@@ -302,7 +302,8 @@ class CloudRecordingService
             $settingsUrl = "https://api.zoom.us/v2/meetings/{$meetingRef}/recordings/settings";
 
             try {
-                $res = Http::timeout(10)->withToken($token)->patch($settingsUrl, [
+                // Without an explicit Accept header Zoom answers validation errors in XML.
+                $res = Http::timeout(10)->withToken($token)->acceptJson()->patch($settingsUrl, [
                     'share_recording' => 'publicly',
                     'password' => $newPasscode,
                 ]);
@@ -312,8 +313,17 @@ class CloudRecordingService
             }
 
             if (! $res->successful()) {
-                $zoomMessage = (string) ($res->json('message') ?: $res->body());
+                $zoomMessage = self::zoomErrorMessage($res->body());
                 Log::warning("Zoom rejected recording passcode for recording #{$recording->id}: HTTP {$res->status()} - {$zoomMessage}");
+
+                if (str_contains($zoomMessage, 'does not contain scopes')) {
+                    throw new \RuntimeException(
+                        'Zoom rejected the new passcode because your Zoom app is missing the recording settings scope. '
+                        .'In the Zoom App Marketplace, add "cloud_recording:update:recording_settings:admin" '
+                        .'(Recording → "Update meeting recording settings") to your Server-to-Server OAuth app, then try again.'
+                    );
+                }
+
                 throw new \RuntimeException('Zoom rejected the new passcode: '.($zoomMessage !== '' ? $zoomMessage : "HTTP {$res->status()}"));
             }
 
@@ -388,6 +398,51 @@ class CloudRecordingService
         }
 
         return self::encodeMeetingRef($meetingId);
+    }
+
+    /**
+     * Turn a Zoom error body (JSON or XML) into a readable message. Field-level validation
+     * errors (e.g. the account's passcode rules) are preferred over the generic "Validation Failed."
+     */
+    public static function zoomErrorMessage(string $body): string
+    {
+        $body = trim($body);
+        if ($body === '') {
+            return '';
+        }
+
+        $message = '';
+        $fieldMessages = [];
+
+        $json = json_decode($body, true);
+        if (is_array($json)) {
+            $message = (string) ($json['message'] ?? '');
+            foreach ((array) ($json['errors'] ?? []) as $error) {
+                if (is_array($error) && ! empty($error['message'])) {
+                    $fieldMessages[] = (string) $error['message'];
+                }
+            }
+        } elseif (str_starts_with($body, '<')) {
+            $previous = libxml_use_internal_errors(true);
+            $xml = simplexml_load_string($body, \SimpleXMLElement::class, LIBXML_NONET);
+            libxml_use_internal_errors($previous);
+
+            if ($xml !== false) {
+                $message = trim((string) $xml->message);
+                foreach ($xml->errors as $error) {
+                    $text = trim((string) $error->message);
+                    if ($text !== '') {
+                        $fieldMessages[] = $text;
+                    }
+                }
+            }
+        }
+
+        if ($fieldMessages !== []) {
+            return implode(' ', $fieldMessages);
+        }
+
+        return $message !== '' ? $message : $body;
     }
 
     /**

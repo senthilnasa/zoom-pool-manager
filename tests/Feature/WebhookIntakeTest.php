@@ -285,6 +285,7 @@ class WebhookIntakeTest extends TestCase
                 'payload' => [
                     'object' => [
                         'id' => '1234567890',
+                        'uuid' => 'sessionUuid01==',
                     ],
                 ],
             ],
@@ -296,6 +297,7 @@ class WebhookIntakeTest extends TestCase
 
         $meeting->refresh();
         $this->assertEquals('started', $meeting->status);
+        $this->assertEquals('sessionUuid01==', $meeting->zoom_uuid);
         $eventStarted->refresh();
         $this->assertEquals('processed', $eventStarted->status);
 

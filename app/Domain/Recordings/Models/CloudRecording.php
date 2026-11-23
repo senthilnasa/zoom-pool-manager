@@ -47,7 +47,7 @@ class CloudRecording extends Model
     /**
      * @var list<string>
      */
-    protected $appends = ['one_click_url'];
+    protected $appends = ['one_click_url', 'share_link'];
 
     /**
      * @var array<string, string>
@@ -63,8 +63,30 @@ class CloudRecording extends Model
     ];
 
     /**
-     * Share link with Zoom's encoded play passcode embedded (`?pwd=`), so viewers
-     * are not prompted for the passcode. Falls back to the plain share/play URL.
+     * Passcode-protected link for invitations: never carries Zoom's `?pwd=` play token,
+     * so Zoom asks viewers for the passcode that is sent alongside it.
+     */
+    public function getShareLinkAttribute(): string
+    {
+        return self::withoutPlayToken((string) ($this->share_url ?: $this->play_url ?: ''));
+    }
+
+    /**
+     * Remove a `pwd` query parameter so the link stays passcode-protected.
+     */
+    public static function withoutPlayToken(string $url): string
+    {
+        if (! str_contains($url, 'pwd=')) {
+            return $url;
+        }
+
+        return rtrim((string) preg_replace('/([?&])pwd=[^&#]*&?/', '$1', $url), '?&');
+    }
+
+    /**
+     * Direct-login link with Zoom's encoded play passcode embedded (`?pwd=`), so viewers
+     * are not prompted for the passcode. Anyone holding it can watch the recording.
+     * Falls back to the plain share/play URL.
      */
     public function getOneClickUrlAttribute(): string
     {

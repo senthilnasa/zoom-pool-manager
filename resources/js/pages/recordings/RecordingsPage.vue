@@ -136,9 +136,9 @@
               <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
                 <button
                   v-if="r.play_url || r.share_url"
-                  @click="copyShareLink(r.one_click_url || r.share_url || r.play_url)"
+                  @click="copyDirectLoginLink(r)"
                   class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer inline-flex"
-                  title="Copy 1-Click Link (passcode embedded)"
+                  title="Copy Direct Login Link (opens without asking for the passcode)"
                 >
                   <Copy class="w-3.5 h-3.5" />
                 </button>
@@ -146,7 +146,7 @@
                   v-if="r.play_url || r.share_url"
                   @click="copyFullInvitation(r)"
                   class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer inline-flex"
-                  title="Copy Full Recording Invitation (Link + Passcode)"
+                  title="Copy Mail Invitation (passcode-protected link + passcode)"
                 >
                   <Share2 class="w-3.5 h-3.5" />
                 </button>
@@ -538,11 +538,12 @@ const saveRecording = async () => {
   }
 };
 
-const copyShareLink = async (url) => {
+const copyDirectLoginLink = async (r) => {
+  const url = r?.one_click_url || r?.share_url || r?.play_url || '';
   if (!url) return;
   try {
     await navigator.clipboard.writeText(url);
-    toast.success('Recording link copied to clipboard!');
+    toast.success('Direct login link copied. Anyone with this link can watch without the passcode.');
   } catch {
     toast.error('Failed to copy recording link.');
   }
@@ -585,13 +586,14 @@ const copyFullInvitation = async (r) => {
   if (!r) return;
   const topic = r.topic || 'Zoom Cloud Recording';
   const date = formatDateTime(r.recording_start || r.created_at);
-  const url = r.one_click_url || r.share_url || r.play_url || '';
+  // Invitation link never carries the ?pwd= token, so Zoom asks for the passcode below.
+  const url = r.share_link || r.share_url || r.play_url || '';
   const passcode = r.passcode ? `\nPasscode: ${r.passcode}` : '';
   const invitation = `Topic: ${topic}\nDate: ${date}\n\nRecording Link:\n${url}${passcode}`;
 
   try {
     await navigator.clipboard.writeText(invitation);
-    toast.success('Full recording invitation copied to clipboard!');
+    toast.success('Mail invitation copied. The link asks for the passcode included below it.');
   } catch {
     toast.error('Failed to copy invitation.');
   }

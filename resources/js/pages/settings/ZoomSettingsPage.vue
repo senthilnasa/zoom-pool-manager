@@ -765,6 +765,24 @@ const defaultRecommendedScopes = [
     required: false,
   },
   {
+    scope: 'recording:write:admin',
+    granular: 'cloud_recording:update:recording_settings:admin',
+    aliases: [
+      'cloud_recording:update:recording_settings:admin',
+      'cloud_recording:update:recording_settings',
+      'cloud_recording:write:admin',
+      'recording:write:admin',
+    ],
+    category: 'Cloud Recordings',
+    label: 'Custom Recording Passcodes',
+    description: 'Allows ZPM to set a custom passcode on a meeting\'s cloud recording and share it, so the passcode ZPM hands out is the one Zoom accepts.',
+    endpoints: ['PATCH /meetings/{meetingId}/recordings/settings'],
+    zoom_category: 'Recording',
+    zoom_option_label: 'Update meeting recording settings',
+    how_to_find: 'In Zoom Marketplace "+ Add Scopes" modal: Click "Recording" (or "Cloud Recording") on the left sidebar, then check "Update meeting recording settings" (granular cloud_recording:update:recording_settings:admin, or classic "View and manage all user recordings").',
+    required: false,
+  },
+  {
     scope: 'report:read:admin',
     granular: 'report:read:list_meeting_participants:admin',
     aliases: [
@@ -899,6 +917,12 @@ const getMatchedGrantedScope = (scOrScope, granularName, aliases = []) => {
   }
 
   // 4. Intelligent prefix matching for modern Zoom Server-to-Server OAuth
+  // Cloud Recording writes (custom passcodes) need an update/write grant; a read grant must not satisfy them.
+  if (scope === 'recording:write:admin' || granular.includes('cloud_recording:update')) {
+    const matched = granted.find(g => g.startsWith('cloud_recording:update') || g.startsWith('cloud_recording:write') || g.startsWith('recording:write'));
+    return matched || null;
+  }
+
   // Cloud Recordings (both classic recording:read and modern cloud_recording:read)
   if (scope.includes('recording') || granular.includes('recording')) {
     const matched = granted.find(g => g.startsWith('cloud_recording:read') || g.startsWith('recording:read'));

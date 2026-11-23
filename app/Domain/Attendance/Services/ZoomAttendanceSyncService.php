@@ -6,9 +6,11 @@ use App\Domain\Attendance\Models\MeetingAttendance;
 use App\Domain\Audit\Services\AuditService;
 use App\Domain\Communication\Services\MailDeliveryService;
 use App\Domain\Meetings\Models\Meeting;
+use App\Domain\Recordings\Services\CloudRecordingService;
 use App\Domain\Zoom\Models\ZoomConnection;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -25,19 +27,20 @@ class ZoomAttendanceSyncService
      */
     public function syncRecentAttendance(): array
     {
+        // Only meetings that actually ran in Zoom have a participant report; a booking whose
+        // scheduled end has merely passed may never have been started and always fails with 3001.
         $meetings = Meeting::whereNotNull('zoom_meeting_id')
-            ->whereIn('status', ['ended', 'completed'])
             ->where('starts_at', '>=', now()->subDays(7))
+            ->where(function ($query) {
+                $query->whereIn('status', ['ended', 'completed', 'recording_processing'])
+                    ->orWhere(function ($query) {
+                        // Started in Zoom (webhook captured a session UUID) but its end was never recorded.
+                        $query->whereNotNull('zoom_uuid')
+                            ->where('ends_at', '<=', now())
+                            ->where('status', '!=', 'cancelled');
+                    });
+            })
             ->get();
-
-        if ($meetings->isEmpty()) {
-            // Also check scheduled meetings that have already passed their end time
-            $meetings = Meeting::whereNotNull('zoom_meeting_id')
-                ->where('ends_at', '<=', now())
-                ->where('starts_at', '>=', now()->subDays(7))
-                ->limit(10)
-                ->get();
-        }
 
         $totalAttendees = 0;
         $syncedMeetings = 0;
@@ -113,31 +116,47 @@ class ZoomAttendanceSyncService
                 ];
             }
 
-            // 2. Query Zoom Reports: Participant attendance API
-            $zoomMeetingId = $meeting->zoom_meeting_id;
-            $reportUrl = "https://api.zoom.us/v2/report/meetings/{$zoomMeetingId}/participants";
+            // 2. Query Zoom Reports: Participant attendance API.
+            // Prefer the session UUID captured from webhooks; the numeric meeting ID only resolves
+            // to a session Zoom can still associate with it, and otherwise fails with code 3001.
+            $zoomMeetingId = (string) $meeting->zoom_meeting_id;
+            $refs = array_values(array_unique(array_filter([(string) $meeting->zoom_uuid, $zoomMeetingId])));
 
-            $response = Http::timeout(15)
-                ->withHeaders([
-                    'Authorization' => 'Bearer '.$accessToken,
-                    'User-Agent' => 'Zoom-Pool-Manager/'.config('zpm.version', '1.0.0'),
-                ])
-                ->get($reportUrl, [
-                    'page_size' => 300,
-                ]);
+            $report = null;
+            foreach ($refs as $ref) {
+                $report = $this->fetchParticipantReport($accessToken, $ref);
+                if ($report['ok'] || ! $report['not_found']) {
+                    break;
+                }
+            }
 
-            if (! $response->successful()) {
-                // If past meeting report returns 404/400 (not completed or basic plan), fallback gracefully
+            if ($report !== null && ! $report['ok'] && $report['not_found']) {
+                // Ask Zoom which sessions of this meeting actually ran, and report on the one for this booking.
+                $instanceUuid = $this->findPastInstanceUuid($accessToken, $meeting);
+
+                if ($instanceUuid === null) {
+                    return [
+                        'success' => false,
+                        'attendees_count' => 0,
+                        'message' => "Zoom has no ended session for meeting {$zoomMeetingId}. It was either never started in Zoom, or Zoom has not finished preparing its report yet (this can take a while after the meeting ends).",
+                    ];
+                }
+
+                $report = $this->fetchParticipantReport($accessToken, $instanceUuid);
+                if ($report['ok'] && $meeting->zoom_uuid !== $instanceUuid) {
+                    $meeting->update(['zoom_uuid' => $instanceUuid]);
+                }
+            }
+
+            if ($report === null || ! $report['ok']) {
                 return [
                     'success' => false,
                     'attendees_count' => 0,
-                    'message' => "Zoom report API returned HTTP {$response->status()}: {$response->body()}",
+                    'message' => 'Zoom report API returned HTTP '.($report['status'] ?? 0).': '.($report['body'] ?? 'no response'),
                 ];
             }
 
-            /** @var array{participants?: array<int, array<string, mixed>>} $reportData */
-            $reportData = $response->json();
-            $participants = $reportData['participants'] ?? [];
+            $participants = $report['participants'];
             $count = 0;
 
             $meetingDurationSeconds = max(60, $meeting->starts_at->diffInSeconds($meeting->ends_at));
@@ -196,6 +215,86 @@ class ZoomAttendanceSyncService
                 'message' => 'Attendance sync error: '.$e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Fetch every page of the participant report for a meeting ID or session UUID.
+     *
+     * @return array{ok: bool, not_found: bool, status: int, body: string, participants: array<int, array<string, mixed>>}
+     */
+    protected function fetchParticipantReport(string $accessToken, string $meetingRef): array
+    {
+        $url = 'https://api.zoom.us/v2/report/meetings/'.CloudRecordingService::encodeMeetingRef($meetingRef).'/participants';
+        $participants = [];
+        $nextPageToken = '';
+
+        do {
+            $query = ['page_size' => 300];
+            if ($nextPageToken !== '') {
+                $query['next_page_token'] = $nextPageToken;
+            }
+
+            $response = $this->zoomRequest($accessToken)->get($url, $query);
+
+            if (! $response->successful()) {
+                return [
+                    'ok' => false,
+                    'not_found' => $response->status() === 404 || (int) $response->json('code') === 3001,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'participants' => [],
+                ];
+            }
+
+            /** @var array<int, array<string, mixed>> $page */
+            $page = $response->json('participants') ?? [];
+            $participants = array_merge($participants, $page);
+            $nextPageToken = (string) ($response->json('next_page_token') ?? '');
+        } while ($nextPageToken !== '');
+
+        return ['ok' => true, 'not_found' => false, 'status' => 200, 'body' => '', 'participants' => $participants];
+    }
+
+    /**
+     * Find the UUID of the ended Zoom session that best matches this booking's scheduled start.
+     */
+    protected function findPastInstanceUuid(string $accessToken, Meeting $meeting): ?string
+    {
+        $url = 'https://api.zoom.us/v2/past_meetings/'.rawurlencode((string) $meeting->zoom_meeting_id).'/instances';
+        $response = $this->zoomRequest($accessToken)->get($url);
+
+        if (! $response->successful()) {
+            Log::warning("Could not list past Zoom instances for meeting #{$meeting->id}: HTTP {$response->status()} - {$response->body()}");
+
+            return null;
+        }
+
+        /** @var array<int, array{uuid?: string, start_time?: string}> $instances */
+        $instances = $response->json('meetings') ?? [];
+
+        $best = null;
+        $bestGap = PHP_INT_MAX;
+        foreach ($instances as $instance) {
+            if (empty($instance['uuid']) || empty($instance['start_time'])) {
+                continue;
+            }
+
+            $gap = abs(Carbon::parse($instance['start_time'])->getTimestamp() - $meeting->starts_at->getTimestamp());
+            if ($gap < $bestGap) {
+                $bestGap = $gap;
+                $best = (string) $instance['uuid'];
+            }
+        }
+
+        return $best;
+    }
+
+    protected function zoomRequest(string $accessToken): PendingRequest
+    {
+        return Http::timeout(15)->withHeaders([
+            'Authorization' => 'Bearer '.$accessToken,
+            'User-Agent' => 'Zoom-Pool-Manager/'.config('zpm.version', '1.0.0'),
+        ]);
     }
 
     /**
