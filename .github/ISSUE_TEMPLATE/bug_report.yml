@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a problem with Zoom Pool Manager
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: ZPM version
+      description: See version.json or Settings > About
+      placeholder: "1.0.26"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation type
+      options: [Docker, Linux server (Nginx/Apache), Shared hosting, Other]
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Steps to reproduce, expected vs actual behaviour. Remove any secrets (Zoom keys, tokens, passwords).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      render: shell

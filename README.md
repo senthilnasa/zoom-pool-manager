@@ -1,6 +1,15 @@
-# Zoom Pool Manager (ZPM)
+# Zoom Pool Manager (ZPM) - Open-Source Zoom License Pooling & Meeting Scheduler
 
 <div align="center">
+
+<img src=".github/social-preview.png" alt="Zoom Pool Manager - share a small pool of Zoom licenses across hundreds of users" width="720">
+
+**Share 20 Zoom licenses with 500+ faculty and staff.** ZPM is a free, self-hosted Zoom license sharing and meeting scheduling system for universities, colleges and enterprises.
+
+[![GitHub stars](https://img.shields.io/github/stars/senthilnasa/zoom-pool-manager?style=social)](https://github.com/senthilnasa/zoom-pool-manager/stargazers)
+[![Latest release](https://img.shields.io/github/v/release/senthilnasa/zoom-pool-manager)](https://github.com/senthilnasa/zoom-pool-manager/releases/latest)
+[![CI](https://github.com/senthilnasa/zoom-pool-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/senthilnasa/zoom-pool-manager/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-GitBook-3884FF.svg)](https://senthilnasa.gitbook.io/zoom-pool-manager-zpm)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20%7C%208.3%20%7C%208.4-777BB4.svg)](https://php.net)
@@ -28,7 +37,10 @@ Official Repository: **[https://github.com/senthilnasa/zoom-pool-manager](https:
 [Configuration](#-configuration--environment-variables) •
 [API & Webhooks](#-rest-api--webhooks) •
 [Security](#-security--governance) •
+[FAQ](#-faq) •
 [Contributing](#-contributing--license)
+
+📚 **Full documentation:** [senthilnasa.gitbook.io/zoom-pool-manager-zpm](https://senthilnasa.gitbook.io/zoom-pool-manager-zpm)
 
 </div>
 
@@ -48,6 +60,12 @@ Instead of purchasing expensive dedicated licenses for every user or manually ju
 - 🔄 **Full Recurring Series Engine:** Full RFC 5545 recurrence expansion (Daily, Weekly, Monthly) with single-resource dedication or pool-wide smart reallocation.
 - 🏢 **Enterprise Directory Sync & SSO:** Out-of-the-box integration with Microsoft Entra ID (Azure AD), Google Workspace, and LDAP / Active Directory with automatic designation and department ingestion.
 - 🎨 **Modern Gen-Z Glassmorphism SPA:** Single Page Application built on Vue 3 + Tailwind CSS featuring instant search across all 28 modules, light/dark themes, anti-FOUC scripts, and live status polling.
+
+### Who is it for?
+
+- 🎓 **Universities & colleges** running online/hybrid lectures, office hours, viva and thesis defenses on a limited number of Zoom licenses.
+- 🏢 **Enterprises & NGOs** that want a central Zoom booking system instead of shared passwords and spreadsheets.
+- 🛠 **IT teams** looking for a self-hosted alternative to buying one Zoom license per user, with SSO, audit logs and an API for Moodle, Canvas or Blackboard.
 
 ---
 
@@ -362,9 +380,34 @@ npm run build
 
 ---
 
+## ❓ FAQ
+
+**Can multiple users share one Zoom license?**
+Yes. ZPM keeps a pool of licensed Zoom host accounts and assigns a free one to each meeting at booking time, so many people can host meetings without ever having their own license, as long as their meetings do not overlap beyond the pool size.
+
+**Do organizers need the Zoom account password?**
+No. Organizers get the join link and a 6-digit Host Key to claim host inside Zoom. Host account credentials are never shown.
+
+**How is this different from Zoom's own scheduler or Zoom Rooms?**
+Zoom's scheduler is per user. ZPM schedules across a *pool* of accounts, handles conflicts, buffers, recurring class timetables, approvals, quotas, and frees the license as soon as a meeting ends.
+
+**Is it free?**
+Yes. ZPM is open-source under the MIT License and runs on your own server (Docker or a standard LAMP/LEMP stack). You only pay for the Zoom licenses you already have.
+
+**Does it integrate with an LMS?**
+Yes, through the REST API (`/api/v1`) and signed webhooks, so Moodle, Canvas, Blackboard or an ERP can book meetings automatically.
+
+---
+
+## ⭐ Support the Project
+
+If ZPM saves your institution money, please **[star the repository](https://github.com/senthilnasa/zoom-pool-manager)** - it helps other universities and teams find it. Share it with your IT department, and open an [issue](https://github.com/senthilnasa/zoom-pool-manager/issues) with feedback or questions.
+
+---
+
 ## 🤝 Contributing & License
 
-Contributions, bug reports, and feature suggestions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) before opening a pull request.
+Contributions, bug reports, and feature suggestions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md) before opening a pull request.
 
 This project is open-source software licensed under the **[MIT License](LICENSE)**.
 

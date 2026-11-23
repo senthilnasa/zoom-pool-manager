@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest an idea for Zoom Pool Manager
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+  - type: input
+    id: org
+    attributes:
+      label: Organisation type (optional)
+      placeholder: University, college, enterprise...
