@@ -155,7 +155,7 @@ class EmailTemplateController extends Controller
         /** @var User|null $user */
         $user = $request->user();
 
-        $recipientEmail = trim((string) $request->input('recipient_email', $user?->email ?? ''));
+        $recipientEmail = trim((string) $request->input('recipient_email', $user->email ?? ''));
 
         if (empty($recipientEmail) || ! filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
             return response()->json([
