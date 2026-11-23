@@ -12,6 +12,8 @@ use App\Domain\Zoom\Models\ZoomResource;
 use App\Domain\Zoom\Models\ZoomUser;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -219,14 +221,25 @@ class CloudRecordingsTest extends TestCase
 
     public function test_owner_can_update_recording_passcode(): void
     {
+        Http::fake([
+            'zoom.us/oauth/token*' => Http::response(['access_token' => 'tok_123']),
+            'api.zoom.us/v2/meetings/*/recordings/settings' => Http::response(null, 204),
+            'api.zoom.us/v2/meetings/*/recordings' => Http::response([
+                'share_url' => 'https://zoom.us/rec/share/sample_play',
+                'recording_play_passcode' => 'newPlayToken123',
+            ]),
+        ]);
+
         $recording = CloudRecording::create([
             'meeting_id' => $this->meeting->id,
             'logical_owner_user_id' => $this->ownerUser->id,
             'zoom_meeting_id' => '777888999',
+            'zoom_recording_id' => '/abc//def==',
             'topic' => 'Quantum Mechanics',
             'play_url' => 'https://zoom.us/rec/play/sample_play',
             'share_url' => 'https://zoom.us/rec/share/sample_play',
             'passcode' => 'OldPass123',
+            'play_passcode' => 'oldPlayToken',
             'status' => 'completed',
         ]);
 
@@ -236,10 +249,115 @@ class CloudRecordingsTest extends TestCase
             ]);
 
         $response->assertOk()
-            ->assertJsonPath('success', true);
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('one_click_url', 'https://zoom.us/rec/share/sample_play?pwd=newPlayToken123');
 
         $recording->refresh();
         $this->assertEquals('NewCustomPass@2026', $recording->passcode);
+        $this->assertEquals('newPlayToken123', $recording->play_passcode);
+
+        // Must target this recording instance by double-encoded UUID, not the numeric (latest-instance) ID.
+        Http::assertSent(fn (Request $req) => $req->method() === 'PATCH'
+            && str_contains($req->url(), '/meetings/'.rawurlencode(rawurlencode('/abc//def==')).'/recordings/settings')
+            && $req['password'] === 'NewCustomPass@2026');
+    }
+
+    public function test_passcode_rejected_by_zoom_is_not_saved_locally(): void
+    {
+        Http::fake([
+            'zoom.us/oauth/token*' => Http::response(['access_token' => 'tok_123']),
+            'api.zoom.us/v2/meetings/*/recordings/settings' => Http::response([
+                'code' => 300,
+                'message' => 'Passcode does not meet the requirements.',
+            ], 400),
+        ]);
+
+        $recording = CloudRecording::create([
+            'meeting_id' => $this->meeting->id,
+            'logical_owner_user_id' => $this->ownerUser->id,
+            'zoom_meeting_id' => '777888999',
+            'zoom_recording_id' => 'uuidAbc==',
+            'topic' => 'Quantum Mechanics',
+            'share_url' => 'https://zoom.us/rec/share/sample_play',
+            'passcode' => 'OldPass@123',
+            'status' => 'completed',
+        ]);
+
+        $this->actingAs($this->ownerUser)
+            ->putJson("/spa/recordings/{$recording->id}/passcode", ['passcode' => '12342'])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonFragment(['message' => 'Zoom rejected the new passcode: Passcode does not meet the requirements.']);
+
+        $this->assertEquals('OldPass@123', $recording->fresh()->passcode);
+    }
+
+    public function test_list_api_play_token_is_not_stored_as_passcode(): void
+    {
+        $service = app(CloudRecordingService::class);
+
+        // Legacy row where the encoded play token was saved as the passcode.
+        CloudRecording::create([
+            'zoom_meeting_id' => '777888999',
+            'zoom_recording_id' => 'zm-uuid-qm-01',
+            'topic' => 'Quantum Mechanics Lecture',
+            'passcode' => 'encPlayToken_XYZ',
+            'status' => 'completed',
+        ]);
+
+        $recording = $service->ingestCompletedRecording(['payload' => ['object' => [
+            'id' => '777888999',
+            'uuid' => 'zm-uuid-qm-01',
+            'topic' => 'Quantum Mechanics Lecture',
+            'share_url' => 'https://zoom.us/rec/share/sample_token',
+            'recording_play_passcode' => 'encPlayToken_XYZ',
+        ]]]);
+
+        $this->assertNull($recording->passcode);
+        $this->assertEquals('encPlayToken_XYZ', $recording->play_passcode);
+        $this->assertEquals('https://zoom.us/rec/share/sample_token?pwd=encPlayToken_XYZ', $recording->one_click_url);
+
+        // Webhook payloads carry the real passcode; it wins.
+        $recording = $service->ingestCompletedRecording(['payload' => ['object' => [
+            'id' => '777888999',
+            'uuid' => 'zm-uuid-qm-01',
+            'topic' => 'Quantum Mechanics Lecture',
+            'share_url' => 'https://zoom.us/rec/share/sample_token',
+            'password' => 'Real@Pass1',
+            'recording_play_passcode' => 'encPlayToken_XYZ',
+        ]]]);
+        $this->assertEquals('Real@Pass1', $recording->passcode);
+
+        // A later list-API sync (no `password`) must not wipe the known passcode.
+        $recording = $service->ingestCompletedRecording(['payload' => ['object' => [
+            'id' => '777888999',
+            'uuid' => 'zm-uuid-qm-01',
+            'topic' => 'Quantum Mechanics Lecture',
+            'recording_play_passcode' => 'encPlayToken_XYZ',
+        ]]]);
+        $this->assertEquals('Real@Pass1', $recording->passcode);
+    }
+
+    public function test_sync_fetches_real_passcode_from_recording_settings(): void
+    {
+        Http::fake([
+            'zoom.us/oauth/token*' => Http::response(['access_token' => 'tok_123']),
+            'api.zoom.us/v2/users/*/recordings*' => Http::response(['meetings' => [[
+                'id' => 777888999,
+                'uuid' => 'zm-uuid-qm-01',
+                'topic' => 'Quantum Mechanics Lecture',
+                'share_url' => 'https://zoom.us/rec/share/sample_token',
+                'recording_play_passcode' => 'encPlayToken_XYZ',
+                'recording_files' => [],
+            ]]]),
+            'api.zoom.us/v2/meetings/*/recordings/settings' => Http::response(['password' => 'Typed@Pass9']),
+        ]);
+
+        $this->artisan('zpm:recordings:sync', ['--days' => 1])->assertSuccessful();
+
+        $recording = CloudRecording::where('zoom_recording_id', 'zm-uuid-qm-01')->firstOrFail();
+        $this->assertEquals('Typed@Pass9', $recording->passcode);
+        $this->assertEquals('encPlayToken_XYZ', $recording->play_passcode);
     }
 
     public function test_owner_can_send_recording_invitation(): void

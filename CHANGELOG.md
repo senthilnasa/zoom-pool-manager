@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.29] - 2026-11-23
+
+### Fixed
+- **Cloud Recording Passcodes Not Working**:
+  - The recording sync stored Zoom's encoded `recording_play_passcode` (a `?pwd=` URL token) as the recording passcode, so the passcode shown in ZPM and in recording emails was always rejected by Zoom's passcode prompt. The viewer passcode (`password`) and the play token are now stored separately (new `cloud_recordings.play_passcode` column).
+  - `zpm:recordings:sync` now reads the real passcode from `GET /meetings/{uuid}/recordings/settings` (the list-recordings API omits it) when it is missing or when the play token changes. Existing rows holding the play token as the passcode are corrected on the next sync.
+  - Custom recording passcodes are now applied on Zoom **before** being saved locally. Zoom's response is checked, and rejections (e.g. passcodes that do not meet Zoom's complexity rules) are shown to the user instead of being silently ignored.
+  - Custom passcodes now target the specific recording instance by meeting UUID (double-encoded when required) instead of the numeric meeting ID, which for recurring meetings only resolved to the latest instance.
+  - After a passcode change, the rotated play token and share URL are refreshed from Zoom.
+
+### Enhanced
+- **1-Click Recording Links**: Recording emails, the copied invitation text, "Copy Link" and "Watch" now use the share URL with Zoom's play token embedded (`?pwd=`), so viewers are not prompted for the passcode. The passcode is still listed in invitations.
+
+---
+
 ## [1.0.28] - 2026-10-10
 
 ### Fixed & Enhanced

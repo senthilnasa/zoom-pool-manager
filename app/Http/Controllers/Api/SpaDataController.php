@@ -1100,12 +1100,19 @@ class SpaDataController extends Controller
             'passcode' => ['required', 'string', 'max:50'],
         ]);
 
-        $this->recordingService->updatePasscode($recording, $validated['passcode'], $user);
+        try {
+            $this->recordingService->updatePasscode($recording, $validated['passcode'], $user);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        $fresh = $recording->fresh();
 
         return response()->json([
             'success' => true,
-            'message' => 'Custom recording passcode updated successfully!',
-            'passcode' => $recording->fresh()->passcode,
+            'message' => 'Recording passcode updated on Zoom successfully!',
+            'passcode' => $fresh?->passcode,
+            'one_click_url' => $fresh?->one_click_url,
         ]);
     }
 

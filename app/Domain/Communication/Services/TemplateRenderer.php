@@ -183,7 +183,8 @@ class TemplateRenderer
         $recording = $context['recording'] ?? null;
         if ($recording) {
             $vars['recording.topic'] = (string) $recording->topic;
-            $vars['recording.share_url'] = (string) ($recording->share_url ?: $recording->play_url ?: '');
+            // One-click link: embeds Zoom's encoded `?pwd=` token so viewers skip the passcode prompt.
+            $vars['recording.share_url'] = (string) $recording->one_click_url;
             $vars['recording.play_url'] = (string) ($recording->play_url ?: $recording->share_url ?: '');
             $vars['recording.passcode'] = (string) ($recording->passcode ?: 'None');
             $vars['recording.duration_minutes'] = (string) $recording->duration_minutes;

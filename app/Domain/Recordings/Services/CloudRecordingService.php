@@ -39,7 +39,6 @@ class CloudRecordingService
         $zoomUuid = (string) ($object['uuid'] ?? '');
         $topic = (string) ($object['topic'] ?? 'Zoom Cloud Recording');
         $shareUrl = (string) ($object['share_url'] ?? '');
-        $playUrl = (string) ($object['recording_play_passcode'] ?? $object['password'] ?? '');
         $durationMinutes = (int) ($object['duration'] ?? 0);
         $totalSize = (int) ($object['total_size'] ?? 0);
 
@@ -91,10 +90,10 @@ class CloudRecordingService
             }
         }
 
-        // Extract passcode from password or recording_play_passcode
-        $passcode = ! empty($object['password'])
-            ? (string) $object['password']
-            : (! empty($object['recording_play_passcode']) ? (string) $object['recording_play_passcode'] : null);
+        // `password` is the passcode viewers type; `recording_play_passcode` is an encoded
+        // token only valid as `?pwd=` on the share URL — it must never be shown as the passcode.
+        $passcode = ! empty($object['password']) ? (string) $object['password'] : null;
+        $playPasscode = ! empty($object['recording_play_passcode']) ? (string) $object['recording_play_passcode'] : null;
 
         // Fallback play URL from recording files if share_url is empty
         $effectivePlayUrl = $shareUrl ?: null;
@@ -135,9 +134,20 @@ class CloudRecordingService
             'file_size_bytes' => $totalSize,
             'share_url' => $shareUrl ?: null,
             'play_url' => $effectivePlayUrl,
-            'passcode' => $passcode,
             'status' => 'completed',
         ];
+
+        if ($playPasscode !== null) {
+            $recordingData['play_passcode'] = $playPasscode;
+        }
+
+        if ($passcode !== null) {
+            $recordingData['passcode'] = $passcode;
+        } elseif (! $existing || ($playPasscode !== null && $existing->passcode === $playPasscode)) {
+            // List-recordings API omits `password`. Don't wipe a known passcode, but do
+            // clear legacy rows where the encoded play token was stored as the passcode.
+            $recordingData['passcode'] = null;
+        }
 
         if ($existing) {
             $existing->update($recordingData);
@@ -274,38 +284,57 @@ class CloudRecordingService
     /**
      * Update custom passcode for the recording and sync with Zoom API if active.
      */
+    /**
+     * Zoom must accept the passcode before it is stored locally; otherwise ZPM would hand
+     * out a passcode that the Zoom recording page rejects.
+     *
+     * @throws \RuntimeException when Zoom rejects the passcode or cannot be reached
+     */
     public function updatePasscode(CloudRecording $recording, string $newPasscode, User $actor): CloudRecording
     {
         $newPasscode = trim($newPasscode);
         $oldPasscode = $recording->passcode;
 
-        $recording->passcode = $newPasscode !== '' ? $newPasscode : null;
-        $recording->save();
+        $meetingRef = $this->zoomRecordingRef($recording);
+        $token = ($meetingRef !== null && ! config('app.demo')) ? $this->zoomAccessToken() : null;
 
-        // Sync with Zoom API if live connection is configured
-        if (! config('app.demo') && ! app()->environment('testing') && ! empty($recording->zoom_meeting_id)) {
-            $conn = ZoomConnection::first();
-            if ($conn && ! empty($conn->account_id)) {
-                try {
-                    $basicAuth = base64_encode($conn->client_id.':'.$conn->client_secret);
-                    $tokenRes = Http::timeout(5)
-                        ->withHeaders(['Authorization' => 'Basic '.$basicAuth])
-                        ->post('https://zoom.us/oauth/token?grant_type=account_credentials&account_id='.urlencode($conn->account_id));
+        if ($token !== null) {
+            $settingsUrl = "https://api.zoom.us/v2/meetings/{$meetingRef}/recordings/settings";
 
-                    if ($tokenRes->successful()) {
-                        $token = $tokenRes->json('access_token');
-                        Http::timeout(6)
-                            ->withToken($token)
-                            ->patch("https://api.zoom.us/v2/meetings/{$recording->zoom_meeting_id}/recordings/settings", [
-                                'share_recording' => 'publicly',
-                                'password' => $newPasscode,
-                            ]);
+            try {
+                $res = Http::timeout(10)->withToken($token)->patch($settingsUrl, [
+                    'share_recording' => 'publicly',
+                    'password' => $newPasscode,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning("Failed to sync custom recording passcode to Zoom: {$e->getMessage()}");
+                throw new \RuntimeException('Could not reach Zoom to update the recording passcode. Please try again.');
+            }
+
+            if (! $res->successful()) {
+                $zoomMessage = (string) ($res->json('message') ?: $res->body());
+                Log::warning("Zoom rejected recording passcode for recording #{$recording->id}: HTTP {$res->status()} - {$zoomMessage}");
+                throw new \RuntimeException('Zoom rejected the new passcode: '.($zoomMessage !== '' ? $zoomMessage : "HTTP {$res->status()}"));
+            }
+
+            // Changing the passcode rotates Zoom's `?pwd=` token; refresh it so 1-click links keep working.
+            try {
+                $details = Http::timeout(10)->withToken($token)->get("https://api.zoom.us/v2/meetings/{$meetingRef}/recordings");
+                if ($details->successful()) {
+                    if ($details->json('recording_play_passcode')) {
+                        $recording->play_passcode = (string) $details->json('recording_play_passcode');
                     }
-                } catch (\Throwable $e) {
-                    Log::warning("Failed to sync custom recording password to Zoom: {$e->getMessage()}");
+                    if ($details->json('share_url')) {
+                        $recording->share_url = (string) $details->json('share_url');
+                    }
                 }
+            } catch (\Throwable $e) {
+                Log::warning("Failed to refresh recording play passcode from Zoom: {$e->getMessage()}");
             }
         }
+
+        $recording->passcode = $newPasscode !== '' ? $newPasscode : null;
+        $recording->save();
 
         $this->auditService->log(
             'recording.passcode_updated',
@@ -316,6 +345,90 @@ class CloudRecordingService
         );
 
         return $recording;
+    }
+
+    /**
+     * Read the viewer-facing recording passcode from Zoom's recording settings.
+     * The list-recordings API does not include it, so the sync calls this when needed.
+     */
+    public function fetchRecordingPassword(string $meetingUuidOrId, string $token): ?string
+    {
+        $ref = self::encodeMeetingRef($meetingUuidOrId);
+
+        try {
+            $res = Http::timeout(10)->withToken($token)->get("https://api.zoom.us/v2/meetings/{$ref}/recordings/settings");
+        } catch (\Throwable $e) {
+            Log::warning("Failed to fetch recording settings for {$meetingUuidOrId}: {$e->getMessage()}");
+
+            return null;
+        }
+
+        if (! $res->successful()) {
+            return null;
+        }
+
+        $password = (string) ($res->json('password') ?? '');
+
+        return $password !== '' ? $password : null;
+    }
+
+    /**
+     * Zoom path segment identifying this specific recording instance. The meeting UUID is
+     * preferred: for recurring meetings the numeric ID resolves to the latest instance only.
+     */
+    protected function zoomRecordingRef(CloudRecording $recording): ?string
+    {
+        if (! empty($recording->zoom_recording_id)) {
+            return self::encodeMeetingRef((string) $recording->zoom_recording_id);
+        }
+
+        $meetingId = (string) ($recording->zoom_meeting_id ?? '');
+        if ($meetingId === '' || $meetingId === 'UNKNOWN') {
+            return null;
+        }
+
+        return self::encodeMeetingRef($meetingId);
+    }
+
+    /**
+     * Zoom requires UUIDs that start with "/" or contain "//" to be double URL-encoded.
+     */
+    public static function encodeMeetingRef(string $uuidOrId): string
+    {
+        $encoded = rawurlencode($uuidOrId);
+
+        return (str_starts_with($uuidOrId, '/') || str_contains($uuidOrId, '//'))
+            ? rawurlencode($encoded)
+            : $encoded;
+    }
+
+    /**
+     * Server-to-server OAuth token, or null when no Zoom connection is configured.
+     *
+     * @throws \RuntimeException when credentials are configured but Zoom refuses them
+     */
+    protected function zoomAccessToken(): ?string
+    {
+        $conn = ZoomConnection::first();
+        if (! $conn || empty($conn->account_id) || empty($conn->client_id) || empty($conn->client_secret)) {
+            return null;
+        }
+
+        try {
+            $res = Http::timeout(10)
+                ->withHeaders(['Authorization' => 'Basic '.base64_encode($conn->client_id.':'.$conn->client_secret)])
+                ->post('https://zoom.us/oauth/token?grant_type=account_credentials&account_id='.urlencode($conn->account_id));
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Could not reach Zoom to update the recording passcode. Please try again.');
+        }
+
+        $token = $res->successful() ? (string) $res->json('access_token') : '';
+        if ($token === '') {
+            Log::warning("Zoom OAuth failed while updating recording passcode: HTTP {$res->status()}");
+            throw new \RuntimeException('Could not authenticate with Zoom to update the recording passcode.');
+        }
+
+        return $token;
     }
 
     /**

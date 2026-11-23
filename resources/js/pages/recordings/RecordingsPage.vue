@@ -136,9 +136,9 @@
               <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
                 <button
                   v-if="r.play_url || r.share_url"
-                  @click="copyShareLink(r.share_url || r.play_url)"
+                  @click="copyShareLink(r.one_click_url || r.share_url || r.play_url)"
                   class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer inline-flex"
-                  title="Copy Link Only"
+                  title="Copy 1-Click Link (passcode embedded)"
                 >
                   <Copy class="w-3.5 h-3.5" />
                 </button>
@@ -160,7 +160,7 @@
                 </button>
                 <a
                   v-if="r.play_url || r.share_url"
-                  :href="r.play_url || r.share_url"
+                  :href="r.one_click_url || r.play_url || r.share_url"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-900/40 text-xs font-semibold transition-colors"
@@ -308,7 +308,7 @@
                 class="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-brand-500"
               />
               <p class="text-[11px] text-slate-400 mt-1">
-                This passcode will be saved in ZPM and synced with Zoom Cloud Recording settings.
+                The passcode is applied on Zoom first and saved only if Zoom accepts it. Zoom requires at least 8 characters mixing letters, numbers and special characters (your account policy may add more rules).
               </p>
             </div>
 
@@ -585,7 +585,7 @@ const copyFullInvitation = async (r) => {
   if (!r) return;
   const topic = r.topic || 'Zoom Cloud Recording';
   const date = formatDateTime(r.recording_start || r.created_at);
-  const url = r.share_url || r.play_url || '';
+  const url = r.one_click_url || r.share_url || r.play_url || '';
   const passcode = r.passcode ? `\nPasscode: ${r.passcode}` : '';
   const invitation = `Topic: ${topic}\nDate: ${date}\n\nRecording Link:\n${url}${passcode}`;
 

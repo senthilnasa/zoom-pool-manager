@@ -1,6 +1,6 @@
 {
-  "version": "1.0.28",
+  "version": "1.0.29",
   "build": "stable",
-  "release_date": "2026-10-10",
+  "release_date": "2026-11-23",
   "php_min": "8.2.0"
 }

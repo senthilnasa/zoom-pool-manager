@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Recordings\Models\CloudRecording;
 use App\Domain\Recordings\Services\CloudRecordingService;
 use App\Domain\Zoom\Models\ZoomConnection;
 use App\Domain\Zoom\Models\ZoomResource;
@@ -156,6 +157,7 @@ class SyncCloudRecordingsCommand extends Command
                         $data = $resp->json();
                         $meetings = $data['meetings'] ?? [];
                         foreach ($meetings as $m) {
+                            $m = $this->withRecordingPassword($m, $recordingService, $token);
                             $recordingService->ingestCompletedRecording([
                                 'payload' => ['object' => $m],
                                 'zoom_resource_id' => $res->id,
@@ -184,5 +186,36 @@ class SyncCloudRecordingsCommand extends Command
 
             return Command::FAILURE;
         }
+    }
+
+    /**
+     * The list-recordings API returns only the encoded `recording_play_passcode`, not the
+     * passcode viewers type. Look it up from recording settings when we don't have it yet
+     * or when the play token changed (i.e. the passcode was changed on Zoom).
+     *
+     * @param  array<string, mixed>  $m
+     * @return array<string, mixed>
+     */
+    protected function withRecordingPassword(array $m, CloudRecordingService $recordingService, string $token): array
+    {
+        $uuid = (string) ($m['uuid'] ?? '');
+        if (! empty($m['password']) || $uuid === '' || empty($m['recording_play_passcode'])) {
+            return $m;
+        }
+
+        $local = CloudRecording::where('zoom_recording_id', $uuid)->first();
+        $needsLookup = ! $local
+            || empty($local->passcode)
+            || $local->passcode === $m['recording_play_passcode']
+            || $local->play_passcode !== $m['recording_play_passcode'];
+
+        if ($needsLookup) {
+            $password = $recordingService->fetchRecordingPassword($uuid, $token);
+            if ($password !== null) {
+                $m['password'] = $password;
+            }
+        }
+
+        return $m;
     }
 }

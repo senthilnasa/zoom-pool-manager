@@ -34,9 +34,20 @@ class CloudRecording extends Model
         'play_url',
         'download_url',
         'passcode',
+        'play_passcode',
         'status',
         'expires_at',
     ];
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = ['play_passcode'];
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = ['one_click_url'];
 
     /**
      * @var array<string, string>
@@ -48,7 +59,22 @@ class CloudRecording extends Model
         'duration_minutes' => 'integer',
         'file_size_bytes' => 'integer',
         'passcode' => 'encrypted',
+        'play_passcode' => 'encrypted',
     ];
+
+    /**
+     * Share link with Zoom's encoded play passcode embedded (`?pwd=`), so viewers
+     * are not prompted for the passcode. Falls back to the plain share/play URL.
+     */
+    public function getOneClickUrlAttribute(): string
+    {
+        $url = (string) ($this->share_url ?: $this->play_url ?: '');
+        if ($url === '' || empty($this->play_passcode) || str_contains($url, 'pwd=')) {
+            return $url;
+        }
+
+        return $url.(str_contains($url, '?') ? '&' : '?').'pwd='.rawurlencode((string) $this->play_passcode);
+    }
 
     protected static function booted(): void
     {
