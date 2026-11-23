@@ -51,4 +51,12 @@ class LogMailProvider implements MailProviderInterface
     {
         self::$sentMessages = [];
     }
+
+    /**
+     * @return array<int, array{toEmail: string, toName: ?string, subject: string, htmlBody: string, textBody: string, attachments: array<int, array{name: string, data: string, mime: string}>}>
+     */
+    public static function getSentMails(): array
+    {
+        return self::$sentMessages;
+    }
 }

@@ -22,13 +22,18 @@ class EmailTemplateController extends Controller
 
     public function index(Request $request): View|JsonResponse
     {
+        $this->authorizeAdmin($request);
+
         // Self-heal/seed missing templates into the database
         EmailTemplateRegistry::seedMissingTemplates();
 
         if ($request->wantsJson()) {
             $templates = EmailTemplate::orderBy('category')->orderBy('name')->get();
 
-            return response()->json($templates);
+            return response()->json([
+                'templates' => $templates,
+                'categories' => EmailTemplateRegistry::getCategories(),
+            ]);
         }
 
         return app(SpaController::class)->index($request, [
@@ -36,8 +41,9 @@ class EmailTemplateController extends Controller
         ]);
     }
 
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
+        $this->authorizeAdmin($request);
         $template = EmailTemplate::where('public_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
@@ -50,15 +56,19 @@ class EmailTemplateController extends Controller
         ]);
     }
 
-    public function edit(string $id): View
+    public function edit(Request $request, string $id): View
     {
-        return app(SpaController::class)->index(request(), [
+        $this->authorizeAdmin($request);
+
+        return app(SpaController::class)->index($request, [
             'fallbackHtml' => '<h1>Edit Email Template</h1>',
         ]);
     }
 
     public function update(Request $request, string $id): RedirectResponse|JsonResponse
     {
+        $this->authorizeAdmin($request);
+
         $template = EmailTemplate::where('public_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
@@ -96,6 +106,8 @@ class EmailTemplateController extends Controller
 
     public function preview(Request $request, string $id): JsonResponse
     {
+        $this->authorizeAdmin($request);
+
         $template = EmailTemplate::where('public_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
@@ -121,8 +133,10 @@ class EmailTemplateController extends Controller
         ]);
     }
 
-    public function reset(string $id): JsonResponse
+    public function reset(Request $request, string $id): JsonResponse
     {
+        $this->authorizeAdmin($request);
+
         $template = EmailTemplate::where('public_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
@@ -136,8 +150,10 @@ class EmailTemplateController extends Controller
         ]);
     }
 
-    public function resetAll(): JsonResponse
+    public function resetAll(Request $request): JsonResponse
     {
+        $this->authorizeAdmin($request);
+
         $count = EmailTemplateRegistry::resetAllToDefaults();
 
         return response()->json([
@@ -148,14 +164,16 @@ class EmailTemplateController extends Controller
 
     public function sendTest(Request $request, string $id): JsonResponse
     {
+        $this->authorizeAdmin($request);
+
         $template = EmailTemplate::where('public_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
 
         /** @var User|null $user */
         $user = $request->user();
-
-        $recipientEmail = trim((string) $request->input('recipient_email', $user->email ?? ''));
+        $defaultEmail = $user instanceof User ? $user->email : '';
+        $recipientEmail = trim((string) $request->input('recipient_email', $defaultEmail));
 
         if (empty($recipientEmail) || ! filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
             return response()->json([
@@ -198,5 +216,29 @@ class EmailTemplateController extends Controller
                 'message' => 'Failed to send test email: '.$e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Ensure the authenticated user has administrative privileges.
+     */
+    protected function authorizeAdmin(Request $request): void
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+        if (! $user) {
+            abort(401, 'Unauthenticated.');
+        }
+
+        if (
+            $user->hasRole('Super Administrator') ||
+            $user->hasRole('it_admin') ||
+            $user->hasRole('admin') ||
+            $user->can('settings.manage') ||
+            $user->can('system.manage')
+        ) {
+            return;
+        }
+
+        abort(403, 'Unauthorized. Admin access required.');
     }
 }

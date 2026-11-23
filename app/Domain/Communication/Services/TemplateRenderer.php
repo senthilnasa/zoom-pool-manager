@@ -199,6 +199,23 @@ class TemplateRenderer
             }
         }
 
+        // Provide seamless alias interoperability for snake_case keys (e.g. meeting_title -> meeting.title)
+        foreach ($vars as $k => $v) {
+            if (str_contains($k, '.')) {
+                $snakeKey = str_replace('.', '_', $k);
+                if (! isset($vars[$snakeKey])) {
+                    $vars[$snakeKey] = $v;
+                }
+            }
+        }
+
+        if (isset($vars['meeting.host_key']) && ! isset($vars['host_key_pin'])) {
+            $vars['host_key_pin'] = $vars['meeting.host_key'];
+        }
+        if (isset($vars['recipient.name']) && ! isset($vars['user_name'])) {
+            $vars['user_name'] = $vars['recipient.name'];
+        }
+
         return $vars;
     }
 

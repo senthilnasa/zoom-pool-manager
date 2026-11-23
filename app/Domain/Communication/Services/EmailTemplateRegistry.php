@@ -8,6 +8,22 @@ use App\Domain\Settings\Models\Setting;
 class EmailTemplateRegistry
 {
     /**
+     * @return array<int, array{id: string, label: string}>
+     */
+    public static function getCategories(): array
+    {
+        return [
+            ['id' => 'all', 'label' => 'All Templates'],
+            ['id' => 'bookings', 'label' => 'Bookings & Schedules'],
+            ['id' => 'approvals', 'label' => 'Approvals & Workflow'],
+            ['id' => 'waitlist', 'label' => 'Waitlist Queue'],
+            ['id' => 'recordings', 'label' => 'Recordings & Media'],
+            ['id' => 'attendance', 'label' => 'Attendance & Reports'],
+            ['id' => 'cancellations', 'label' => 'Cancellations'],
+        ];
+    }
+
+    /**
      * Get the master definitions for all core system email templates.
      *
      * @return array<string, array{
