@@ -141,7 +141,7 @@ class MeetingBookingTest extends TestCase
     public function test_preview_conflicts_supports_pool_id_alias_and_detects_notice_violation(): void
     {
         // Enforce 2h notice policy
-        \App\Domain\Settings\Models\Setting::set('org.min_notice_hours', 2);
+        Setting::set('org.min_notice_hours', 2);
 
         // Schedule meeting only 30 minutes in the future (violates 2h notice)
         $startsAt = Carbon::now()->addMinutes(30);
@@ -164,8 +164,8 @@ class MeetingBookingTest extends TestCase
 
     public function test_meeting_options_returns_effective_booking_policy(): void
     {
-        \App\Domain\Settings\Models\Setting::set('org.min_notice_hours', 4);
-        \App\Domain\Settings\Models\Setting::set('org.max_advance_days', 60);
+        Setting::set('org.min_notice_hours', 4);
+        Setting::set('org.max_advance_days', 60);
 
         $response = $this->actingAs($this->user)
             ->getJson('/spa/meetings/options');

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\Communication\Services\IcsCalendarService;
+use App\Domain\Communication\Services\MailDeliveryService;
 use App\Domain\Meetings\Models\Meeting;
 use App\Domain\Settings\Models\Setting;
 use App\Domain\Users\Models\Department;
@@ -224,7 +225,7 @@ class IcsCalendarTest extends TestCase
             'join_url' => 'https://zoom.us/j/999888777',
         ]);
 
-        $deliveryService = app(\App\Domain\Communication\Services\MailDeliveryService::class);
+        $deliveryService = app(MailDeliveryService::class);
         $delivery = $deliveryService->queueEmail(
             templateKey: 'meeting_confirmed',
             recipientEmail: $this->user->email,

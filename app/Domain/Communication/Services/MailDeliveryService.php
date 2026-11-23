@@ -115,7 +115,7 @@ class MailDeliveryService
     {
         $default = EmailTemplateRegistry::getDefaultTemplate($key);
 
-        return $default['subject_template'] ?? "[{{org.name}}] Notification regarding {{meeting.title}}";
+        return $default['subject_template'] ?? '[{{org.name}}] Notification regarding {{meeting.title}}';
     }
 
     protected function getDefaultHtmlBody(string $key): string
