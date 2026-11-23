@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.0.30] - 2026-11-23
+
+### Added
+- **Zoom Meeting & Host Key Sync** (`zpm:zoom:sync-meetings`):
+  - Refreshes the host key of every active Zoom host account from Zoom (`GET /users/{id}`).
+  - Refreshes the join URL, passcode and UUID of every booked meeting from Zoom (`GET /meetings/{id}`) and copies the allocated host account's host key onto the meeting.
+  - Covers upcoming and live meetings by default; `--all` includes ended meetings, `--meeting=` targets one meeting, `--dry-run` reports changes without saving and `--skip-host-keys` skips the host account lookups.
+  - Meetings that no longer exist in Zoom are reported and left unchanged; rate-limited requests (HTTP 429) are retried.
+  - Runs hourly as the new **Zoom Meeting & Host Key Sync** scheduled job (Settings > Scheduled Jobs).
+
 ### Fixed
 - **Custom Recording Passcode Scope**: Setting a custom recording passcode needs the `cloud_recording:update:recording_settings:admin` (classic `recording:write:admin`) scope, which ZPM did not list. It is now in the Zoom Settings scope checklist and `docs/zoom/scopes.md`, a recording read scope no longer marks it as granted, and when Zoom rejects a passcode for a missing scope the error now names the scope to add.
 - **Recording Links Bypassed the Passcode**: Since 1.0.29, recording emails and the copied invitation used the 1-click link with Zoom's `?pwd=` token, so anyone with the link could watch without the passcode. Recordings now have two copy options:
