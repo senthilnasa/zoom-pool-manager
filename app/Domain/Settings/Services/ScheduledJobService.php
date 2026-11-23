@@ -41,6 +41,14 @@ class ScheduledJobService
                 'default_enabled' => true,
                 'category' => 'Meetings & Host Pool',
             ],
+            'zoom_meetings_sync' => [
+                'name' => 'Zoom Meeting & Host Key Sync',
+                'command' => 'zpm:zoom:sync-meetings',
+                'description' => 'Pulls join URLs, passcodes, and host keys from Zoom for all upcoming meetings.',
+                'default_cadence' => 'hourly',
+                'default_enabled' => true,
+                'category' => 'Meetings & Host Pool',
+            ],
             'meeting_reminders' => [
                 'name' => 'Meeting Start Reminders',
                 'command' => 'zpm:notifications:send-reminders',

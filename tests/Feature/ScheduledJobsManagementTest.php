@@ -88,7 +88,7 @@ class ScheduledJobsManagementTest extends TestCase
         ]);
 
         $jobs = $res->json('jobs');
-        $this->assertCount(10, $jobs);
+        $this->assertCount(11, $jobs);
 
         $keys = collect($jobs)->pluck('key')->all();
         $this->assertContains('meetings_reconcile', $keys);
